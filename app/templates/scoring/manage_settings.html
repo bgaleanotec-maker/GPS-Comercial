@@ -1,0 +1,99 @@
+<!-- Ruta: SST/app/templates/scoring/manage_settings.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center space-x-3 mb-6">
+        <svg class="h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527c.46-.329 1.025-.218 1.373.184l.737.737c.398.398.514 1.025.184 1.373l-.527.737c-.249.35-.272.806-.108 1.204.165.397.505.71.93.78l.894.149c.542.09.94.56.94 1.11v1.093c0 .55-.398 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.93.78-.164.398-.142.854.108 1.204l.527.737c.329.46.218 1.025-.184 1.373l-.737.737c-.398.398-1.025.514-1.373.184l-.737-.527c-.35-.249-.806-.272-1.204-.108-.397.165-.71.505-.78.93l-.149.894c-.09.542-.56.94-1.11.94h-1.093c-.55 0-1.02-.398-1.11-.94l-.149-.894c-.07-.424-.384-.764-.78-.93-.398-.164-.855-.142-1.205.108l-.737.527c-.46.329-1.025-.218-1.373-.184l-.737-.737c-.398-.398-.514-1.025-.184-1.373l.527-.737c.249-.35.272.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.149c-.542-.09-.94-.56-.94-1.11v-1.093c0 .55.398-1.02.94-1.11l.894.149c.424-.07.764-.383.93-.78.164-.398.142-.854-.108-1.204l-.527-.737c-.329-.46-.218-1.025.184-1.373l.737-.737c.398-.398 1.025-.514 1.373-.184l.737.527c.35.249.806-.272 1.204-.108.397-.165.71-.505.78-.93l.149-.894z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <h1 class="text-3xl font-bold text-gray-900">Configuración General</h1>
+    </div>
+
+    <div class="bg-white shadow-lg rounded-xl">
+        <form action="" method="post" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="p-6 space-y-8">
+                <!-- Sección de Horarios de Operación -->
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-900">Horarios de Operación</h3>
+                    <p class="mt-1 text-sm text-gray-500">Define los días y horas en que el sistema estará activo para generar alertas y registrar visitas automáticas.</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        {{ form.start_time.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.start_time(class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md") }}
+                    </div>
+                    <div>
+                        {{ form.end_time.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.end_time(class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md") }}
+                    </div>
+                </div>
+                <div>
+                    {{ form.active_days.label(class="block text-sm font-medium text-gray-700 mb-2") }}
+                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+                        {% for value, label in form.active_days.choices %}
+                        <div class="flex items-center">
+                            <input type="checkbox" name="active_days" value="{{ value }}" id="day-{{ value }}" 
+                                   {% if value|string in form.active_days.data %}checked{% endif %}
+                                   class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <label for="day-{{ value }}" class="ml-2 block text-sm text-gray-900">{{ label }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Sección de Gestión de Visitas -->
+                <div class="border-t border-gray-200 pt-8 mt-8">
+                    <h3 class="text-xl font-semibold text-gray-900">Gestión de Visitas</h3>
+                </div>
+                <div>
+                    {{ form.visit_interval.label(class="block text-sm font-medium text-gray-700") }}
+                    {{ form.visit_interval(class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md") }}
+                    <p class="mt-2 text-sm text-gray-500">Tiempo mínimo que debe pasar antes de registrar una nueva visita automática al mismo aliado.</p>
+                </div>
+
+                <!-- Sección de Gestión de Reportes -->
+                <div class="border-t border-gray-200 pt-8 mt-8">
+                    <h3 class="text-xl font-semibold text-gray-900">Gestión de Reportes</h3>
+                    <p class="mt-1 text-sm text-gray-500">Configura el envío automático de reportes diarios.</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        {{ form.report_time.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.report_time(class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md") }}
+                    </div>
+                    <div>
+                        {{ form.report_recipients.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.report_recipients(class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md", rows=3) }}
+                        <p class="mt-2 text-sm text-gray-500">Lista de correos separados por comas.</p>
+                    </div>
+                </div>
+
+                <!-- --- NUEVA SECCIÓN DE ALERTAS --- -->
+                <div class="border-t border-gray-200 pt-8 mt-8">
+                    <h3 class="text-xl font-semibold text-gray-900">Gestión de Alertas de Infracción</h3>
+                    <p class="mt-1 text-sm text-gray-500">Configura los destinatarios para las alertas de infracciones (exceso de velocidad, etc.).</p>
+                </div>
+                <div>
+                    {{ form.sst_recipients.label(class="block text-sm font-medium text-gray-700") }}
+                    {{ form.sst_recipients(class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md", rows=3, placeholder="email1@ejemplo.com, email2@ejemplo.com") }}
+                    <p class="mt-2 text-sm text-gray-500">Lista de correos separados por comas que recibirán alertas de infracción en tiempo real.</p>
+                </div>
+
+            </div>
+            <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex items-center justify-end space-x-4">
+                <button type="submit" name="send_report" value="1" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Enviar Reporte de Hoy Ahora
+                </button>
+                <button type="submit" name="save_settings" value="1" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Guardar Configuración
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,158 @@
+<!-- Ruta: SST/app/templates/device_details.html -->
+{% extends "base.html" %}
+
+{% block head %}
+    <!-- Añadimos los recursos para el mapa interactivo (Leaflet.js) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        #map { height: 400px; }
+        .score-circle-bg {
+            fill: none;
+            stroke: #e5e7eb; /* gray-200 */
+        }
+        .score-circle-progress {
+            fill: none;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dashoffset 0.8s ease-out;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Score de Conducción Segura</h1>
+            <p class="text-lg text-gray-600">{{ device.name }} - {{ current_date }}</p>
+        </div>
+        <a href="{{ url_for('main.dashboard') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">&larr; Volver al Dashboard</a>
+    </div>
+
+    <!-- Sección del Score -->
+    <div class="bg-white shadow rounded-lg mb-6 p-6 flex flex-col items-center">
+        <div class="relative w-48 h-48">
+            <svg class="w-full h-full" viewBox="0 0 120 120">
+                <circle class="score-circle-bg" cx="60" cy="60" r="54" stroke-width="12"></circle>
+                <circle class="score-circle-progress" id="score-progress" cx="60" cy="60" r="54" stroke-width="12"></circle>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-5xl font-bold text-gray-800">{{ "%.0f"|format(score) }}</span>
+                <span class="text-sm text-gray-500">Puntos</span>
+            </div>
+        </div>
+        <p class="mt-4 text-lg font-medium text-gray-700">Tu puntaje de conducción segura</p>
+    </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-6">
+        <div class="bg-white overflow-hidden shadow rounded-lg p-5 text-center">
+            <p class="text-sm font-medium text-gray-500 truncate">Infracciones (30 días)</p>
+            <p class="mt-1 text-3xl font-semibold text-red-600">{{ total_infractions }}</p>
+        </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg p-5 text-center">
+            <p class="text-sm font-medium text-gray-500 truncate">Distancia Hoy</p>
+            <p class="mt-1 text-3xl font-semibold text-gray-900">{{ "%.2f"|format(distance_today) }} <span class="text-lg font-medium">km</span></p>
+        </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg p-5 text-center">
+            <p class="text-sm font-medium text-gray-500 truncate">Velocidad Máx. Hoy</p>
+            <p class="mt-1 text-3xl font-semibold text-gray-900">{{ "%.0f"|format(max_speed_today) }} <span class="text-lg font-medium">km/h</span></p>
+        </div>
+    </div>
+    
+    <!-- Botón de Evaluación -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+             <div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Acciones</h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Analiza los viajes del día para registrar nuevas infracciones.</p>
+            </div>
+            <form action="{{ url_for('main.device_details', device_id=device.id) }}" method="post">
+                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                    Analizar Viajes de Hoy
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mapa y Tabla de Infracciones (como antes) -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6"><h3 class="text-lg leading-6 font-medium text-gray-900">Mapa del Recorrido de Hoy</h3></div>
+        <div class="border-t border-gray-200"><div id="map" class="w-full z-0"></div></div>
+    </div>
+
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6"><h3 class="text-lg leading-6 font-medium text-gray-900">Registro de Infracciones de Hoy</h3></div>
+        <div class="border-t border-gray-200"><div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Regla Incumplida</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Registrado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puntos</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% if infractions_today %}
+                        {% for infraction in infractions_today %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ infraction.timestamp.astimezone(pytz.timezone('America/Bogota')).strftime('%I:%M:%S %p') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ infraction.rule.name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">{{ infraction.measured_value }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ infraction.rule.points }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">No se han encontrado infracciones para el día de hoy.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div></div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- Lógica del Gráfico Circular del Score ---
+        const score = {{ score|default(0) }};
+        const circle = document.getElementById('score-progress');
+        const radius = circle.r.baseVal.value;
+        const circumference = 2 * Math.PI * radius;
+        
+        circle.style.strokeDasharray = `${circumference} ${circumference}`;
+        const offset = circumference - (score / 100) * circumference;
+        circle.style.strokeDashoffset = offset;
+        
+        // Cambiar color según el score
+        if (score >= 80) {
+            circle.style.stroke = '#10B981'; // green-500
+        } else if (score >= 50) {
+            circle.style.stroke = '#F59E0B'; // amber-500
+        } else {
+            circle.style.stroke = '#EF4444'; // red-500
+        }
+
+        // --- Lógica del Mapa (como antes) ---
+        const routeData = {{ route|tojson|safe }};
+        if (routeData && routeData.length > 0) {
+            const centerLat = routeData[0].latitude;
+            const centerLon = routeData[0].longitude;
+            const map = L.map('map').setView([centerLat, centerLon], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            const latlngs = routeData.map(p => [p.latitude, p.longitude]);
+            L.polyline(latlngs, {color: 'blue'}).addTo(map);
+            L.marker(latlngs[0]).addTo(map).bindPopup('<b>Inicio del Viaje</b>').openPopup();
+            L.marker(latlngs[latlngs.length - 1]).addTo(map).bindPopup('<b>Última Posición</b>');
+        } else {
+            document.getElementById('map').innerHTML = '<div class="p-4 text-center text-gray-500">No hay datos de ruta para mostrar en el mapa hoy.</div>';
+        }
+    });
+</script>
+
+{% endblock %}
