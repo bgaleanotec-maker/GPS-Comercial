@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from app.models import Rule, Infraction, Setting
 from app.forms import RuleForm, SettingsForm
 from app import db
-from datetime import datetime, time
+from datetime import datetime
 from app.reporting_logic import generate_and_send_daily_report
 
 @bp.route('/rules', methods=['GET', 'POST'])
@@ -55,9 +55,6 @@ def delete_rule(rule_id):
 @bp.route('/settings', methods=['GET', 'POST'])
 @login_required
 def manage_settings():
-    """
-    Gestiona la configuración general de la aplicación.
-    """
     if current_user.role != 'admin':
         abort(403)
     
@@ -72,29 +69,49 @@ def manage_settings():
                 flash('Hubo un error al enviar el reporte. Revisa la configuración y los logs.', 'danger')
             return redirect(url_for('scoring.manage_settings'))
 
-        elif 'submit' in request.form:  # <-- CAMBIO: Detecta el botón correcto
-            # Convertir objetos time a strings
-            start_time_str = form.start_time.data.strftime('%H:%M') if isinstance(form.start_time.data, time) else form.start_time.data
-            end_time_str = form.end_time.data.strftime('%H:%M') if isinstance(form.end_time.data, time) else form.end_time.data
-            report_time_str = form.report_time.data.strftime('%H:%M') if isinstance(form.report_time.data, time) else form.report_time.data
+        elif 'submit' in request.form:
+            # Función auxiliar para convertir tiempo de forma segura
+            def safe_time_convert(time_data):
+                if isinstance(time_data, str):
+                    # Intentar con formato HH:MM:SS primero
+                    try:
+                        return datetime.strptime(time_data, '%H:%M:%S').time()
+                    except ValueError:
+                        # Si falla, intentar con HH:MM
+                        try:
+                            return datetime.strptime(time_data, '%H:%M').time()
+                        except ValueError:
+                            # Si todo falla, devolver None
+                            return None
+                return time_data
+            
+            start_time = safe_time_convert(form.start_time.data)
+            end_time = safe_time_convert(form.end_time.data)
+            report_time = safe_time_convert(form.report_time.data)
+            
+            if not all([start_time, end_time, report_time]):
+                flash('Error en el formato de las horas. Por favor verifica los datos.', 'danger')
+                return redirect(url_for('scoring.manage_settings'))
             
             settings_to_save = {
-                'start_time': start_time_str,
-                'end_time': end_time_str,
+                'start_time': start_time.strftime('%H:%M'),
+                'end_time': end_time.strftime('%H:%M'),
                 'visit_interval': str(form.visit_interval.data),
-                'report_time': report_time_str,
-                'report_recipients': form.report_recipients.data,
+                'report_time': report_time.strftime('%H:%M'),
+                'report_recipients': form.report_recipients.data.strip() if form.report_recipients.data else '',
                 'active_days': ",".join(form.active_days.data),
-                'sst_recipients': form.sst_recipients.data  # <-- NOMBRE CORRECTO
+                'sst_recipients': form.sst_recipients.data.strip() if form.sst_recipients.data else ''
             }
 
             for key, value in settings_to_save.items():
                 setting = Setting.query.filter_by(key=key).first()
                 if setting:
                     setting.value = value
+                    print(f"✅ Actualizado: {key} = {value}")
                 else:
                     new_setting = Setting(key=key, value=value)
                     db.session.add(new_setting)
+                    print(f"✅ Creado: {key} = {value}")
             
             db.session.commit()
             flash('La configuración ha sido guardada con éxito.', 'success')
@@ -104,26 +121,12 @@ def manage_settings():
         settings_query = Setting.query.all()
         settings = {s.key: s.value for s in settings_query}
         
-        # Cargar valores al formulario con manejo de errores
-        try:
-            form.start_time.data = datetime.strptime(settings.get('start_time', '06:00'), '%H:%M').time()
-        except:
-            form.start_time.data = datetime.strptime('06:00', '%H:%M').time()
-        
-        try:
-            form.end_time.data = datetime.strptime(settings.get('end_time', '20:00'), '%H:%M').time()
-        except:
-            form.end_time.data = datetime.strptime('20:00', '%H:%M').time()
-        
+        form.start_time.data = datetime.strptime(settings.get('start_time', '06:00'), '%H:%M').time()
+        form.end_time.data = datetime.strptime(settings.get('end_time', '20:00'), '%H:%M').time()
         form.active_days.data = settings.get('active_days', '1,2,3,4,5').split(',')
         form.visit_interval.data = int(settings.get('visit_interval', '60'))
-        
-        try:
-            form.report_time.data = datetime.strptime(settings.get('report_time', '08:00'), '%H:%M').time()
-        except:
-            form.report_time.data = datetime.strptime('08:00', '%H:%M').time()
-        
+        form.report_time.data = datetime.strptime(settings.get('report_time', '08:00'), '%H:%M').time()
         form.report_recipients.data = settings.get('report_recipients', '')
-        form.sst_recipients.data = settings.get('sst_recipients', '')  # <-- NOMBRE CORRECTO
+        form.sst_recipients.data = settings.get('sst_recipients', '')
 
     return render_template('scoring/manage_settings.html', title='Configuración General', form=form)

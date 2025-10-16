@@ -45,10 +45,10 @@ class SettingsForm(FlaskForm):
     visit_interval = IntegerField('Intervalo de Repetición de Visita (minutos)', default=60, validators=[DataRequired()])
     report_time = StringField('Hora de Envío del Reporte Diario', validators=[DataRequired()])
     report_recipients = TextAreaField('Correos para Reportes (separados por coma)')
-    sst_recipients = TextAreaField('Correos para Alertas SST (separados por coma)')  # <-- NOMBRE CORRECTO
+    sst_recipients = TextAreaField('Correos para Alertas SST (separados por coma)')  # ← CRÍTICO: debe ser sst_recipients
     submit = SubmitField('Guardar Configuración')
     send_report = SubmitField('Enviar Reporte de Hoy Ahora')
-
+    
 # --- Formularios Comerciales y de Visitas ---
 class AllyForm(FlaskForm):
     name = StringField('Nombre del Aliado', validators=[DataRequired()])

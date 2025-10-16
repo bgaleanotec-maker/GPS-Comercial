@@ -21,6 +21,6 @@ class Config(object):
     TRACCAR_USER = os.environ.get('TRACCAR_USER') or 'admin'
     TRACCAR_PASSWORD = os.environ.get('TRACCAR_PASSWORD') or 'admin'
 
-    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY') or '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'
+    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY') or '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'
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'bgaleanotec@gmail.com'
     SST_EMAIL_RECIPIENT = os.environ.get('SST_EMAIL_RECIPIENT') or 'bgaleanotec@gmail.com'
