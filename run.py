@@ -14,13 +14,63 @@ from app.models import Rule, Infraction, User, Ally, Visit, Setting
 from app.email import send_infraction_alert, send_report_email
 from app.reporting_logic import generate_report_data
 
-# --- IMPORTACIÓN CLAVE: Traemos la lógica de evaluación de infracciones ---
-from app.scoring.engine import evaluate_device
 
 # --- Constante de Conversión ---
 KNOTS_TO_KMH = 1.852
 # Variable global para rastrear el último día que se envió el reporte
 last_report_sent_day = None
+
+
+# --- NUEVA FUNCIÓN: VERIFICACIÓN DE HORARIO LABORAL ---
+def is_working_hours(app):
+    """
+    Verifica si estamos en horario laboral según la configuración.
+    Retorna True solo si:
+    1. Es un día laboral configurado
+    2. Está dentro del rango de horas configurado
+    
+    Esto respeta la privacidad de los empleados fuera de horario.
+    """
+    with app.app_context():
+        settings = {s.key: s.value for s in Setting.query.all()}
+        
+        # Obtener configuración de días y horarios
+        active_days_str = settings.get('active_days', '1,2,3,4,5')  # Default: Lunes a Viernes
+        start_time_str = settings.get('start_time', '06:00')
+        end_time_str = settings.get('end_time', '20:00')
+        
+        # Obtener hora actual en Colombia
+        colombia_tz = pytz.timezone('America/Bogota')
+        now_colombia = datetime.now(colombia_tz)
+        
+        # Verificar día de la semana (0=Domingo, 1=Lunes, ..., 6=Sábado)
+        current_day = str(now_colombia.weekday() + 1)
+        if current_day == '7':  # Si es domingo, convertir a 0
+            current_day = '0'
+        
+        active_days = active_days_str.split(',')
+        
+        if current_day not in active_days:
+            print(f"[PRIVACIDAD] Hoy no es día laboral. No se registrará actividad.")
+            return False
+        
+        # Verificar hora del día
+        try:
+            start_hour, start_minute = map(int, start_time_str.split(':'))
+            end_hour, end_minute = map(int, end_time_str.split(':'))
+            
+            start_time = dt_time(start_hour, start_minute)
+            end_time = dt_time(end_hour, end_minute)
+            current_time = now_colombia.time()
+            
+            if not (start_time <= current_time <= end_time):
+                print(f"[PRIVACIDAD] Fuera de horario laboral ({start_time_str} - {end_time_str}). No se registrará actividad.")
+                return False
+        except ValueError:
+            print("[ERROR] Formato de hora inválido en configuración.")
+            return False
+    
+    return True
 
 
 # --- Lógica de Traccar para el Hilo de Fondo (Integrada) ---
@@ -79,50 +129,19 @@ def check_for_visits_bg(app, device, all_allies):
         print(f"[Diagnóstico Hilo Fondo] No se encontró posición GPS para el dispositivo {device_name}.")
         return
 
-    # --- TIMEZONE DE COLOMBIA ---
-    colombia_tz = pytz.timezone('America/Bogota')
-    now_colombia = datetime.now(colombia_tz)
-    now_utc = now_colombia.astimezone(pytz.utc)
-    
-    # Parsear la fecha del GPS
-    fix_time_str = last_pos['fixTime'].replace('Z', '+00:00')
-    fix_time_utc = datetime.fromisoformat(fix_time_str)
-    
-    if fix_time_utc.tzinfo is None:
-        fix_time_utc = pytz.utc.localize(fix_time_utc)
-    
-    fix_time_colombia = fix_time_utc.astimezone(colombia_tz)
-    
-    # --- CLASIFICACIÓN DE TIPO DE MOVIMIENTO ---
-    speed_knots = last_pos.get('speed', 0)
-    speed_kmh = speed_knots * KNOTS_TO_KMH
-    
-    # Lógica de clasificación inteligente:
-    # - Velocidad < 8 km/h = Caminando
-    # - Velocidad >= 8 km/h = Vehículo
-    if speed_kmh < 8:
-        movement_type = 'walking'
-        movement_emoji = '🚶'
-        movement_label = 'CAMINANDO'
-    else:
-        movement_type = 'vehicle'
-        movement_emoji = '🚗'
-        movement_label = 'VEHÍCULO'
-    
+    now_utc = datetime.now(pytz.utc)
+    fix_time_utc = datetime.fromisoformat(last_pos['fixTime'].replace('Z', '+00:00'))
     age_seconds = (now_utc - fix_time_utc).total_seconds()
-    print(f"[Diagnóstico Hilo Fondo] Última posición encontrada.")
-    print(f"[Diagnóstico Hilo Fondo] Hora GPS (Colombia): {fix_time_colombia.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"[Diagnóstico Hilo Fondo] Velocidad: {speed_kmh:.2f} km/h ({movement_emoji} {movement_label})")
-    print(f"[Diagnóstico Hilo Fondo] Antigüedad: {age_seconds:.0f} segundos ({age_seconds/60:.1f} minutos)")
+    print(f"[Diagnóstico Hilo Fondo] Última posición encontrada. Antigüedad: {age_seconds:.0f} segundos.")
 
-    # Solo consideramos posiciones recientes (últimas 24 horas)
+    # Solo consideramos posiciones de las últimas 24 horas para la prueba
     if age_seconds > 86400:
-        print("[Diagnóstico Hilo Fondo] Posición demasiado antigua (>24h). Ignorando.")
+        print("[Diagnóstico Hilo Fondo] La última posición es demasiado antigua para ser considerada para una visita.")
         return
 
     for ally in all_allies:
         distance = haversine_distance(last_pos['latitude'], last_pos['longitude'], ally.latitude, ally.longitude)
-        print(f"[Diagnóstico Hilo Fondo] Distancia a '{ally.name}': {distance:.2f}m (Radio requerido: {ally.radius}m)")
+        print(f"[Diagnóstico Hilo Fondo] Distancia a '{ally.name}': {distance:.2f} metros. (Radio requerido: {ally.radius}m)")
 
         if distance <= ally.radius:
             settings = {s.key: s.value for s in Setting.query.all()}
@@ -131,86 +150,45 @@ def check_for_visits_bg(app, device, all_allies):
             last_visit = Visit.query.filter_by(device_id=device_id, ally_id=ally.id)\
                 .order_by(Visit.timestamp.desc()).first()
 
-            if last_visit:
-                if last_visit.timestamp.tzinfo is None:
-                    last_visit_utc = pytz.utc.localize(last_visit.timestamp)
-                else:
-                    last_visit_utc = last_visit.timestamp.astimezone(pytz.utc)
-                
-                time_since_last = (fix_time_utc - last_visit_utc).total_seconds() / 60
-                
-                if time_since_last < visit_interval_minutes:
-                    print(f"[Diagnóstico Hilo Fondo] Visita a '{ally.name}' ya registrada hace {time_since_last:.1f} min.")
-                    print(f"[Diagnóstico Hilo Fondo] Esperando intervalo de {visit_interval_minutes} min.")
-                    continue
+            if last_visit and (fix_time_utc - last_visit.timestamp.replace(tzinfo=pytz.utc)) < timedelta(minutes=visit_interval_minutes):
+                print(f"[Diagnóstico Hilo Fondo] Visita a '{ally.name}' ya registrada recientemente. Esperando intervalo.")
+                continue
 
-            print(f"\n{'='*80}")
-            print(f"🎯 ¡NUEVA VISITA AUTOMÁTICA DETECTADA!")
-            print(f"{'='*80}")
-            print(f"   Dispositivo: {device_name} (ID: {device_id})")
-            print(f"   Aliado: {ally.name}")
-            print(f"   Tipo de Movimiento: {movement_emoji} {movement_label}")
-            print(f"   Velocidad Registrada: {speed_kmh:.2f} km/h")
-            print(f"   Fecha/Hora (Colombia): {fix_time_colombia.strftime('%d/%m/%Y %H:%M:%S')}")
-            print(f"   Distancia al Punto: {distance:.2f} metros")
-            print(f"   Precisión GPS: {last_pos.get('accuracy', 'N/A')} metros")
-            print(f"{'='*80}\n")
-            
+            print(f"--- ¡NUEVA VISITA AUTOMÁTICA DETECTADA! Dispositivo: {device_name}, Aliado: {ally.name} ---")
             user = User.query.filter_by(traccar_device_id=device_id).first()
-            
-            # Guardar visita con clasificación
             new_visit = Visit(
-                timestamp=fix_time_utc.replace(tzinfo=None),
+                timestamp=fix_time_utc,
                 device_id=device_id,
                 user_id=user.id if user else None,
                 ally_id=ally.id,
-                is_manual=False,
-                movement_type=movement_type,  # ← NUEVO: Clasificación
-                avg_speed=round(speed_kmh, 2)  # ← NUEVO: Velocidad
+                is_manual=False
             )
             db.session.add(new_visit)
             db.session.commit()
-            print(f"✅ Visita guardada exitosamente")
-            print(f"   - Tipo: {movement_label}")
-            print(f"   - Velocidad: {speed_kmh:.2f} km/h\n")
-            break  # Solo una visita por evaluación
+            break # Solo registramos una visita por evaluación para evitar duplicados
 
 def run_periodic_evaluation_bg(app):
-    """Función principal que se ejecuta en el hilo para evaluar infracciones y visitas."""
-    colombia_tz = pytz.timezone('America/Bogota')
-    now_colombia = datetime.now(colombia_tz)
-    print(f"\n{'='*80}")
-    print(f"🔄 EJECUTANDO EVALUACIÓN COMPLETA")
-    print(f"{'='*80}")
-    print(f"Hora (Colombia): {now_colombia.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"{'='*80}\n")
+    """
+    Función principal que se ejecuta en el hilo para evaluar infracciones y visitas.
+    🔒 RESPETA HORARIO LABORAL - Solo monitorea en días/horas configurados.
+    """
+    # ✅ VERIFICACIÓN DE PRIVACIDAD
+    if not is_working_hours(app):
+        print(f"[PRIVACIDAD] Evaluación saltada - Fuera de horario laboral.")
+        return
     
+    print(f"--- EJECUTANDO EVALUACIÓN: {datetime.now()} ---")
     devices = get_devices_bg(app)
     if devices:
         with app.app_context():
-            # --- 1. EVALUAR INFRACCIONES ---
-            print("[Evaluación Infracciones] Iniciando análisis de reglas...")
-            for device in devices:
-                try:
-                    evaluate_device(device)
-                except Exception as e:
-                    print(f"[ERROR] Error al evaluar infracciones del dispositivo {device.get('name')}: {e}")
-            
-            # --- 2. EVALUAR VISITAS AUTOMÁTICAS ---
-            print("\n[Evaluación Visitas] Iniciando detección de visitas...")
             all_allies = Ally.query.all()
             if not all_allies:
                 print("[Diagnóstico Hilo Fondo] No hay aliados configurados para verificar visitas.")
-            else:
-                for device in devices:
-                    try:
-                        check_for_visits_bg(app, device, all_allies)
-                    except Exception as e:
-                        print(f"[ERROR] Error al evaluar visitas del dispositivo {device.get('name')}: {e}")
-    
-    print(f"\n{'='*80}")
-    print(f"✅ EVALUACIÓN FINALIZADA")
-    print(f"{'='*80}\n")
+            for device in devices:
+                # Lógica de visitas automáticas
+                if all_allies:
+                    check_for_visits_bg(app, device, all_allies)
+    print("--- EVALUACIÓN FINALIZADA ---\n")
 
 def check_and_send_report_bg(app):
     """Verifica si es hora de enviar el reporte diario y lo hace si corresponde."""
@@ -221,7 +199,7 @@ def check_and_send_report_bg(app):
         report_recipients_str = settings.get('report_recipients')
 
         if not report_time_str or not report_recipients_str:
-            return
+            return # No hacer nada si no está configurado
 
         colombia_tz = pytz.timezone('America/Bogota')
         now_colombia = datetime.now(colombia_tz)
@@ -232,56 +210,45 @@ def check_and_send_report_bg(app):
             print("[ERROR Hilo Fondo] El formato de la hora del reporte es inválido.")
             return
 
-        if (now_colombia.hour == report_hour and 
-            now_colombia.minute == report_minute and
-            now_colombia.date() != last_report_sent_day):
+        # Comprobamos si es la hora y si no hemos enviado el reporte hoy
+        if (now_colombia.hour == report_hour and now_colombia.minute == report_minute and
+                now_colombia.date() != last_report_sent_day):
             
-            print("\n" + "="*80)
-            print("📧 INICIANDO ENVÍO DE REPORTE DIARIO AUTOMÁTICO")
-            print("="*80)
-            
+            print("--- INICIANDO ENVÍO DE REPORTE DIARIO AUTOMÁTICO ---")
             recipients = [email.strip() for email in report_recipients_str.split(',') if email.strip()]
+            
+            # Generamos los datos para el reporte
             report_data = generate_report_data()
             
-            if send_report_email(recipients, report_data):
-                last_report_sent_day = now_colombia.date()
-                print("✅ REPORTE DIARIO ENVIADO EXITOSAMENTE")
-            else:
-                print("❌ ERROR AL ENVIAR EL REPORTE DIARIO")
+            # Enviamos el correo
+            send_report_email(recipients, report_data)
             
-            print("="*80 + "\n")
+            # Actualizamos la fecha del último envío para no repetir
+            last_report_sent_day = now_colombia.date()
+            print("--- ENVÍO DE REPORTE DIARIO FINALIZADO ---")
 
 # Creamos la aplicación
 app = create_app()
 
 def background_task(app_context):
     """Esta es la función que se ejecuta en el hilo de fondo."""
-    print("\n" + "="*80)
-    print("🚀 HILO DE FONDO INICIADO")
-    print("="*80)
-    print("⏱️  Evaluación cada 60 segundos")
-    print("📍 Detección automática de visitas: ACTIVA")
-    print("⚠️  Monitoreo de infracciones: ACTIVO")
-    print("🚗 Clasificación vehículo/caminando: ACTIVA")
-    print("="*80 + "\n")
-    
+    print("\n--- Hilo de fondo iniciado. La evaluación se ejecutará cada 60 segundos. ---")
+    print("🔒 MODO PRIVACIDAD ACTIVADO: Solo se monitoreará en días/horas laborales configurados.")
     while True:
         with app_context():
+            # Pasamos la instancia de la app a las funciones
             current_app_obj = current_app._get_current_object()
             run_periodic_evaluation_bg(current_app_obj)
             check_and_send_report_bg(current_app_obj)
         time.sleep(60)
 
 if __name__ == '__main__':
+    # Creamos e iniciamos el hilo de fondo
     eval_thread = Thread(target=background_task, args=(app.app_context,), daemon=True)
     eval_thread.start()
 
-    print("\n" + "="*80)
-    print("🌐 INICIANDO SERVIDOR WEB CON WAITRESS")
-    print("="*80)
-    print(f"📍 Servidor: http://127.0.0.1:5000")
-    print(f"🕐 Zona horaria: America/Bogota (COT)")
-    print(f"⏰ Hora actual: {datetime.now(pytz.timezone('America/Bogota')).strftime('%Y-%m-%d %H:%M:%S')}")
-    print("="*80 + "\n")
-    
+    # Iniciamos el servidor web
+    print("\n--- INICIANDO SERVIDOR WEB CON WAITRESS ---")
+    print(f"Servidor corriendo en http://127.0.0.1:5000")
+    print("-----------------------------------------\n")
     serve(app, host='127.0.0.1', port=5000)

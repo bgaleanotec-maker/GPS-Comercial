@@ -9,10 +9,76 @@ import requests
 from math import radians, sin, cos, sqrt, atan2
 
 # Importamos los modelos directamente
-from app.models import Infraction, User, Rule
+from app.models import Infraction, User, Rule, Setting
 
 # --- Lógica de Traccar y Cálculos para las Vistas (Integrada) ---
 KNOTS_TO_KMH = 1.852
+
+
+# --- 🔒 NUEVA FUNCIÓN: FILTRAR POSICIONES POR HORARIO LABORAL ---
+def filter_positions_by_working_hours(positions):
+    """
+    Filtra posiciones GPS para quedarse SOLO con las que ocurrieron
+    durante días y horarios laborales configurados.
+    
+    Esto elimina el "ruido" de kilómetros personales para:
+    - Cálculo de bonos
+    - Auxilios de transporte
+    - Kilometraje productivo
+    """
+    if not positions:
+        return []
+    
+    # Obtener configuración de días y horarios laborales
+    settings = {s.key: s.value for s in Setting.query.all()}
+    active_days_str = settings.get('active_days', '1,2,3,4,5')  # Default: Lun-Vie
+    start_time_str = settings.get('start_time', '06:00')
+    end_time_str = settings.get('end_time', '20:00')
+    
+    active_days = active_days_str.split(',')
+    
+    try:
+        start_hour, start_minute = map(int, start_time_str.split(':'))
+        end_hour, end_minute = map(int, end_time_str.split(':'))
+        start_time = time(start_hour, start_minute)
+        end_time = time(end_hour, end_minute)
+    except ValueError:
+        # Si hay error en configuración, devolver todas las posiciones
+        return positions
+    
+    # Filtrar posiciones
+    filtered = []
+    colombia_tz = pytz.timezone('America/Bogota')
+    
+    for pos in positions:
+        try:
+            # Obtener timestamp de la posición
+            fix_time = datetime.fromisoformat(pos.get('fixTime', '').replace('Z', '+00:00'))
+            fix_time_col = fix_time.astimezone(colombia_tz)
+            
+            # Verificar día de la semana (0=Domingo, 1=Lunes, ..., 6=Sábado)
+            day_of_week = str(fix_time_col.weekday() + 1)
+            if day_of_week == '7':  # Domingo
+                day_of_week = '0'
+            
+            # Si no es día laboral, saltar
+            if day_of_week not in active_days:
+                continue
+            
+            # Verificar hora del día
+            pos_time = fix_time_col.time()
+            if not (start_time <= pos_time <= end_time):
+                continue
+            
+            # Esta posición SÍ es laboral
+            filtered.append(pos)
+            
+        except Exception:
+            # Si hay error procesando esta posición, la omitimos
+            continue
+    
+    return filtered
+
 
 def _get_traccar_session():
     """Obtiene una sesión de requests con las credenciales de la app."""
@@ -28,24 +94,39 @@ def get_devices_view():
         response = session.get(f"{base_url}/api/devices")
         response.raise_for_status()
         return response.json()
-    except Exception: return None
+    except Exception:
+        return None
 
 def get_device_by_id_view(device_id):
     """Obtiene un dispositivo por su ID (versión para las vistas)."""
     all_devices = get_devices_view()
-    if all_devices: return next((d for d in all_devices if d['id'] == device_id), None)
+    if all_devices:
+        return next((d for d in all_devices if d['id'] == device_id), None)
     return None
 
 def get_device_positions_view(device_id, from_time, to_time):
-    """Obtiene las posiciones GPS crudas (versión para las vistas)."""
+    """
+    Obtiene las posiciones GPS FILTRADAS por horario laboral.
+    🔒 Solo devuelve posiciones de días/horas laborales.
+    """
     base_url = current_app.config['TRACCAR_URL']
     session = _get_traccar_session()
-    params = {'deviceId': device_id, 'from': from_time.astimezone(pytz.utc).isoformat(), 'to': to_time.astimezone(pytz.utc).isoformat()}
+    params = {
+        'deviceId': device_id,
+        'from': from_time.astimezone(pytz.utc).isoformat(),
+        'to': to_time.astimezone(pytz.utc).isoformat()
+    }
     try:
         response = session.get(f"{base_url}/api/positions", params=params)
         response.raise_for_status()
-        return response.json()
-    except Exception: return []
+        all_positions = response.json()
+        
+        # 🔒 FILTRAR POR HORARIO LABORAL
+        filtered_positions = filter_positions_by_working_hours(all_positions)
+        
+        return filtered_positions
+    except Exception:
+        return []
 
 def calculate_distance_from_points(positions):
     """Calcula la distancia total en metros a partir de una lista de puntos GPS."""
@@ -67,7 +148,10 @@ def calculate_driving_score_view(device_id, days=30):
     """Calcula el Score de Conducción (versión para las vistas)."""
     now = datetime.now(pytz.timezone('America/Bogota'))
     period_start = now - timedelta(days=days)
-    infractions = Infraction.query.filter(Infraction.device_id == device_id, Infraction.timestamp >= period_start).all()
+    infractions = Infraction.query.filter(
+        Infraction.device_id == device_id,
+        Infraction.timestamp >= period_start
+    ).all()
     total_penalty_points = sum(infraction.rule.points for infraction in infractions)
     score = max(0, 100 - total_penalty_points)
     return score, len(infractions)
@@ -86,11 +170,14 @@ def dashboard():
     if current_user.role == 'admin':
         devices = get_devices_view()
         if devices:
-            colombia_tz = pytz.timezone('America/Bogota'); now = datetime.now(colombia_tz)
+            colombia_tz = pytz.timezone('America/Bogota')
+            now = datetime.now(colombia_tz)
             today_start = colombia_tz.localize(datetime.combine(now.date(), time.min))
             month_start = today_start.replace(day=1)
             total_start = colombia_tz.localize(datetime(2000, 1, 1))
+            
             for device in devices:
+                # 🔒 SOLO POSICIONES DE HORARIO LABORAL
                 positions_today = get_device_positions_view(device['id'], today_start, now)
                 positions_month = get_device_positions_view(device['id'], month_start, now)
                 positions_total = get_device_positions_view(device['id'], total_start, now)
@@ -118,11 +205,13 @@ def dashboard():
             return render_template('admin_dashboard.html', title='Mi Dashboard', devices=[])
 
         # Calculamos los datos del resumen para el único dispositivo del empleado
-        colombia_tz = pytz.timezone('America/Bogota'); now = datetime.now(colombia_tz)
+        colombia_tz = pytz.timezone('America/Bogota')
+        now = datetime.now(colombia_tz)
         today_start = colombia_tz.localize(datetime.combine(now.date(), time.min))
         month_start = today_start.replace(day=1)
         total_start = colombia_tz.localize(datetime(2000, 1, 1))
         
+        # 🔒 SOLO POSICIONES DE HORARIO LABORAL
         positions_today = get_device_positions_view(device['id'], today_start, now)
         positions_month = get_device_positions_view(device['id'], month_start, now)
         positions_total = get_device_positions_view(device['id'], total_start, now)
@@ -148,13 +237,16 @@ def device_details(device_id):
         abort(403)
     
     device = get_device_by_id_view(device_id)
-    if not device: abort(404)
+    if not device:
+        abort(404)
 
     # El resto de la función sigue igual...
     score, total_infractions = calculate_driving_score_view(device_id)
-    colombia_tz = pytz.timezone('America/Bogota'); now = datetime.now(colombia_tz)
+    colombia_tz = pytz.timezone('America/Bogota')
+    now = datetime.now(colombia_tz)
     today_start = colombia_tz.localize(datetime.combine(now.date(), time.min))
     
+    # 🔒 SOLO POSICIONES DE HORARIO LABORAL
     positions_today = get_device_positions_view(device_id, today_start, now)
     distance_today = calculate_distance_from_points(positions_today) / 1000
     
@@ -162,17 +254,26 @@ def device_details(device_id):
     if positions_today:
         max_speed_today = max(p.get('speed', 0) for p in positions_today) * KNOTS_TO_KMH
 
-    infractions_today = Infraction.query.filter(Infraction.device_id == device_id, Infraction.timestamp >= today_start).order_by(Infraction.timestamp.desc()).all()
+    infractions_today = Infraction.query.filter(
+        Infraction.device_id == device_id,
+        Infraction.timestamp >= today_start
+    ).order_by(Infraction.timestamp.desc()).all()
     
-    try: locale.setlocale(locale.LC_TIME, 'es_CO.UTF-8')
-    except locale.Error: pass
+    try:
+        locale.setlocale(locale.LC_TIME, 'es_CO.UTF-8')
+    except locale.Error:
+        pass
     formatted_date = now.strftime('%d de %B de %Y')
     
     return render_template(
-        'device_details.html', title=f"Score de {device.get('name', 'Dispositivo')}", 
-        device=device, score=score, total_infractions=total_infractions,
-        distance_today=distance_today, max_speed_today=max_speed_today,
+        'device_details.html',
+        title=f"Score de {device.get('name', 'Dispositivo')}", 
+        device=device,
+        score=score,
+        total_infractions=total_infractions,
+        distance_today=distance_today,
+        max_speed_today=max_speed_today,
         route=positions_today, 
-        infractions_today=infractions_today, current_date=formatted_date
+        infractions_today=infractions_today,
+        current_date=formatted_date
     )
-

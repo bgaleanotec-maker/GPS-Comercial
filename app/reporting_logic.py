@@ -8,11 +8,12 @@ from app.email import send_report_email
 def generate_report_data():
     """
     Recopila y estructura todos los datos necesarios para el reporte diario.
+    🔒 Solo cuenta kilómetros de horario laboral (para bonos/auxilios).
     """
     colombia_tz = pytz.timezone('America/Bogota')
     now = datetime.now(colombia_tz)
     
-    # --- 1. Datos de Dispositivos ---
+    # --- 1. Datos de Dispositivos (FILTRADOS POR HORARIO LABORAL) ---
     devices_data = []
     devices = get_devices_view()
     if devices:
@@ -20,6 +21,7 @@ def generate_report_data():
         month_start = today_start.replace(day=1)
         
         for device in devices:
+            # 🔒 get_device_positions_view YA filtra por horario laboral
             positions_today = get_device_positions_view(device['id'], today_start, now)
             positions_month = get_device_positions_view(device['id'], month_start, now)
             
@@ -41,9 +43,18 @@ def generate_report_data():
     year_start_utc = today_start_utc.replace(month=1, day=1)
 
     for ally in allies:
-        visits_today = Visit.query.filter(Visit.ally_id == ally.id, Visit.timestamp >= today_start_utc).count()
-        visits_week = Visit.query.filter(Visit.ally_id == ally.id, Visit.timestamp >= week_start_utc).count()
-        visits_year = Visit.query.filter(Visit.ally_id == ally.id, Visit.timestamp >= year_start_utc).count()
+        visits_today = Visit.query.filter(
+            Visit.ally_id == ally.id,
+            Visit.timestamp >= today_start_utc
+        ).count()
+        visits_week = Visit.query.filter(
+            Visit.ally_id == ally.id,
+            Visit.timestamp >= week_start_utc
+        ).count()
+        visits_year = Visit.query.filter(
+            Visit.ally_id == ally.id,
+            Visit.timestamp >= year_start_utc
+        ).count()
         
         allies_data.append({
             'name': ally.name,

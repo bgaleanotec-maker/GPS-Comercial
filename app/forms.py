@@ -111,15 +111,19 @@ class UserCreationForm(FlaskForm):
 
 
 
-
-
 class VisitForm(FlaskForm):
     ally_id = SelectField('Aliado Visitado', coerce=int, validators=[DataRequired()])
     category = SelectField('Categoría de la Visita', choices=[
-        ('Mantenimiento', 'Mantenimiento'),
-        ('Formación', 'Formación'),
-        ('Plan de Ventas', 'Plan de Ventas'),
-        ('Otro', 'Otro')
+        ('Visita Cliente', 'Visita Cliente'),
+        ('Visita Prolongue', 'Visita Prolongue'),
+        ('Visita Contratista', 'Visita Contratista'),
+        ('Zonas de Avance', 'Zonas de Avance'),
+        ('Imposibilidades', 'Imposibilidades'),
+        ('Reunión citada Vanti', 'Reunión citada Vanti'),
+        ('Evento especial', 'Evento especial'),
+        ('Trabajo administrativo', 'Trabajo administrativo'),
+        ('Vacaciones – Permiso especial', 'Vacaciones – Permiso especial'),
+        ('Incapacidad', 'Incapacidad')
     ], validators=[DataRequired()])
     observations = TextAreaField('Observaciones')
     evidence = FileField('Cargar Evidencia (Imagen o PDF)', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'pdf'], '¡Solo se permiten imágenes y PDF!')])
