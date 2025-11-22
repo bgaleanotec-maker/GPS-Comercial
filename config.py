@@ -17,7 +17,7 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join(basedir, 'app/static/uploads')
 
-    TRACCAR_URL = os.environ.get('TRACCAR_URL') or 'http://68.183.171.26:8082'
+    TRACCAR_URL = os.environ.get('TRACCAR_URL') or 'http://64.227.85.213:8082'
     TRACCAR_USER = os.environ.get('TRACCAR_USER') or 'admin'
     TRACCAR_PASSWORD = os.environ.get('TRACCAR_PASSWORD') or 'admin'
 
