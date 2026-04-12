@@ -1,31 +1,35 @@
-"""Build script para Render - maneja migraciones de forma segura."""
+"""Build script para Render - inicializa/actualiza BD."""
 import os
-import subprocess
-import sys
+os.environ['ENABLE_BACKGROUND_WORKER'] = 'false'
 
-def run(cmd):
-    """Ejecuta comando con ENABLE_BACKGROUND_WORKER=false."""
-    env = os.environ.copy()
-    env['ENABLE_BACKGROUND_WORKER'] = 'false'
-    print(f">>> {cmd}")
-    result = subprocess.run(cmd, shell=True, env=env, capture_output=True, text=True)
-    if result.stdout:
-        print(result.stdout)
-    if result.stderr:
-        print(result.stderr)
-    return result.returncode
+from app import create_app, db
+from app.models import User, Setting
 
-print("=== GPS Comercial Build ===")
+app = create_app()
+with app.app_context():
+    print("=== Creando/actualizando tablas ===")
+    db.create_all()
 
-# Intentar upgrade normal
-print("Aplicando migraciones...")
-code = run("flask db upgrade")
+    # Admin por defecto
+    if not User.query.filter_by(username='admin').first():
+        admin = User(username='admin', full_name='Administrador',
+                     email='admin@gps.com', role='admin')
+        admin.set_password(os.environ.get('ADMIN_INITIAL_PASSWORD', 'admin123'))
+        db.session.add(admin)
+        print("Admin creado")
 
-if code != 0:
-    print("Primer intento fallo. Haciendo stamp head...")
-    run("flask db stamp head")
-    print("Re-intentando upgrade...")
-    run("flask db upgrade")
+    # Settings por defecto
+    defaults = {
+        'start_time': '06:00', 'end_time': '20:00',
+        'active_days': '1,2,3,4,5', 'visit_interval': '60',
+        'report_time': '08:00', 'report_recipients': '',
+        'sst_recipients': '', 'whatsapp_enabled': 'false',
+        'ultramsg_instance_id': '', 'ultramsg_token': '',
+        'whatsapp_report_time': '08:00',
+    }
+    for key, value in defaults.items():
+        if not Setting.query.filter_by(key=key).first():
+            db.session.add(Setting(key=key, value=value))
 
-print("=== Build completado ===")
-sys.exit(0)
+    db.session.commit()
+    print("=== Build completado ===")
