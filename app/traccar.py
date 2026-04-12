@@ -224,36 +224,45 @@ def get_latest_position_for_app(app, device_id):
 
 
 # ============================================================
-# Utilidades de clasificacion de movimiento
+# Utilidades de clasificacion de movimiento - BOGOTA
 # ============================================================
+# En Bogota los trancones hacen que vehiculos vayan a 3-4 km/h.
+# No basta con velocidad instantanea. Usamos ventana de contexto:
+# - Si en los ultimos N puntos hubo velocidad > 15 km/h, es vehiculo en trancon
+# - Si la velocidad maxima reciente nunca pasa de 8 km/h, es a pie
+# - Umbral puro solo aplica si no hay contexto
 
-def classify_movement(speed_knots):
-    """
-    Clasifica el tipo de movimiento basado en la velocidad.
-    Retorna 'walking' si <= WALKING_SPEED_THRESHOLD km/h, 'vehicle' si es mayor.
-    """
-    speed_kmh = speed_knots * KNOTS_TO_KMH
-    if speed_kmh <= WALKING_SPEED_THRESHOLD:
-        return 'walking'
-    return 'vehicle'
+WALKING_MAX_SPEED = 8.0  # km/h - velocidad maxima realista caminando rapido
+VEHICLE_INDICATOR_SPEED = 15.0  # km/h - si alguna vez llego a esto, es vehiculo
+CONTEXT_WINDOW = 10  # ultimos N puntos para evaluar contexto
 
 
 def calculate_route_distances(positions):
     """
     Calcula distancias recorridas separadas por modo de transporte.
-    Retorna dict con:
-      - walking_km: distancia a pie
-      - vehicle_km: distancia en vehiculo
-      - total_km: distancia total
-      - max_speed_kmh: velocidad maxima registrada
-      - avg_speed_kmh: velocidad promedio (excluyendo paradas)
+    Logica adaptada para Bogota (trancones = vehiculo lento, no es caminar).
+
+    Algoritmo:
+    1. Analiza ventana de contexto de ultimos N puntos
+    2. Si max velocidad en ventana > 15 km/h -> vehiculo (incluye trancon)
+    3. Si max velocidad en ventana <= 8 km/h sostenido -> a pie
+    4. Zona gris (8-15 km/h) -> vehiculo (en Bogota es mas probable trancon)
     """
     from app.utils import haversine_distance
+
+    if not positions or len(positions) < 2:
+        return {
+            'walking_km': 0, 'vehicle_km': 0, 'total_km': 0,
+            'max_speed_kmh': 0, 'avg_speed_kmh': 0,
+        }
 
     walking_meters = 0.0
     vehicle_meters = 0.0
     max_speed_kmh = 0.0
     speed_readings = []
+
+    # Pre-calcular velocidades en km/h
+    speeds_kmh = [p.get('speed', 0) * KNOTS_TO_KMH for p in positions]
 
     for i in range(1, len(positions)):
         prev = positions[i - 1]
@@ -264,19 +273,31 @@ def calculate_route_distances(positions):
             curr.get('latitude', 0), curr.get('longitude', 0)
         )
 
-        speed_knots = curr.get('speed', 0)
-        speed_kmh = speed_knots * KNOTS_TO_KMH
+        speed_kmh = speeds_kmh[i]
 
         if speed_kmh > max_speed_kmh:
             max_speed_kmh = speed_kmh
 
-        if speed_kmh > 1.0:  # Excluir paradas del promedio
+        if speed_kmh > 1.0:
             speed_readings.append(speed_kmh)
 
-        movement_type = classify_movement(speed_knots)
-        if movement_type == 'walking':
+        # Ventana de contexto: max velocidad en ultimos N puntos
+        window_start = max(0, i - CONTEXT_WINDOW)
+        window_max = max(speeds_kmh[window_start:i + 1])
+
+        # Tambien mirar adelante (si hay pico futuro cercano, es vehiculo arrancando)
+        window_end = min(len(speeds_kmh), i + CONTEXT_WINDOW)
+        forward_max = max(speeds_kmh[i:window_end]) if i < len(speeds_kmh) else 0
+
+        # Clasificacion con contexto Bogota
+        if window_max > VEHICLE_INDICATOR_SPEED or forward_max > VEHICLE_INDICATOR_SPEED:
+            # Hubo o habra velocidad alta cercana -> vehiculo (trancon)
+            vehicle_meters += distance
+        elif window_max <= WALKING_MAX_SPEED and speed_kmh <= WALKING_MAX_SPEED:
+            # Nunca paso de 8 km/h en la ventana -> caminando
             walking_meters += distance
         else:
+            # Zona gris -> en Bogota = vehiculo en trancon
             vehicle_meters += distance
 
     avg_speed = sum(speed_readings) / len(speed_readings) if speed_readings else 0.0
