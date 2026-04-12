@@ -1,76 +1,125 @@
-<!-- Ruta: SST/app/templates/analytics/analytics_dashboard.html -->
 {% extends "base.html" %}
 
+{% block head %}
+<style>
+    @keyframes fade-in-up {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes count-up {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fade-in { animation: fade-in-up 0.4s ease-out both; }
+    .animate-fade-in-1 { animation: fade-in-up 0.4s ease-out 0.05s both; }
+    .animate-fade-in-2 { animation: fade-in-up 0.4s ease-out 0.1s both; }
+    .animate-fade-in-3 { animation: fade-in-up 0.4s ease-out 0.15s both; }
+    .animate-count { animation: count-up 0.5s ease-out 0.2s both; }
+    .kpi-card {
+        position: relative;
+        overflow: hidden;
+    }
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+        transform: translate(30px, -30px);
+    }
+    .table-row-hover:hover {
+        background: linear-gradient(90deg, rgba(99,102,241,0.04) 0%, rgba(139,92,246,0.04) 100%);
+    }
+    .progress-bar {
+        transition: width 0.8s ease-out;
+    }
+    .export-btn {
+        backdrop-filter: blur(8px);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-    <!-- Header -->
-    <div class="mb-8">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <div class="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg">
-                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8" x-data="{ filtersOpen: false }">
+
+    <!-- Encabezado -->
+    <div class="mb-6 animate-fade-in">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex items-center space-x-3.5">
+                <div class="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-sm">
+                    <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Analítica Avanzada</h1>
-                    <p class="text-gray-600">Dashboard de inteligencia de negocio</p>
+                    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Analitica Avanzada</h1>
+                    <p class="text-sm text-gray-500">Dashboard de inteligencia de negocio</p>
                 </div>
             </div>
-            
-            <!-- Botones de Exportación -->
-            <div class="flex space-x-3">
-                <button onclick="alert('Funcionalidad PDF en desarrollo')" 
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300">
-                    <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+
+            <!-- Botones de exportacion y filtros movil -->
+            <div class="flex items-center gap-2">
+                <!-- Boton filtros en movil -->
+                <button @click="filtersOpen = !filtersOpen" class="lg:hidden inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors touch-target">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    Filtros
+                </button>
+
+                <button onclick="alert('Funcionalidad PDF en desarrollo')"
+                        class="export-btn inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-colors touch-target">
+                    <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                     </svg>
-                    Exportar PDF
+                    <span class="hidden sm:inline">Exportar</span> PDF
                 </button>
-                <a href="{{ url_for('analytics.export_dashboard', date_from=start_date, date_to=end_date, employee=selected_employee or 'all', ally=selected_ally or 'all') }}" 
-                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105">
-                    <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+
+                <a href="{{ url_for('analytics.export_dashboard', date_from=start_date, date_to=end_date, employee=selected_employee or 'all', ally=selected_ally or 'all') }}"
+                   class="export-btn inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl hover:bg-emerald-100 transition-colors touch-target">
+                    <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
-                    Exportar Excel
+                    <span class="hidden sm:inline">Exportar</span> Excel
                 </a>
             </div>
-
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-5">
+
         <!-- Sidebar de Filtros -->
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 sticky top-20">
-                <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200 rounded-t-xl">
-                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                        <svg class="h-5 w-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="lg:col-span-1"
+             :class="{ 'hidden lg:block': !filtersOpen, 'block': filtersOpen }">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 sticky top-20 animate-fade-in">
+                <div class="px-5 py-3.5 bg-gradient-to-r from-indigo-50/80 to-purple-50/80 border-b border-gray-100 rounded-t-2xl">
+                    <h3 class="text-sm font-semibold text-gray-800 flex items-center">
+                        <svg class="h-4 w-4 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
                         </svg>
                         Filtros
                     </h3>
                 </div>
-                
-                <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="p-6 space-y-6">
-                    <!-- Rango de Fechas -->
+
+                <form method="GET" action="{{ url_for('analytics.analytics_dashboard') }}" class="p-5 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
-                        <input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Fecha Inicio</label>
+                        <input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50/50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:bg-white transition-all">
                     </div>
-                    
+
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
-                        <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Fecha Fin</label>
+                        <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50/50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:bg-white transition-all">
                     </div>
-                    
-                    <!-- Separador -->
-                    <div class="border-t border-gray-200"></div>
-                    
-                    <!-- Filtro por Empleado -->
+
+                    <div class="border-t border-gray-100"></div>
+
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Empleado</label>
-                        <select name="employee_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Empleado</label>
+                        <select name="employee_id" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50/50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:bg-white transition-all">
                             <option value="">Todos los empleados</option>
                             {% for user in all_users %}
                             <option value="{{ user.id }}" {% if selected_employee == user.id %}selected{% endif %}>
@@ -79,11 +128,10 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
-                    <!-- Filtro por Aliado -->
+
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Aliado</label>
-                        <select name="ally_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Aliado</label>
+                        <select name="ally_id" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50/50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:bg-white transition-all">
                             <option value="">Todos los aliados</option>
                             {% for ally in all_allies %}
                             <option value="{{ ally.id }}" {% if selected_ally == ally.id %}selected{% endif %}>
@@ -92,13 +140,12 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
-                    <!-- Botones -->
-                    <div class="space-y-2">
-                        <button type="submit" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-medium shadow-md">
+
+                    <div class="space-y-2 pt-1">
+                        <button type="submit" class="w-full px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 active:bg-indigo-800 transition-colors shadow-sm touch-target">
                             Aplicar Filtros
                         </button>
-                        <a href="{{ url_for('analytics.analytics_dashboard') }}" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium text-center">
+                        <a href="{{ url_for('analytics.analytics_dashboard') }}" class="block w-full px-4 py-2.5 bg-gray-50 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-100 transition-colors text-center border border-gray-200 touch-target">
                             Limpiar
                         </a>
                     </div>
@@ -107,208 +154,337 @@
         </div>
 
         <!-- Contenido Principal -->
-        <div class="lg:col-span-3 space-y-6">
-            
-            <!-- Tarjetas de Resumen General -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="lg:col-span-3 space-y-5">
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <!-- Total Empleados -->
-                <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-                    <div class="flex items-center justify-between">
+                <div class="kpi-card bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-sm p-5 text-white animate-fade-in-1">
+                    <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-blue-100 text-sm font-medium">Total Empleados</p>
-                            <p class="text-4xl font-bold mt-2">{{ employees_data|length }}</p>
+                            <p class="text-indigo-100 text-xs font-medium uppercase tracking-wider">Total Empleados</p>
+                            <p class="text-3xl font-bold mt-1.5 animate-count">{{ employees_data|length }}</p>
                         </div>
-                        <div class="bg-white/20 p-3 rounded-lg">
-                            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="bg-white/10 p-2.5 rounded-xl">
+                            <svg class="h-5 w-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                             </svg>
                         </div>
                     </div>
+                    <div class="mt-3 flex items-center text-xs text-indigo-200">
+                        <svg class="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        Activos en el periodo
+                    </div>
                 </div>
 
                 <!-- Total Aliados -->
-                <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-                    <div class="flex items-center justify-between">
+                <div class="kpi-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-sm p-5 text-white animate-fade-in-2">
+                    <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-purple-100 text-sm font-medium">Total Aliados</p>
-                            <p class="text-4xl font-bold mt-2">{{ allies_data|length }}</p>
+                            <p class="text-purple-100 text-xs font-medium uppercase tracking-wider">Total Aliados</p>
+                            <p class="text-3xl font-bold mt-1.5 animate-count">{{ allies_data|length }}</p>
                         </div>
-                        <div class="bg-white/20 p-3 rounded-lg">
-                            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="bg-white/10 p-2.5 rounded-xl">
+                            <svg class="h-5 w-5 text-purple-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                             </svg>
                         </div>
                     </div>
+                    <div class="mt-3 flex items-center text-xs text-purple-200">
+                        <svg class="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        Comerciales registrados
+                    </div>
                 </div>
 
-                <!-- Total Visitas Período -->
-                <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
-                    <div class="flex items-center justify-between">
+                <!-- Total Visitas -->
+                <div class="kpi-card bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-sm p-5 text-white animate-fade-in-3">
+                    <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-green-100 text-sm font-medium">Visitas (Período)</p>
-                            <p class="text-4xl font-bold mt-2">{{ allies_data|sum(attribute='visits_period') }}</p>
+                            <p class="text-emerald-100 text-xs font-medium uppercase tracking-wider">Visitas (Periodo)</p>
+                            <p class="text-3xl font-bold mt-1.5 animate-count">{{ allies_data|sum(attribute='visits_period') }}</p>
                         </div>
-                        <div class="bg-white/20 p-3 rounded-lg">
-                            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="bg-white/10 p-2.5 rounded-xl">
+                            <svg class="h-5 w-5 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                             </svg>
                         </div>
                     </div>
+                    <div class="mt-3 flex items-center text-xs text-emerald-200">
+                        <svg class="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Registradas en geocercas
+                    </div>
                 </div>
             </div>
 
-            <!-- Sección: Análisis por Empleado -->
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200">
-                <div class="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 rounded-t-xl">
+            <!-- Tabla: Analisis por Empleado -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 animate-fade-in-2">
+                <div class="px-5 py-3.5 bg-gradient-to-r from-indigo-50/60 to-blue-50/60 border-b border-gray-100 rounded-t-2xl">
                     <div class="flex items-center justify-between">
-                        <h2 class="text-xl font-semibold text-gray-900 flex items-center">
-                            <svg class="h-6 w-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <h2 class="text-sm font-semibold text-gray-800 flex items-center">
+                            <svg class="h-4 w-4 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                             </svg>
-                            Análisis por Empleado/Vehículo
+                            Analisis por Empleado / Vehiculo
                         </h2>
                         {% if employees_data %}
-                        <span class="text-sm text-gray-600">{{ employees_data|length }} empleado(s)</span>
+                        <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">{{ employees_data|length }} empleado(s)</span>
                         {% endif %}
                     </div>
                 </div>
-                
-                <div class="p-6">
+
+                <div class="p-5">
                     {% if employees_data %}
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Empleado</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vehículo</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Hoy (km)</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Mes (km)</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total (km)</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Visitas</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Infracciones</th>
+
+                    <!-- Cards movil -->
+                    <div class="sm:hidden space-y-3">
+                        {% for emp in employees_data %}
+                        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <div class="flex items-center mb-3">
+                                <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
+                                    <span class="text-white font-semibold text-xs">{{ emp.full_name[0].upper() }}</span>
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-semibold text-gray-900">{{ emp.full_name }}</div>
+                                    <div class="text-xs text-gray-400">{{ emp.device_name }}</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div class="bg-white rounded-lg p-2 border border-gray-100">
+                                    <div class="text-xs text-gray-400">Hoy</div>
+                                    <div class="text-sm font-semibold text-gray-900">{{ "%.1f"|format(emp.distance_today_km) }} km</div>
+                                </div>
+                                <div class="bg-white rounded-lg p-2 border border-gray-100">
+                                    <div class="text-xs text-gray-400">Visitas</div>
+                                    <div class="text-sm font-semibold text-emerald-600">{{ emp.visits_period }}</div>
+                                </div>
+                                <div class="bg-white rounded-lg p-2 border border-gray-100">
+                                    <div class="text-xs text-gray-400">Infrac.</div>
+                                    <div class="text-sm font-semibold {% if emp.infractions_period > 0 %}text-red-600{% else %}text-gray-400{% endif %}">{{ emp.infractions_period }}</div>
+                                </div>
+                            </div>
+                            <!-- Barra de progreso de rendimiento -->
+                            {% set max_visits = employees_data|map(attribute='visits_period')|max %}
+                            {% if max_visits and max_visits > 0 %}
+                            <div class="mt-3">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-gray-400">Rendimiento</span>
+                                    <span class="text-indigo-600 font-medium">{{ ((emp.visits_period / max_visits) * 100)|int }}%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="progress-bar h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style="width: {{ ((emp.visits_period / max_visits) * 100)|int }}%"></div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Tabla desktop -->
+                    <div class="hidden sm:block overflow-x-auto rounded-xl border border-gray-100">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="bg-gray-50/80">
+                                    <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
+                                    <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehiculo</th>
+                                    <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hoy (km)</th>
+                                    <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Mes (km)</th>
+                                    <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total (km)</th>
+                                    <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Visitas</th>
+                                    <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Rendimiento</th>
+                                    <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Infracciones</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody class="divide-y divide-gray-50">
+                                {% set max_visits = employees_data|map(attribute='visits_period')|max %}
                                 {% for emp in employees_data %}
-                                <tr class="hover:bg-indigo-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                <tr class="table-row-hover transition-colors duration-150">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
-                                                <span class="text-white font-bold text-sm">{{ emp.full_name[0].upper() }}</span>
+                                            <div class="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                                                <span class="text-white font-semibold text-xs">{{ emp.full_name[0].upper() }}</span>
                                             </div>
-                                            <div class="ml-4">
+                                            <div class="ml-3">
                                                 <div class="text-sm font-medium text-gray-900">{{ emp.full_name }}</div>
-                                                <div class="text-sm text-gray-500">{{ emp.username }}</div>
+                                                <div class="text-xs text-gray-400">{{ emp.username }}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ emp.device_name }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">{{ "%.2f"|format(emp.distance_today_km) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">{{ "%.2f"|format(emp.distance_month_km) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">{{ "%.2f"|format(emp.distance_total_km) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ emp.device_name }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium text-gray-900">{{ "%.2f"|format(emp.distance_today_km) }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium text-gray-900">{{ "%.2f"|format(emp.distance_month_km) }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium text-gray-900">{{ "%.2f"|format(emp.distance_total_km) }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
                                             {{ emp.visits_period }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if emp.infractions_period > 0 %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        {% if max_visits and max_visits > 0 %}
+                                        <div class="flex items-center gap-2">
+                                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div class="progress-bar h-full bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full" style="width: {{ ((emp.visits_period / max_visits) * 100)|int }}%"></div>
+                                            </div>
+                                            <span class="text-xs text-gray-400 w-8 text-right">{{ ((emp.visits_period / max_visits) * 100)|int }}%</span>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold {% if emp.infractions_period > 0 %}bg-red-50 text-red-600 border border-red-100{% else %}bg-gray-50 text-gray-400 border border-gray-100{% endif %}">
                                             {{ emp.infractions_period }}
                                         </span>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
-                            <tfoot class="bg-gray-50">
-                                <tr>
-                                    <td colspan="2" class="px-6 py-4 text-sm font-bold text-gray-900">TOTALES</td>
-                                    <td class="px-6 py-4 text-right text-sm font-bold text-indigo-600">{{ "%.2f"|format(employees_data|sum(attribute='distance_today_km')) }}</td>
-                                    <td class="px-6 py-4 text-right text-sm font-bold text-indigo-600">{{ "%.2f"|format(employees_data|sum(attribute='distance_month_km')) }}</td>
-                                    <td class="px-6 py-4 text-right text-sm font-bold text-indigo-600">{{ "%.2f"|format(employees_data|sum(attribute='distance_total_km')) }}</td>
-                                    <td class="px-6 py-4 text-right text-sm font-bold text-green-600">{{ employees_data|sum(attribute='visits_period') }}</td>
-                                    <td class="px-6 py-4 text-right text-sm font-bold text-red-600">{{ employees_data|sum(attribute='infractions_period') }}</td>
+                            <tfoot>
+                                <tr class="bg-gray-50/80 border-t border-gray-100">
+                                    <td colspan="2" class="px-4 py-3 text-xs font-bold text-gray-700 uppercase tracking-wider">Totales</td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-indigo-600">{{ "%.2f"|format(employees_data|sum(attribute='distance_today_km')) }}</td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-indigo-600">{{ "%.2f"|format(employees_data|sum(attribute='distance_month_km')) }}</td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-indigo-600">{{ "%.2f"|format(employees_data|sum(attribute='distance_total_km')) }}</td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-emerald-600">{{ employees_data|sum(attribute='visits_period') }}</td>
+                                    <td class="px-4 py-3"></td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-red-500">{{ employees_data|sum(attribute='infractions_period') }}</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                     {% else %}
-                    <div class="text-center py-12">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                        </svg>
-                        <p class="mt-4 text-sm text-gray-500">No hay datos de empleados para mostrar</p>
+                    <div class="text-center py-16">
+                        <div class="w-12 h-12 mx-auto rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                            <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                            </svg>
+                        </div>
+                        <p class="text-sm text-gray-500 font-medium">No hay datos de empleados para mostrar</p>
+                        <p class="text-xs text-gray-400 mt-1">Ajusta los filtros o selecciona otro periodo</p>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Sección: Análisis por Aliado -->
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200">
-                <div class="px-6 py-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200 rounded-t-xl">
+            <!-- Tabla: Analisis por Aliado -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 animate-fade-in-3">
+                <div class="px-5 py-3.5 bg-gradient-to-r from-purple-50/60 to-pink-50/60 border-b border-gray-100 rounded-t-2xl">
                     <div class="flex items-center justify-between">
-                        <h2 class="text-xl font-semibold text-gray-900 flex items-center">
-                            <svg class="h-6 w-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <h2 class="text-sm font-semibold text-gray-800 flex items-center">
+                            <svg class="h-4 w-4 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                             </svg>
-                            Análisis por Aliado Comercial
+                            Analisis por Aliado Comercial
                         </h2>
                         {% if allies_data %}
-                        <span class="text-sm text-gray-600">{{ allies_data|length }} aliado(s)</span>
+                        <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">{{ allies_data|length }} aliado(s)</span>
                         {% endif %}
                     </div>
                 </div>
-                
-                <div class="p-6">
+
+                <div class="p-5">
                     {% if allies_data %}
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Aliado</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Categoría</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Visitas (Período)</th>
-                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Empleados Únicos</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Última Visita</th>
-                                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
+
+                    <!-- Cards movil -->
+                    <div class="sm:hidden space-y-3">
+                        {% for ally in allies_data %}
+                        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center">
+                                    <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-sm">
+                                        <span class="text-white font-semibold text-xs">{{ ally.name[0].upper() }}</span>
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-sm font-semibold text-gray-900">{{ ally.name }}</div>
+                                        <div class="text-xs text-gray-400">{{ ally.category or 'General' }}</div>
+                                    </div>
+                                </div>
+                                {% if ally.status == 'active' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
+                                    Activo
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                                    <span class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1.5"></span>
+                                    Inactivo
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div class="bg-white rounded-lg p-2 border border-gray-100">
+                                    <div class="text-xs text-gray-400">Visitas</div>
+                                    <div class="text-sm font-semibold text-purple-600">{{ ally.visits_period }}</div>
+                                </div>
+                                <div class="bg-white rounded-lg p-2 border border-gray-100">
+                                    <div class="text-xs text-gray-400">Empleados</div>
+                                    <div class="text-sm font-semibold text-gray-900">{{ ally.unique_employees }}</div>
+                                </div>
+                                <div class="bg-white rounded-lg p-2 border border-gray-100">
+                                    <div class="text-xs text-gray-400">Ultima</div>
+                                    <div class="text-xs font-semibold text-gray-600">
+                                        {% if ally.last_visit %}{{ ally.last_visit.strftime('%d/%m') }}{% else %}--{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Tabla desktop -->
+                    <div class="hidden sm:block overflow-x-auto rounded-xl border border-gray-100">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="bg-gray-50/80">
+                                    <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aliado</th>
+                                    <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+                                    <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Visitas</th>
+                                    <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Empleados</th>
+                                    <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ultima Visita</th>
+                                    <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody class="divide-y divide-gray-50">
                                 {% for ally in allies_data %}
-                                <tr class="hover:bg-purple-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                <tr class="table-row-hover transition-colors duration-150">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <div class="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-md">
-                                                <span class="text-white font-bold text-sm">{{ ally.name[0].upper() }}</span>
+                                            <div class="h-8 w-8 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                                                <span class="text-white font-semibold text-xs">{{ ally.name[0].upper() }}</span>
                                             </div>
-                                            <div class="ml-4">
+                                            <div class="ml-3">
                                                 <div class="text-sm font-medium text-gray-900">{{ ally.name }}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100">
                                             {{ ally.category or 'General' }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900">{{ ally.visits_period }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">{{ ally.unique_employees }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-bold text-gray-900">{{ ally.visits_period }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm text-gray-600">{{ ally.unique_employees }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                         {% if ally.last_visit %}
                                             {{ ally.last_visit.strftime('%d/%m/%Y') }}
-                                            <div class="text-xs text-gray-500">Hace {{ ally.days_since_last_visit }} día(s)</div>
+                                            <div class="text-xs text-gray-400">Hace {{ ally.days_since_last_visit }} dia(s)</div>
                                         {% else %}
-                                            <span class="text-gray-400">Nunca</span>
+                                            <span class="text-gray-300">Nunca</span>
                                         {% endif %}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <td class="px-4 py-3 whitespace-nowrap text-center">
                                         {% if ally.status == 'active' %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            <span class="w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
                                             Activo
                                         </span>
                                         {% else %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            <span class="w-2 h-2 bg-gray-500 rounded-full mr-1.5"></span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200">
+                                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1.5"></span>
                                             Inactivo
                                         </span>
                                         {% endif %}
@@ -316,74 +492,79 @@
                                 </tr>
                                 {% endfor %}
                             </tbody>
-                            <tfoot class="bg-gray-50">
-                                <tr>
-                                    <td colspan="2" class="px-6 py-4 text-sm font-bold text-gray-900">TOTALES</td>
-                                    <td class="px-6 py-4 text-right text-sm font-bold text-purple-600">{{ allies_data|sum(attribute='visits_period') }}</td>
+                            <tfoot>
+                                <tr class="bg-gray-50/80 border-t border-gray-100">
+                                    <td colspan="2" class="px-4 py-3 text-xs font-bold text-gray-700 uppercase tracking-wider">Totales</td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-purple-600">{{ allies_data|sum(attribute='visits_period') }}</td>
                                     <td colspan="3"></td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
-                    
-                    <!-- Resumen de Estados -->
-                    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-green-800">Aliados Activos</p>
-                                    <p class="text-2xl font-bold text-green-900 mt-1">
-                                        {{ allies_data|selectattr('status', 'equalto', 'active')|list|length }}
-                                    </p>
-                                </div>
-                                <svg class="h-10 w-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                    <!-- Resumen de estados -->
+                    <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="flex items-center justify-between p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                            <div>
+                                <p class="text-xs font-medium text-emerald-600 uppercase tracking-wider">Activos</p>
+                                <p class="text-2xl font-bold text-emerald-700 mt-0.5">
+                                    {{ allies_data|selectattr('status', 'equalto', 'active')|list|length }}
+                                </p>
+                            </div>
+                            <div class="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+                                <svg class="h-4.5 w-4.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
                         </div>
-                        
-                        <div class="bg-gray-50 border-l-4 border-gray-500 p-4 rounded-lg">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-800">Aliados Inactivos</p>
-                                    <p class="text-2xl font-bold text-gray-900 mt-1">
-                                        {{ allies_data|selectattr('status', 'equalto', 'inactive')|list|length }}
-                                    </p>
-                                </div>
-                                <svg class="h-10 w-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                        <div class="flex items-center justify-between p-3.5 bg-gray-50/80 rounded-xl border border-gray-200">
+                            <div>
+                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Inactivos</p>
+                                <p class="text-2xl font-bold text-gray-700 mt-0.5">
+                                    {{ allies_data|selectattr('status', 'equalto', 'inactive')|list|length }}
+                                </p>
+                            </div>
+                            <div class="w-9 h-9 rounded-xl bg-gray-200 flex items-center justify-center">
+                                <svg class="h-4.5 w-4.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
                         </div>
-                        
-                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-blue-800">Promedio Visitas</p>
-                                    <p class="text-2xl font-bold text-blue-900 mt-1">
-                                        {% if allies_data|length > 0 %}
-                                        {{ "%.1f"|format(allies_data|sum(attribute='visits_period') / allies_data|length) }}
-                                        {% else %}
-                                        0
-                                        {% endif %}
-                                    </p>
-                                </div>
-                                <svg class="h-10 w-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                        <div class="flex items-center justify-between p-3.5 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                            <div>
+                                <p class="text-xs font-medium text-indigo-500 uppercase tracking-wider">Promedio Visitas</p>
+                                <p class="text-2xl font-bold text-indigo-700 mt-0.5">
+                                    {% if allies_data|length > 0 %}
+                                    {{ "%.1f"|format(allies_data|sum(attribute='visits_period') / allies_data|length) }}
+                                    {% else %}
+                                    0
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
+                                <svg class="h-4.5 w-4.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                 </svg>
                             </div>
                         </div>
                     </div>
+
                     {% else %}
-                    <div class="text-center py-12">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                        </svg>
-                        <p class="mt-4 text-sm text-gray-500">No hay datos de aliados para mostrar</p>
+                    <div class="text-center py-16">
+                        <div class="w-12 h-12 mx-auto rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                            <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                        <p class="text-sm text-gray-500 font-medium">No hay datos de aliados para mostrar</p>
+                        <p class="text-xs text-gray-400 mt-1">Ajusta los filtros o selecciona otro periodo</p>
                     </div>
                     {% endif %}
                 </div>
             </div>
+
         </div>
     </div>
 </div>
