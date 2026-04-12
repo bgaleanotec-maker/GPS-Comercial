@@ -2,7 +2,7 @@ services:
   - type: web
     name: gps-comercial
     runtime: python
-    buildCommand: pip install -r requirements.txt && ENABLE_BACKGROUND_WORKER=false flask db upgrade 2>/dev/null || (ENABLE_BACKGROUND_WORKER=false flask db stamp head && ENABLE_BACKGROUND_WORKER=false flask db upgrade)
+    buildCommand: pip install -r requirements.txt && python build_render.py
     startCommand: gunicorn --preload -w 1 run:app
     healthCheckPath: /health
     envVars:
