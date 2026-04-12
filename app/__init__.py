@@ -76,8 +76,11 @@ def create_app(config_class=Config):
 
     # Iniciar worker de fondo (deteccion automatica de visitas + reportes)
     if os.environ.get('ENABLE_BACKGROUND_WORKER', 'true').lower() != 'false':
-        from app.background import start_background_worker
-        start_background_worker(app)
+        try:
+            from app.background import start_background_worker
+            start_background_worker(app)
+        except Exception as e:
+            logger.warning("No se pudo iniciar el background worker: %s", e)
 
     return app
 
