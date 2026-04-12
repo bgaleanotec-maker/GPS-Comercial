@@ -12,7 +12,7 @@ from app import db
 from app.models import User, Ally, Visit, Setting
 from app.email import send_infraction_alert, send_report_email
 from app.reporting_logic import generate_report_data
-from app.utils import is_working_hours, haversine_distance
+from app.utils import is_working_hours, haversine_distance, is_user_trackable
 from app.traccar import get_devices_for_app, get_latest_position_for_app
 
 logger = logging.getLogger(__name__)
@@ -62,11 +62,18 @@ def check_for_visits(app, device, all_allies):
                 if (fix_time_utc - last_ts) < timedelta(minutes=visit_interval_minutes):
                     continue
 
+            user = User.query.filter_by(traccar_device_id=device_id).first()
+            # Verificar estado del usuario (vacaciones, incapacidad, etc.)
+            if not is_user_trackable(user):
+                logger.info("Usuario %s no trackeable (estado: %s). Saltando.",
+                           user.username if user else 'N/A',
+                           user.employee_status if user else 'N/A')
+                return
+
             logger.info(
                 "NUEVA VISITA AUTOMATICA: Dispositivo %s -> Aliado %s (%.0fm)",
                 device_name, ally.name, distance
             )
-            user = User.query.filter_by(traccar_device_id=device_id).first()
             new_visit = Visit(
                 timestamp=fix_time_utc,
                 device_id=device_id,
@@ -133,6 +140,43 @@ def check_and_send_report(app):
             logger.info("--- REPORTE DIARIO ENVIADO ---")
 
 
+def check_and_send_whatsapp(app):
+    """Verifica si es hora de enviar notificaciones WhatsApp a lideres."""
+    global _last_whatsapp_sent_day
+    with app.app_context():
+        settings = {s.key: s.value for s in Setting.query.all()}
+        if settings.get('whatsapp_enabled', 'false') != 'true':
+            return
+
+        whatsapp_time_str = settings.get('whatsapp_report_time', '')
+        if not whatsapp_time_str:
+            return
+
+        colombia_tz = pytz.timezone('America/Bogota')
+        now_colombia = datetime.now(colombia_tz)
+
+        try:
+            wh_hour, wh_minute = map(int, whatsapp_time_str.split(':'))
+        except ValueError:
+            return
+
+        if (now_colombia.hour == wh_hour and
+                now_colombia.minute == wh_minute and
+                now_colombia.date() != _last_whatsapp_sent_day):
+            logger.info("--- ENVIANDO NOTIFICACIONES WHATSAPP ---")
+            try:
+                from app.whatsapp import send_leader_notifications
+                send_leader_notifications(app)
+                _last_whatsapp_sent_day = now_colombia.date()
+                logger.info("--- NOTIFICACIONES WHATSAPP ENVIADAS ---")
+            except Exception as e:
+                logger.error("Error enviando WhatsApp: %s", e)
+
+
+# Variables de tracking de envios
+_last_whatsapp_sent_day = None
+
+
 def _background_loop(app):
     """Funcion principal del hilo de fondo."""
     logger.info("Hilo de fondo iniciado. Evaluacion cada 60 segundos.")
@@ -142,6 +186,7 @@ def _background_loop(app):
             with app.app_context():
                 run_periodic_evaluation(app)
                 check_and_send_report(app)
+                check_and_send_whatsapp(app)
         except Exception as e:
             logger.error("Error en el hilo de fondo: %s", e)
         time.sleep(60)

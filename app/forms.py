@@ -71,6 +71,31 @@ class VisitForm(FlaskForm):
     evidence = FileField('Cargar Evidencia (Imagen o PDF)', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'pdf'], '¡Solo se permiten imágenes y PDF!')])
     submit = SubmitField('Registrar Visita')
 
+# --- Formulario de Edicion de Usuario ---
+
+class UserEditForm(FlaskForm):
+    """Formulario para editar usuario con direcciones y estado."""
+    full_name = StringField('Nombre Completo', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    phone_number = StringField('Telefono WhatsApp')
+    home_address = StringField('Direccion Residencia')
+    work_address = StringField('Direccion Trabajo')
+    categoria = SelectField('Categoria', choices=[
+        ('Vantilisto', 'Vantilisto'), ('Seguros', 'Seguros'), ('VantiMax', 'VantiMax'),
+        ('Comercial', 'Comercial'), ('Residencial', 'Residencial'), ('Nueva Edificacion', 'Nueva Edificacion')
+    ])
+    filial = SelectField('Filial', choices=[
+        ('Vanti', 'Vanti'), ('GOR', 'GOR'), ('Nacer', 'Nacer'), ('Cundi', 'Cundi')
+    ])
+    employee_status = SelectField('Estado', choices=[
+        ('activo', 'Activo'), ('vacaciones', 'Vacaciones'), ('incapacidad', 'Incapacidad'),
+        ('licencia', 'Licencia'), ('retirado', 'Retirado')
+    ])
+    role = SelectField('Rol', choices=[
+        ('empleado', 'Empleado'), ('lider', 'Lider de Negocio'), ('admin', 'Administrador')
+    ])
+    submit = SubmitField('Guardar')
+
 # --- NUEVO: Formulario de Creación de Usuario ---
 
 class UserCreationForm(FlaskForm):

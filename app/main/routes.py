@@ -62,6 +62,11 @@ def health_check():
     return {'status': 'ok'}, 200
 
 
+@bp.route('/offline')
+def offline():
+    return render_template('offline.html', title='Sin Conexion')
+
+
 @bp.route('/')
 @bp.route('/index')
 def index():

@@ -100,7 +100,11 @@ def manage_settings():
                 'report_time': report_time.strftime('%H:%M'),
                 'report_recipients': form.report_recipients.data.strip() if form.report_recipients.data else '',
                 'active_days': ",".join(form.active_days.data),
-                'sst_recipients': form.sst_recipients.data.strip() if form.sst_recipients.data else ''
+                'sst_recipients': form.sst_recipients.data.strip() if form.sst_recipients.data else '',
+                'whatsapp_enabled': request.form.get('whatsapp_enabled', 'false'),
+                'ultramsg_instance_id': request.form.get('ultramsg_instance_id', '').strip(),
+                'ultramsg_token': request.form.get('ultramsg_token', '').strip(),
+                'whatsapp_report_time': request.form.get('whatsapp_report_time', '08:00').strip(),
             }
 
             for key, value in settings_to_save.items():
@@ -128,5 +132,11 @@ def manage_settings():
         form.report_time.data = datetime.strptime(settings.get('report_time', '08:00'), '%H:%M').time()
         form.report_recipients.data = settings.get('report_recipients', '')
         form.sst_recipients.data = settings.get('sst_recipients', '')
+
+        # WhatsApp settings for template context
+        form.whatsapp_enabled = settings.get('whatsapp_enabled', 'false')
+        form.ultramsg_instance_id = settings.get('ultramsg_instance_id', '')
+        form.ultramsg_token = settings.get('ultramsg_token', '')
+        form.whatsapp_report_time = settings.get('whatsapp_report_time', '08:00')
 
     return render_template('scoring/manage_settings.html', title='Configuración General', form=form)

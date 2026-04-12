@@ -19,6 +19,23 @@ class User(UserMixin, db.Model):
     categoria = db.Column(db.String(50), index=True, default='Vantilisto')
     filial = db.Column(db.String(50), index=True, default='Vanti')
 
+    # Direcciones
+    home_address = db.Column(db.String(300))  # Direccion de residencia
+    home_latitude = db.Column(db.Float)
+    home_longitude = db.Column(db.Float)
+    work_address = db.Column(db.String(300))  # Direccion de trabajo
+    work_latitude = db.Column(db.Float)
+    work_longitude = db.Column(db.Float)
+
+    # Contacto
+    phone_number = db.Column(db.String(20))  # Para WhatsApp (formato: 573001234567)
+
+    # Estado del empleado
+    employee_status = db.Column(db.String(30), default='activo')  # activo, vacaciones, incapacidad, licencia, retirado
+    status_start_date = db.Column(db.Date)  # Inicio del estado (ej: inicio vacaciones)
+    status_end_date = db.Column(db.Date)  # Fin del estado
+    status_notes = db.Column(db.Text)  # Notas sobre el estado
+
     def __repr__(self):
         return f'<User {self.username}>'
 
@@ -82,6 +99,20 @@ class Visit(db.Model):
 
     ally = db.relationship('Ally', backref='visits')
     user = db.relationship('User', backref='visits')
+
+
+class UserAllyAssignment(db.Model):
+    """Asignacion de aliados/contratistas a usuarios."""
+    __tablename__ = 'user_ally_assignment'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_uaa_user_id'), nullable=False)
+    ally_id = db.Column(db.Integer, db.ForeignKey('ally.id', name='fk_uaa_ally_id'), nullable=False)
+    assignment_type = db.Column(db.String(30), default='aliado')  # 'aliado', 'contratista'
+    assigned_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    is_active = db.Column(db.Boolean, default=True)
+
+    user = db.relationship('User', backref='ally_assignments')
+    ally = db.relationship('Ally', backref='user_assignments')
 
 
 class Setting(db.Model):

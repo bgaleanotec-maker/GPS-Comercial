@@ -70,6 +70,30 @@ def is_working_hours(app=None):
     return _check()
 
 
+def is_user_trackable(user):
+    """
+    Verifica si un usuario debe ser trackeado hoy.
+    Retorna False si esta en vacaciones, incapacidad, etc.
+    """
+    if not user:
+        return True
+    if user.employee_status == 'activo':
+        return True
+    if user.employee_status == 'retirado':
+        return False
+    # Para vacaciones, incapacidad, licencia - verificar fechas
+    today = datetime.now(COLOMBIA_TZ).date()
+    if user.status_start_date and user.status_end_date:
+        if user.status_start_date <= today <= user.status_end_date:
+            logger.info("[ESTADO] Usuario %s en %s hasta %s. No se trackeara.",
+                       user.username, user.employee_status, user.status_end_date)
+            return False
+    elif user.status_start_date and not user.status_end_date:
+        if today >= user.status_start_date:
+            return False
+    return True
+
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     """Calcula la distancia en metros entre dos puntos geograficos."""
     R = 6371000  # Radio de la Tierra en metros

@@ -1,0 +1,24 @@
+{
+  "name": "GPS Comercial",
+  "short_name": "GPS Com",
+  "description": "Plataforma de gestion GPS comercial y flota vehicular",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#1e1b4b",
+  "theme_color": "#4f46e5",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
