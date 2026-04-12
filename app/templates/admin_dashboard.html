@@ -1,192 +1,111 @@
-<!-- Ruta: SST/app/templates/admin_dashboard.html -->
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-    <!-- Tarjeta de Bienvenida Mejorada -->
-    <div class="relative bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 shadow-2xl rounded-2xl mb-8 overflow-hidden">
-        <!-- Patrón de fondo -->
+<div class="max-w-7xl mx-auto py-4 px-3 sm:px-6 lg:px-8">
+    <!-- Header con stats -->
+    <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl mb-6 overflow-hidden relative">
         <div class="absolute inset-0 opacity-10">
-            <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cg fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;%3E%3Cg fill=&quot;%23ffffff&quot; fill-opacity=&quot;0.4&quot;%3E%3Cpath d=&quot;M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z&quot;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); background-size: 60px 60px;"></div>
+            <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=60 height=60 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22%3E%3Cg fill=%22%23fff%22 fill-opacity=%220.3%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
         </div>
-
-        <!-- Elementos decorativos flotantes -->
-        <div class="absolute top-4 right-4 opacity-20 animate-pulse">
-            <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"></path>
-                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"></path>
-            </svg>
+        <div class="relative px-5 py-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+                        <span class="text-2xl font-bold text-white">{{ current_user.username[0].upper() }}</span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold text-white">Hola, {{ current_user.full_name or current_user.username }}</h1>
+                        <p class="text-indigo-200 text-sm">{{ current_user.role|capitalize }} &middot; {{ current_user.categoria or '' }}</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <div class="text-center px-4 py-2 bg-white/15 backdrop-blur rounded-xl border border-white/20">
+                        <div class="text-2xl font-bold text-white">{{ devices|length if devices else 0 }}</div>
+                        <div class="text-[10px] text-indigo-200">Dispositivos</div>
+                    </div>
+                    <div class="text-center px-4 py-2 bg-white/15 backdrop-blur rounded-xl border border-white/20">
+                        <div class="text-2xl font-bold text-emerald-300">{{ devices|selectattr('status', 'equalto', 'online')|list|length if devices else 0 }}</div>
+                        <div class="text-[10px] text-indigo-200">Online</div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="absolute bottom-4 left-8 opacity-10 animate-bounce">
-            <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
-            </svg>
-        </div>
+    {% if devices %}
+    <!-- Cards de dispositivos -->
+    <div class="space-y-3">
+        {% for device in devices %}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition overflow-hidden">
+            <div class="p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <!-- Left: Info -->
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm
+                            {% if device.status == 'online' %}bg-gradient-to-br from-emerald-400 to-emerald-600
+                            {% elif device.status == 'offline' %}bg-gradient-to-br from-red-400 to-red-600
+                            {% else %}bg-gradient-to-br from-gray-300 to-gray-500{% endif %}">
+                            <span class="text-white font-bold">{{ device.name[0:2].upper() }}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-semibold text-gray-900">{{ device.name }}</h3>
+                                {% if device.status == 'online' %}
+                                <span class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>ONLINE
+                                </span>
+                                {% elif device.status == 'offline' %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600">OFFLINE</span>
+                                {% else %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">{{ device.status|upper if device.status else 'N/A' }}</span>
+                                {% endif %}
+                            </div>
 
-        <!-- Contenido -->
-        <div class="relative px-6 py-8 sm:px-8 sm:py-10">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                <!-- Información del usuario -->
-                <div class="flex-1">
-                    <div class="flex items-center space-x-4 mb-4">
-                        <!-- Avatar con iniciales -->
-                        <div class="flex-shrink-0">
-                            <div class="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shadow-lg">
-                                <span class="text-2xl font-bold text-white">{{ current_user.username[0].upper() }}</span>
+                            <!-- Distancias con iconos -->
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                                <!-- Total hoy -->
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                                    <span class="text-xs text-gray-600"><span class="font-semibold text-gray-900">{{ "%.2f"|format(device.distance_today|default(0)) }}</span> km hoy</span>
+                                </div>
+                                <!-- Vehiculo -->
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
+                                    <span class="text-xs text-blue-700 font-medium">{{ "%.1f"|format(device.vehicle_km_today|default(0)) }} km</span>
+                                </div>
+                                <!-- A pie -->
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg>
+                                    <span class="text-xs text-orange-700 font-medium">{{ "%.1f"|format(device.walking_km_today|default(0)) }} km</span>
+                                </div>
+                                <!-- Vel max -->
+                                {% if device.max_speed_today|default(0) > 0 %}
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                                    <span class="text-xs text-gray-500">{{ "%.0f"|format(device.max_speed_today) }} km/h max</span>
+                                </div>
+                                {% endif %}
+                                <!-- Mes y total -->
+                                <span class="text-[10px] text-gray-400">Mes: {{ "%.1f"|format(device.distance_month|default(0)) }} km</span>
+                                <span class="text-[10px] text-gray-400">Total: {{ "%.0f"|format(device.distance_total|default(0)) }} km</span>
                             </div>
                         </div>
-                        <div>
-                            <h1 class="text-3xl font-bold text-white">
-                                ¡Hola, {{ current_user.username }}!
-                            </h1>
-                            <p class="mt-1 text-lg text-indigo-100">
-                                Dashboard de Administrador
-                            </p>
-                        </div>
-                    </div>
-                    <p class="text-indigo-100 max-w-2xl">
-                        Aquí podrás ver y gestionar todos los dispositivos de la flota en tiempo real.
-                    </p>
-                </div>
-
-                <!-- Badge de rol y stats rápidas -->
-                <div class="mt-6 lg:mt-0 lg:ml-8 flex flex-col items-end space-y-4">
-                    <!-- Badge de rol -->
-                    <div class="inline-flex items-center px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
-                        <svg class="h-5 w-5 text-white mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                        </svg>
-                        <span class="text-sm font-semibold text-white uppercase tracking-wide">
-                            Administrador
-                        </span>
                     </div>
 
-                    <!-- Mini stats -->
-                    <div class="flex space-x-3">
-                        <div class="text-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
-                            <div class="text-2xl font-bold text-white">{{ devices|length if devices else 0 }}</div>
-                            <div class="text-xs text-indigo-100 mt-1">Dispositivos</div>
-                        </div>
-                        <div class="text-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
-                            <div class="text-2xl font-bold text-white">{{ devices|selectattr('status', 'equalto', 'online')|list|length if devices else 0 }}</div>
-                            <div class="text-xs text-indigo-100 mt-1">Online</div>
-                        </div>
-                    </div>
+                    <!-- Right: Action -->
+                    <a href="{{ url_for('main.device_details', device_id=device.id) }}" class="px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-medium hover:bg-indigo-100 transition flex-shrink-0 touch-target">
+                        Detalles
+                    </a>
                 </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-
-    <!-- Tabla de Resumen de Dispositivos -->
-    <div class="bg-white shadow-lg overflow-hidden sm:rounded-xl border border-gray-200">
-        <div class="px-6 py-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="p-2 bg-indigo-100 rounded-lg">
-                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-900">Resumen de Dispositivos</h2>
-                </div>
-                <div class="flex items-center space-x-2 text-sm text-gray-500">
-                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-                    </svg>
-                    <span>Actualizado en tiempo real</span>
-                </div>
-            </div>
-        </div>
-        <div class="border-t border-gray-200">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                <div class="flex items-center space-x-1">
-                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"></path>
-                                        <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"></path>
-                                    </svg>
-                                    <span>Nombre</span>
-                                </div>
-                            </th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Metros Hoy</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Distancia Hoy</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Distancia Mes</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Distancia Total</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% if devices %}
-                            {% for device in devices %}
-                            <tr class="hover:bg-indigo-50 transition-colors duration-150">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                                            <span class="text-white font-bold text-sm">{{ device.name[0].upper() }}</span>
-                                        </div>
-                                        <div class="ml-4">
-                                            <div class="text-sm font-semibold text-gray-900">{{ device.name }}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    {% if device.status == 'online' %}
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
-                                            <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                                            Online
-                                        </span>
-                                    {% elif device.status == 'offline' %}
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
-                                            <span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
-                                            Offline
-                                        </span>
-                                    {% else %}
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
-                                            {{ device.status | default('Unknown') | capitalize }}
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
-                                    {{ "%.0f"|format(device.distance_today_meters|default(0)) }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                                    {{ "%.2f"|format(device.distance_today|default(0)) }} km
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                    {{ "%.2f"|format(device.distance_month|default(0)) }} km
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                    {{ "%.2f"|format(device.distance_total|default(0)) }} km
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <a href="{{ url_for('main.device_details', device_id=device.id) }}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors duration-150">
-                                        Ver Detalles
-                                        <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                        </svg>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="7" class="px-6 py-12 text-center">
-                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                                    </svg>
-                                    <p class="mt-4 text-sm text-gray-500">No se encontraron dispositivos o no se pudo conectar con Traccar.</p>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    {% else %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+        <svg class="mx-auto w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+        <p class="mt-4 text-gray-500">No se pudo conectar a Traccar o no hay dispositivos.</p>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

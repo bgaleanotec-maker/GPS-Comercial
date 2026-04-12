@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-4 px-3 sm:px-6 lg:px-8">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{{ url_for('user_management.manage_users') }}" class="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition touch-target">
+            <svg class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Editar Usuario</h1>
+            <p class="text-sm text-gray-400">@{{ user.username }}</p>
+        </div>
+    </div>
+
+    <form method="post" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Datos Basicos -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h2 class="text-base font-semibold text-gray-900 mb-4">Datos Basicos</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Nombre Completo</label>
+                    <input type="text" name="full_name" value="{{ user.full_name or '' }}" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                    <input type="email" name="email" value="{{ user.email or '' }}" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Telefono WhatsApp</label>
+                    <input type="text" name="phone_number" value="{{ user.phone_number or '' }}" placeholder="573001234567" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Rol</label>
+                    <select name="role" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                        <option value="empleado" {% if user.role == 'empleado' %}selected{% endif %}>Empleado</option>
+                        <option value="lider" {% if user.role == 'lider' %}selected{% endif %}>Lider de Negocio</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrador</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clasificacion -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h2 class="text-base font-semibold text-gray-900 mb-4">Clasificacion</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Categoria / Mercado</label>
+                    <select name="categoria" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                        {% for cat in ['Vantilisto','Seguros','VantiMax','Comercial','Residencial','Nueva Edificacion'] %}
+                        <option value="{{ cat }}" {% if user.categoria == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Filial</label>
+                    <select name="filial" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                        {% for fil in ['Vanti','GOR','Nacer','Cundi'] %}
+                        <option value="{{ fil }}" {% if user.filial == fil %}selected{% endif %}>{{ fil }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Direcciones -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Direcciones</h2>
+            <p class="text-xs text-gray-400 mb-4">Para calcular desplazamientos casa-trabajo y detectar ubicacion</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Direccion de Residencia</label>
+                    <input type="text" name="home_address" value="{{ user.home_address or '' }}" placeholder="Ej: Calle 66C #60-65, Bogota" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Direccion de Trabajo</label>
+                    <input type="text" name="work_address" value="{{ user.work_address or '' }}" placeholder="Ej: Calle 72 #5-38, Bogota" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado del Empleado -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Estado del Empleado</h2>
+            <p class="text-xs text-gray-400 mb-4">Si no esta activo, no se trackeara su GPS</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                    <select name="employee_status" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                        {% for st, label in [('activo','Activo'),('vacaciones','Vacaciones'),('incapacidad','Incapacidad'),('licencia','Licencia'),('retirado','Retirado')] %}
+                        <option value="{{ st }}" {% if user.employee_status == st %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Notas del estado</label>
+                    <input type="text" name="status_notes" value="{{ user.status_notes or '' }}" placeholder="Ej: Vacaciones hasta 20/04" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+                </div>
+            </div>
+        </div>
+
+        <!-- Cambiar Password -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Seguridad</h2>
+            <p class="text-xs text-gray-400 mb-4">Dejar vacio para no cambiar la contrasena</p>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Nueva Contrasena</label>
+                <input type="password" name="new_password" placeholder="Dejar vacio para mantener actual" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm touch-target">
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex gap-3">
+            <a href="{{ url_for('user_management.manage_users') }}" class="flex-1 py-3 text-center bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition touch-target">Cancelar</a>
+            <button type="submit" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition touch-target">Guardar Cambios</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
