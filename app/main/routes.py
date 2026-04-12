@@ -160,49 +160,85 @@ def dashboard():
 @bp.route('/device/<int:device_id>', methods=['GET', 'POST'])
 @login_required
 def device_details(device_id):
-    if current_user.role != 'admin' and current_user.traccar_device_id != device_id:
+    if current_user.role not in ('admin', 'lider') and current_user.traccar_device_id != device_id:
         abort(403)
 
     device = get_device_by_id(device_id)
     if not device:
         abort(404)
 
+    from app.models import User, Visit
+
     score, total_infractions = calculate_driving_score_view(device_id)
     colombia_tz = pytz.timezone('America/Bogota')
     now = datetime.now(colombia_tz)
     today_start = colombia_tz.localize(datetime.combine(now.date(), time.min))
+    week_start = today_start - timedelta(days=now.weekday())
+    month_start = today_start.replace(day=1)
 
+    # Posiciones por periodo
     positions_today = get_device_positions_view(device_id, today_start, now)
+    positions_week = get_device_positions_view(device_id, week_start, now)
+    positions_month = get_device_positions_view(device_id, month_start, now)
+
+    # Distancias
     distance_today = calculate_distance_from_points(positions_today) / 1000
+    distance_week = calculate_distance_from_points(positions_week) / 1000
+    distance_month = calculate_distance_from_points(positions_month) / 1000
 
-    max_speed_today = 0
-    route_stats = None
-    if positions_today:
-        max_speed_today = max(p.get('speed', 0) for p in positions_today) * KNOTS_TO_KMH
-        if len(positions_today) >= 2:
-            route_stats = calculate_route_distances(positions_today)
+    # Route stats por periodo
+    stats_today = calculate_route_distances(positions_today) if positions_today and len(positions_today) >= 2 else None
+    stats_week = calculate_route_distances(positions_week) if positions_week and len(positions_week) >= 2 else None
+    stats_month = calculate_route_distances(positions_month) if positions_month and len(positions_month) >= 2 else None
 
+    max_speed_today = stats_today['max_speed_kmh'] if stats_today else 0
+
+    # Empleado asignado
+    assigned_user = User.query.filter_by(traccar_device_id=device_id).first()
+
+    # Visitas recientes
+    visits_today = Visit.query.filter(Visit.device_id == device_id, Visit.timestamp >= today_start).count()
+    visits_week = Visit.query.filter(Visit.device_id == device_id, Visit.timestamp >= week_start).count()
+    visits_month = Visit.query.filter(Visit.device_id == device_id, Visit.timestamp >= month_start).count()
+
+    # Infracciones
     infractions_today = Infraction.query.filter(
         Infraction.device_id == device_id,
         Infraction.timestamp >= today_start
     ).order_by(Infraction.timestamp.desc()).all()
 
-    try:
-        locale.setlocale(locale.LC_TIME, 'es_CO.UTF-8')
-    except locale.Error:
-        pass
-    formatted_date = now.strftime('%d de %B de %Y')
+    infractions_week = Infraction.query.filter(
+        Infraction.device_id == device_id,
+        Infraction.timestamp >= week_start
+    ).count()
+
+    infractions_month = Infraction.query.filter(
+        Infraction.device_id == device_id,
+        Infraction.timestamp >= month_start
+    ).count()
+
+    formatted_date = now.strftime('%d/%m/%Y')
 
     return render_template(
         'device_details.html',
-        title=f"Score de {device.get('name', 'Dispositivo')}",
+        title=f"{device.get('name', 'Dispositivo')}",
         device=device,
+        assigned_user=assigned_user,
         score=score,
         total_infractions=total_infractions,
         distance_today=distance_today,
+        distance_week=distance_week,
+        distance_month=distance_month,
         max_speed_today=max_speed_today,
         route=positions_today,
         infractions_today=infractions_today,
+        infractions_week=infractions_week,
+        infractions_month=infractions_month,
+        visits_today=visits_today,
+        visits_week=visits_week,
+        visits_month=visits_month,
         current_date=formatted_date,
-        route_stats=route_stats,
+        stats_today=stats_today,
+        stats_week=stats_week,
+        stats_month=stats_month,
     )
