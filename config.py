@@ -16,6 +16,7 @@ class Config(object):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    TEMPLATES_AUTO_RELOAD = True
     UPLOAD_FOLDER = os.path.join(basedir, 'app/static/uploads')
 
     # Traccar - URL no es secreto, puede tener fallback
