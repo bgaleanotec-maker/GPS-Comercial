@@ -1,7 +1,7 @@
 # Ruta: GPS_Comercial/app/main/routes.py
 import logging
 
-from flask import render_template, abort, flash
+from flask import render_template, abort, flash, request
 from app.main import bp
 from flask_login import login_required, current_user
 from datetime import datetime, time, timedelta
@@ -76,9 +76,33 @@ def index():
 @bp.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role == 'admin':
+    from app.models import User
+    # Filtro por mercado/categoria
+    mercado_filter = request.args.get('mercado', 'all')
+
+    # Lider solo ve su mercado
+    if current_user.role == 'lider':
+        mercado_filter = current_user.categoria
+
+    if current_user.role in ('admin', 'lider'):
         devices = get_devices()
         if devices:
+            # Filtrar por mercado si aplica
+            if mercado_filter and mercado_filter != 'all':
+                user_device_ids = [u.traccar_device_id for u in User.query.filter_by(categoria=mercado_filter).all() if u.traccar_device_id]
+                devices = [d for d in devices if d['id'] in user_device_ids]
+
+            # Agregar info de usuario a cada device
+            user_map = {u.traccar_device_id: u for u in User.query.filter(User.traccar_device_id.isnot(None)).all()}
+            for d in devices:
+                u = user_map.get(d['id'])
+                d['employee_name'] = u.full_name if u else None
+                d['employee_categoria'] = u.categoria if u else None
+                d['employee_status'] = u.employee_status if u else None
+
+            # Obtener categorias unicas para el filtro
+            categorias = sorted(set(u.categoria for u in User.query.filter(User.categoria.isnot(None)).all() if u.categoria))
+
             colombia_tz = pytz.timezone('America/Bogota')
             now = datetime.now(colombia_tz)
             today_start = colombia_tz.localize(datetime.combine(now.date(), time.min))
@@ -109,8 +133,11 @@ def dashboard():
                     device['vehicle_km_today'] = 0
                     device['max_speed_today'] = 0
         else:
+            categorias = []
             flash('No se pudo conectar a Traccar para obtener la lista de dispositivos.', 'danger')
-        return render_template('admin_dashboard.html', title='Dashboard Admin', devices=devices)
+        return render_template('admin_dashboard.html', title='Dashboard Admin', devices=devices,
+                               categorias=categorias if devices else [],
+                               mercado_filter=mercado_filter)
 
     elif current_user.role == 'empleado':
         if not current_user.traccar_device_id:

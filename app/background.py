@@ -13,7 +13,7 @@ from app.models import User, Ally, Visit, Setting
 from app.email import send_infraction_alert, send_report_email
 from app.reporting_logic import generate_report_data
 from app.utils import is_working_hours, haversine_distance, is_user_trackable
-from app.traccar import get_devices_for_app, get_latest_position_for_app
+from app.traccar import get_devices_for_app, get_latest_position_for_app, KNOTS_TO_KMH
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +177,73 @@ def check_and_send_whatsapp(app):
 _last_whatsapp_sent_day = None
 
 
+def check_emergency_alerts(app):
+    """Detecta paradas subitas o velocidad extrema y alerta via WhatsApp."""
+    with app.app_context():
+        settings = {s.key: s.value for s in Setting.query.all()}
+        if settings.get('emergency_whatsapp_enabled', 'false') != 'true':
+            return
+
+        admin_number = settings.get('admin_whatsapp_number', '')
+        if not admin_number:
+            return
+
+        devices = get_devices_for_app(app)
+        if not devices:
+            return
+
+        for device in devices:
+            device_id = device.get('id')
+            last_pos = get_latest_position_for_app(app, device_id)
+            if not last_pos:
+                continue
+
+            speed_kmh = last_pos.get('speed', 0) * KNOTS_TO_KMH
+            attributes = last_pos.get('attributes', {})
+            alarm = attributes.get('alarm', '')
+
+            # Detectar emergencia
+            alert_msg = None
+            if alarm in ('hardBraking', 'crash'):
+                user = User.query.filter_by(traccar_device_id=device_id).first()
+                name = user.full_name if user else device.get('name', 'N/A')
+                alert_msg = (
+                    f"*ALERTA EMERGENCIA*\n"
+                    f"Vehiculo: {device.get('name')}\n"
+                    f"Conductor: {name}\n"
+                    f"Evento: {'POSIBLE ACCIDENTE' if alarm == 'crash' else 'FRENADO EXTREMO'}\n"
+                    f"Velocidad: {speed_kmh:.0f} km/h\n"
+                    f"Ubicacion: {last_pos.get('latitude', 0):.6f}, {last_pos.get('longitude', 0):.6f}\n"
+                    f"https://www.google.com/maps?q={last_pos.get('latitude', 0)},{last_pos.get('longitude', 0)}"
+                )
+            elif speed_kmh > 120:
+                user = User.query.filter_by(traccar_device_id=device_id).first()
+                name = user.full_name if user else device.get('name', 'N/A')
+                alert_msg = (
+                    f"*ALERTA VELOCIDAD EXTREMA*\n"
+                    f"Vehiculo: {device.get('name')}\n"
+                    f"Conductor: {name}\n"
+                    f"Velocidad: {speed_kmh:.0f} km/h\n"
+                    f"Ubicacion: {last_pos.get('latitude', 0):.6f}, {last_pos.get('longitude', 0):.6f}\n"
+                    f"https://www.google.com/maps?q={last_pos.get('latitude', 0)},{last_pos.get('longitude', 0)}"
+                )
+
+            if alert_msg:
+                try:
+                    from app.whatsapp import send_whatsapp_message
+                    send_whatsapp_message(admin_number, alert_msg)
+                    # Tambien al lider si existe
+                    if user:
+                        leader = User.query.filter_by(
+                            role='lider', categoria=user.categoria
+                        ).first()
+                        if leader and leader.phone_number:
+                            send_whatsapp_message(leader.phone_number, alert_msg)
+                    logger.warning("ALERTA EMERGENCIA enviada: %s", device.get('name'))
+                except Exception as e:
+                    logger.error("Error enviando alerta emergencia: %s", e)
+
+
 def _background_loop(app):
     """Funcion principal del hilo de fondo."""
     logger.info("Hilo de fondo iniciado. Evaluacion cada 60 segundos.")
@@ -187,6 +254,11 @@ def _background_loop(app):
                 run_periodic_evaluation(app)
                 check_and_send_report(app)
                 check_and_send_whatsapp(app)
+                # Alertas de emergencia (siempre, no solo horario laboral)
+                try:
+                    check_emergency_alerts(app)
+                except Exception as ea:
+                    logger.debug("Check emergencia: %s", ea)
                 # Validar tareas del cronograma con GPS
                 try:
                     from app.schedule.validator import validate_pending_tasks, mark_overdue_tasks

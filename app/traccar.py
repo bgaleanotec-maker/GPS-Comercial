@@ -2,6 +2,7 @@
 """Modulo centralizado para comunicacion con la API de Traccar."""
 
 import logging
+from datetime import datetime
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -262,7 +263,34 @@ def calculate_route_distances(positions):
     speed_readings = []
 
     # Pre-calcular velocidades en km/h
-    speeds_kmh = [p.get('speed', 0) * KNOTS_TO_KMH for p in positions]
+    # Si el dispositivo no reporta velocidad (speed=0), calcular velocidad implicita
+    # basada en distancia/tiempo entre puntos consecutivos
+    speeds_kmh = []
+    for i, p in enumerate(positions):
+        reported_speed = p.get('speed', 0) * KNOTS_TO_KMH
+        if reported_speed > 0.5:
+            speeds_kmh.append(reported_speed)
+        elif i > 0:
+            # Calcular velocidad implicita
+            prev = positions[i - 1]
+            try:
+                t1 = datetime.fromisoformat(prev.get('fixTime', '').replace('Z', '+00:00'))
+                t2 = datetime.fromisoformat(p.get('fixTime', '').replace('Z', '+00:00'))
+                dt_hours = (t2 - t1).total_seconds() / 3600
+                if dt_hours > 0.001:  # mas de 3.6 segundos
+                    dist_km = haversine_distance(
+                        prev.get('latitude', 0), prev.get('longitude', 0),
+                        p.get('latitude', 0), p.get('longitude', 0)
+                    ) / 1000
+                    implicit_speed = dist_km / dt_hours
+                    # Limitar a 200 km/h para evitar outliers por GPS drift
+                    speeds_kmh.append(min(implicit_speed, 200.0))
+                else:
+                    speeds_kmh.append(0.0)
+            except (ValueError, TypeError):
+                speeds_kmh.append(0.0)
+        else:
+            speeds_kmh.append(0.0)
 
     for i in range(1, len(positions)):
         prev = positions[i - 1]
@@ -285,19 +313,16 @@ def calculate_route_distances(positions):
         window_start = max(0, i - CONTEXT_WINDOW)
         window_max = max(speeds_kmh[window_start:i + 1])
 
-        # Tambien mirar adelante (si hay pico futuro cercano, es vehiculo arrancando)
+        # Tambien mirar adelante
         window_end = min(len(speeds_kmh), i + CONTEXT_WINDOW)
         forward_max = max(speeds_kmh[i:window_end]) if i < len(speeds_kmh) else 0
 
         # Clasificacion con contexto Bogota
         if window_max > VEHICLE_INDICATOR_SPEED or forward_max > VEHICLE_INDICATOR_SPEED:
-            # Hubo o habra velocidad alta cercana -> vehiculo (trancon)
             vehicle_meters += distance
         elif window_max <= WALKING_MAX_SPEED and speed_kmh <= WALKING_MAX_SPEED:
-            # Nunca paso de 8 km/h en la ventana -> caminando
             walking_meters += distance
         else:
-            # Zona gris -> en Bogota = vehiculo en trancon
             vehicle_meters += distance
 
     avg_speed = sum(speed_readings) / len(speed_readings) if speed_readings else 0.0
