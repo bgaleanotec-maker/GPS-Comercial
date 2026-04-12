@@ -108,6 +108,9 @@ def create_app(config_class=Config):
     from app.api_keys import bp as api_keys_bp
     app.register_blueprint(api_keys_bp, url_prefix='/api-keys')
 
+    from app.schedule import bp as schedule_bp
+    app.register_blueprint(schedule_bp, url_prefix='/schedule')
+
     # Crear/actualizar tablas e inicializar datos
     _init_database(app)
 

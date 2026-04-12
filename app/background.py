@@ -187,6 +187,13 @@ def _background_loop(app):
                 run_periodic_evaluation(app)
                 check_and_send_report(app)
                 check_and_send_whatsapp(app)
+                # Validar tareas del cronograma con GPS
+                try:
+                    from app.schedule.validator import validate_pending_tasks, mark_overdue_tasks
+                    validate_pending_tasks()
+                    mark_overdue_tasks()
+                except Exception as ve:
+                    logger.debug("Validacion de tareas: %s", ve)
         except Exception as e:
             logger.error("Error en el hilo de fondo: %s", e)
         time.sleep(60)

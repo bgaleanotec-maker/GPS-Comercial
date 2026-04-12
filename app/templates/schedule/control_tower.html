@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-4 px-3 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Torre de Control</h1>
+            <p class="text-sm text-gray-500">Monitoreo de actividades del equipo en tiempo real</p>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900">{{ stats.total }}</div>
+            <div class="text-xs text-gray-500 mt-1">Total Tareas</div>
+        </div>
+        <div class="bg-emerald-50 rounded-2xl border border-emerald-200 p-4 text-center">
+            <div class="text-2xl font-bold text-emerald-700">{{ stats.cumplidas }}</div>
+            <div class="text-xs text-emerald-600 mt-1">Cumplidas</div>
+        </div>
+        <div class="bg-amber-50 rounded-2xl border border-amber-200 p-4 text-center">
+            <div class="text-2xl font-bold text-amber-700">{{ stats.pendientes }}</div>
+            <div class="text-xs text-amber-600 mt-1">Pendientes</div>
+        </div>
+        <div class="bg-red-50 rounded-2xl border border-red-200 p-4 text-center">
+            <div class="text-2xl font-bold text-red-700">{{ stats.vencidas }}</div>
+            <div class="text-xs text-red-600 mt-1">Vencidas</div>
+        </div>
+        <div class="bg-blue-50 rounded-2xl border border-blue-200 p-4 text-center">
+            <div class="text-2xl font-bold text-blue-700">{{ stats.auto_validadas }}</div>
+            <div class="text-xs text-blue-600 mt-1">Validadas GPS</div>
+        </div>
+        <div class="rounded-2xl p-4 text-center {% if stats.cumplimiento >= 80 %}bg-emerald-600{% elif stats.cumplimiento >= 50 %}bg-amber-500{% else %}bg-red-500{% endif %}">
+            <div class="text-2xl font-bold text-white">{{ "%.0f"|format(stats.cumplimiento) }}%</div>
+            <div class="text-xs text-white/80 mt-1">Cumplimiento</div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+        <form method="get" class="flex flex-col sm:flex-row gap-3 items-end">
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+                <input type="date" name="date_from" value="{{ date_from }}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
+            </div>
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+                <input type="date" name="date_to" value="{{ date_to }}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
+            </div>
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Empleado</label>
+                <select name="employee_id" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
+                    <option value="">Todos</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.id }}" {% if employee_filter == emp.id %}selected{% endif %}>{{ emp.full_name or emp.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Todos</option>
+                    <option value="cumplida" {% if status_filter == 'cumplida' %}selected{% endif %}>Cumplidas</option>
+                    <option value="pendiente" {% if status_filter == 'pendiente' %}selected{% endif %}>Pendientes</option>
+                    <option value="vencida" {% if status_filter == 'vencida' %}selected{% endif %}>Vencidas</option>
+                    <option value="cancelada" {% if status_filter == 'cancelada' %}selected{% endif %}>Canceladas</option>
+                </select>
+            </div>
+            <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition touch-target">Filtrar</button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Resumen por empleado -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                    <h2 class="text-sm font-semibold text-gray-700">Resumen por Empleado</h2>
+                </div>
+                <div class="divide-y divide-gray-50">
+                    {% for uid, data in employee_summary.items() %}
+                    <div class="px-4 py-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                    <span class="text-white text-xs font-bold">{{ (data.user.full_name or data.user.username)[0].upper() }}</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">{{ data.user.full_name or data.user.username }}</p>
+                                    <p class="text-xs text-gray-400">{{ data.user.categoria or '' }}</p>
+                                </div>
+                            </div>
+                            {% set pct = (data.cumplidas / data.total * 100) if data.total > 0 else 0 %}
+                            <span class="text-sm font-bold {% if pct >= 80 %}text-emerald-600{% elif pct >= 50 %}text-amber-600{% else %}text-red-600{% endif %}">{{ "%.0f"|format(pct) }}%</span>
+                        </div>
+                        <!-- Progress bar -->
+                        <div class="w-full bg-gray-100 rounded-full h-2">
+                            <div class="h-2 rounded-full {% if pct >= 80 %}bg-emerald-500{% elif pct >= 50 %}bg-amber-500{% else %}bg-red-500{% endif %}" style="width: {{ pct }}%"></div>
+                        </div>
+                        <div class="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                            <span class="text-emerald-600">{{ data.cumplidas }} ok</span>
+                            <span>{{ data.pendientes }} pend</span>
+                            {% if data.vencidas > 0 %}<span class="text-red-500">{{ data.vencidas }} venc</span>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not employee_summary %}
+                    <div class="px-4 py-8 text-center text-sm text-gray-400">Sin datos para este periodo</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de tareas -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-700">Actividades</h2>
+                    <span class="text-xs text-gray-400">{{ tasks|length }} resultado(s)</span>
+                </div>
+                <div class="divide-y divide-gray-50 max-h-[600px] overflow-y-auto">
+                    {% for task in tasks %}
+                    <div class="px-4 py-3 flex items-center gap-3 {% if task.is_overdue %}bg-red-50/50{% endif %}">
+                        <!-- Status indicator -->
+                        {% if task.status == 'cumplida' and task.auto_validated %}
+                        <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                        </div>
+                        {% elif task.status == 'cumplida' %}
+                        <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                        </div>
+                        {% elif task.is_overdue %}
+                        <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                        </div>
+                        {% elif task.status == 'en_progreso' %}
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        {% else %}
+                        <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <div class="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                        </div>
+                        {% endif %}
+
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-gray-900 truncate">{{ task.title }}</span>
+                                {% if task.auto_validated %}
+                                <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded">GPS</span>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+                                <span class="font-medium text-gray-600">{{ task.user.full_name or task.user.username }}</span>
+                                <span>{{ task.scheduled_date.strftime('%d/%m') }}</span>
+                                {% if task.ally %}<span class="text-indigo-500">{{ task.ally.name }}</span>{% endif %}
+                                {% if task.time_on_site_minutes > 0 %}<span>{{ "%.0f"|format(task.time_on_site_minutes) }} min en sitio</span>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="flex-shrink-0">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-medium
+                                {% if task.status == 'cumplida' %}bg-emerald-100 text-emerald-700
+                                {% elif task.is_overdue %}bg-red-100 text-red-700
+                                {% elif task.status == 'en_progreso' %}bg-amber-100 text-amber-700
+                                {% elif task.status == 'cancelada' %}bg-gray-100 text-gray-500
+                                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                {{ task.status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not tasks %}
+                    <div class="px-4 py-12 text-center">
+                        <svg class="mx-auto w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        <p class="mt-2 text-sm text-gray-400">No hay tareas para este filtro</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

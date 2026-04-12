@@ -180,6 +180,69 @@ class ApiKey(db.Model):
         self.usage_count += 1
 
 
+# ============================================================
+# MODELO SCHEDULED TASK - Cronograma de actividades
+# ============================================================
+class ScheduledTask(db.Model):
+    """Tarea agendada por un empleado (ej: visitar aliado X el lunes)."""
+    __tablename__ = 'scheduled_task'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_task_user_id'), nullable=False)
+    ally_id = db.Column(db.Integer, db.ForeignKey('ally.id', name='fk_task_ally_id'), nullable=True)
+
+    # Fecha y descripcion
+    scheduled_date = db.Column(db.Date, nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    task_type = db.Column(db.String(30), default='visita')  # visita, reunion, gestion, otro
+
+    # Tiempo minimo en sitio para marcar como cumplida (minutos)
+    min_time_on_site = db.Column(db.Integer, default=30)
+
+    # Tipo de validacion: 'gps' (requiere presencia GPS) o 'manual' (checklist, ej: cargar presupuesto)
+    validation_type = db.Column(db.String(20), default='gps')  # gps, manual
+
+    # Estado de la tarea
+    status = db.Column(db.String(20), default='pendiente', index=True)
+    # pendiente, cumplida, no_cumplida, en_progreso, cancelada
+
+    # Validacion automatica
+    auto_validated = db.Column(db.Boolean, default=False)  # True si el GPS la valido
+    validated_at = db.Column(db.DateTime)  # Cuando se valido
+    time_on_site_minutes = db.Column(db.Float, default=0)  # Minutos en el sitio
+
+    # Metadata
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    completed_at = db.Column(db.DateTime)
+    notes = db.Column(db.Text)  # Notas del empleado al completar
+
+    # Relaciones
+    user = db.relationship('User', backref='scheduled_tasks')
+    ally = db.relationship('Ally', backref='scheduled_tasks')
+
+    @property
+    def is_overdue(self):
+        """Tarea vencida si la fecha ya paso y no esta cumplida."""
+        if self.status in ('cumplida', 'cancelada'):
+            return False
+        today = datetime.now(timezone.utc).date()
+        return self.scheduled_date < today
+
+    @property
+    def status_display(self):
+        if self.status == 'cumplida':
+            return 'Cumplida' if not self.auto_validated else 'Validada GPS'
+        if self.is_overdue:
+            return 'Vencida'
+        return {
+            'pendiente': 'Pendiente',
+            'en_progreso': 'En Progreso',
+            'no_cumplida': 'No Cumplida',
+            'cancelada': 'Cancelada',
+        }.get(self.status, self.status)
+
+
 @login.user_loader
 def load_user(id):
     return db.session.get(User, int(id))
