@@ -2,7 +2,7 @@ services:
   - type: web
     name: gps-comercial
     runtime: python
-    buildCommand: chmod +x build.sh && ./build.sh
+    buildCommand: pip install -r requirements.txt && python -c "from app import create_app; app=create_app(); import sys; sys.exit(0)" && (flask db upgrade 2>/dev/null || (flask db stamp head && flask db upgrade))
     startCommand: gunicorn --preload -w 1 run:app
     healthCheckPath: /health
     envVars:
