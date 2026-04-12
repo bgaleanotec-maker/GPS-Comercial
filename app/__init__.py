@@ -82,6 +82,9 @@ def create_app(config_class=Config):
     app.jinja_env.globals['pytz'] = pytz
     app.jinja_env.globals['datetime'] = datetime
 
+    from flask_wtf.csrf import generate_csrf
+    app.jinja_env.globals['csrf_token'] = generate_csrf
+
     db.init_app(app)
     login.init_app(app)
     migrate.init_app(app, db)
