@@ -41,8 +41,8 @@ traccar-logs/
 uploads/
 mysql-data/
 
-# Migraciones
-migrations/
+# Migraciones - NO ignorar, necesarias para deploy en produccion
+# migrations/
 
 # Testing
 .pytest_cache/

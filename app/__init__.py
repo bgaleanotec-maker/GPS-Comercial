@@ -1,5 +1,6 @@
-# Ruta: SST/app/__init__.py
+# Ruta: GPS_Comercial/app/__init__.py
 import os
+import logging
 from flask import Flask
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
@@ -9,9 +10,14 @@ from sqlalchemy import MetaData
 import pytz
 from datetime import datetime
 
-# --- INICIO: Corrección para Migraciones con SQLite ---
-# Se define una convención de nombres para las restricciones de la base de datos
-# para evitar errores con Alembic y SQLite.
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Convencion de nombres para restricciones de BD (compatibilidad Alembic + SQLite)
 naming_convention = {
     "ix": 'ix_%(column_0_label)s',
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -20,21 +26,22 @@ naming_convention = {
     "pk": "pk_%(table_name)s"
 }
 
-# Se crea el objeto MetaData con la convención de nombres
 metadata = MetaData(naming_convention=naming_convention)
-# Se pasa el objeto MetaData al inicializador de SQLAlchemy con el nombre de argumento correcto
 db = SQLAlchemy(metadata=metadata)
-# --- FIN: Corrección ---
 
 login = LoginManager()
 login.login_view = 'auth.login'
 migrate = Migrate()
 
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Asegurarse de que la carpeta de subidas exista
+    # Validar configuracion
+    Config.validate()
+
+    # Carpeta de subidas
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
@@ -43,7 +50,7 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     login.init_app(app)
-    migrate.init_app(app, db) # Se pasa el objeto db a migrate
+    migrate.init_app(app, db)
 
     # Registro de Blueprints
     from app.main import bp as main_bp
@@ -61,10 +68,16 @@ def create_app(config_class=Config):
     from app.analytics import bp as analytics_bp
     app.register_blueprint(analytics_bp, url_prefix='/analytics')
 
-    # --- NUEVO BLUEPRINT DE GESTIÓN DE USUARIOS ---
     from app.user_management import bp as user_management_bp
     app.register_blueprint(user_management_bp, url_prefix='/users')
-    # --- FIN ---
+
+    from app.api_keys import bp as api_keys_bp
+    app.register_blueprint(api_keys_bp, url_prefix='/api-keys')
+
+    # Iniciar worker de fondo (deteccion automatica de visitas + reportes)
+    if os.environ.get('ENABLE_BACKGROUND_WORKER', 'true').lower() != 'false':
+        from app.background import start_background_worker
+        start_background_worker(app)
 
     return app
 

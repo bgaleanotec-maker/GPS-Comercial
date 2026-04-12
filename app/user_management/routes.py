@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from app.models import User
 from app.forms import UserCreationForm
 from app import db
-from app.main.routes import get_devices_view
+from app.traccar import get_devices
 
 @bp.route('/manage', methods=['GET', 'POST'])
 @login_required
@@ -32,7 +32,7 @@ def manage_users():
     if 'associate_device' in request.form:
         user_id = request.form.get('user_id')
         device_id = request.form.get('device_id')
-        user_to_associate = User.query.get(user_id)
+        user_to_associate = db.session.get(User,user_id)
         if user_to_associate:
             user_to_associate.traccar_device_id = int(device_id) if device_id and device_id != "0" else None
             db.session.commit()
@@ -44,7 +44,7 @@ def manage_users():
         user_id = request.form.get('user_id')
         categoria = request.form.get('categoria')
         filial = request.form.get('filial')
-        user_to_update = User.query.get(user_id)
+        user_to_update = db.session.get(User,user_id)
         if user_to_update:
             user_to_update.categoria = categoria
             user_to_update.filial = filial
@@ -55,7 +55,7 @@ def manage_users():
     # Lógica para eliminar un usuario
     if 'delete_user' in request.form:
         user_id_to_delete = request.form.get('user_id_to_delete')
-        user_to_delete = User.query.get(user_id_to_delete)
+        user_to_delete = db.session.get(User,user_id_to_delete)
         if user_to_delete:
             if user_to_delete.id == current_user.id:
                 flash('No puedes eliminar tu propia cuenta.', 'danger')
@@ -66,7 +66,7 @@ def manage_users():
             return redirect(url_for('user_management.manage_users'))
 
     users = User.query.order_by(User.username).all()
-    devices = get_devices_view()
+    devices = get_devices()
 
     device_map = {device['id']: device['name'] for device in devices} if devices else {}
     for user in users:

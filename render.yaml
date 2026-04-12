@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: gps-comercial
+    runtime: python
+    buildCommand: pip install -r requirements.txt && flask db upgrade
+    startCommand: gunicorn --preload -w 1 run:app
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gps-comercial-db
+          property: connectionString
+      - key: TRACCAR_URL
+        sync: false
+      - key: TRACCAR_USER
+        sync: false
+      - key: TRACCAR_PASSWORD
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: SST_EMAIL_RECIPIENT
+        sync: false
+      - key: ENABLE_BACKGROUND_WORKER
+        value: "true"

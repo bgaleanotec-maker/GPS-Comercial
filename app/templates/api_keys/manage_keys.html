@@ -1,0 +1,393 @@
+<!-- Ruta: app/templates/api_keys/manage_keys.html -->
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+    .key-badge { font-family: 'Courier New', Courier, monospace; }
+    .scope-chip {
+        @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    }
+    .copy-btn:active { transform: scale(0.95); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
+
+    <!-- ═══ HEADER ═══ -->
+    <div class="relative bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 rounded-2xl shadow-xl overflow-hidden">
+        <!-- Patrón de fondo -->
+        <div class="absolute inset-0 opacity-10">
+            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <defs><pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                    <path d="M 32 0 L 0 0 0 32" fill="none" stroke="white" stroke-width="1"/>
+                </pattern></defs>
+                <rect width="100%" height="100%" fill="url(#grid)"/>
+            </svg>
+        </div>
+
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 opacity-10">
+            <svg class="w-48 h-48 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
+            </svg>
+        </div>
+
+        <div class="relative px-6 py-8 sm:px-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-white">API Keys</h1>
+                            <p class="text-purple-200 text-sm">Tokens de acceso para integraciones externas</p>
+                        </div>
+                    </div>
+                    <p class="text-purple-100 text-sm max-w-xl">
+                        Genera claves seguras tipo <code class="bg-white/10 px-1.5 py-0.5 rounded font-mono text-xs">gps_XXXXXXXX...</code>
+                        para conectar aplicaciones externas a la API de GPS Comercial.
+                    </p>
+                </div>
+
+                <!-- Stats rápidas -->
+                <div class="flex gap-3">
+                    <div class="text-center px-4 py-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                        <div class="text-2xl font-bold text-white">{{ stats.total }}</div>
+                        <div class="text-xs text-purple-200 mt-0.5">Total</div>
+                    </div>
+                    <div class="text-center px-4 py-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                        <div class="text-2xl font-bold text-emerald-300">{{ stats.active }}</div>
+                        <div class="text-xs text-purple-200 mt-0.5">Activas</div>
+                    </div>
+                    <div class="text-center px-4 py-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                        <div class="text-2xl font-bold text-red-300">{{ stats.revoked }}</div>
+                        <div class="text-xs text-purple-200 mt-0.5">Revocadas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <!-- ═══ FORMULARIO CREAR KEY ═══ -->
+        <div class="xl:col-span-1">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
+                <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <svg class="h-4 w-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-base font-semibold text-gray-900">Nueva API Key</h2>
+                </div>
+
+                <form method="POST" action="{{ url_for('api_keys.create_key') }}" class="p-5 space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}"/>
+
+                    <!-- Nombre -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre descriptivo *</label>
+                        <input type="text" name="name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                               placeholder="ej. Integración Power BI">
+                    </div>
+
+                    <!-- Usuario propietario -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Propietario *</label>
+                        <select name="user_id" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white">
+                            <option value="">Seleccionar usuario...</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }} ({{ user.role }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Permisos -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nivel de permisos</label>
+                        <select name="permissions"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white">
+                            <option value="read">🔍 Solo lectura</option>
+                            <option value="write">✏️ Lectura y escritura</option>
+                            <option value="admin">⚡ Administrador</option>
+                        </select>
+                    </div>
+
+                    <!-- Scopes -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Scopes de acceso</label>
+                        <div class="space-y-2">
+                            {% set scope_options = [
+                                ('devices', '🚗 Dispositivos GPS', 'Acceso a info de vehículos'),
+                                ('visits', '📍 Visitas', 'Registro de visitas a aliados'),
+                                ('analytics', '📊 Analítica', 'Dashboards y reportes'),
+                                ('users', '👤 Usuarios', 'Gestión de cuentas'),
+                            ] %}
+                            {% for value, label, desc in scope_options %}
+                            <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" name="scopes" value="{{ value }}"
+                                       {% if value == 'devices' %}checked{% endif %}
+                                       class="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">{{ label }}</span>
+                                    <p class="text-xs text-gray-400">{{ desc }}</p>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Expiración -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Expiración</label>
+                        <select name="expires_days"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white">
+                            <option value="0">Sin expiración</option>
+                            <option value="30">30 días</option>
+                            <option value="90">90 días</option>
+                            <option value="180">6 meses</option>
+                            <option value="365">1 año</option>
+                        </select>
+                    </div>
+
+                    <!-- Notas -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
+                        <textarea name="notes" rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition resize-none"
+                                  placeholder="Descripción del uso de esta clave..."></textarea>
+                    </div>
+
+                    <!-- Advertencia -->
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <div class="flex items-start gap-2">
+                            <svg class="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                            </svg>
+                            <p class="text-xs text-amber-800">La clave completa solo se muestra <strong>una vez</strong> al crearla. Guárdala en un lugar seguro.</p>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
+                        </svg>
+                        Generar API Key
+                    </button>
+                </form>
+
+                <!-- Cómo usar -->
+                <div class="border-t border-gray-100 px-5 py-4">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Cómo usar</h3>
+                    <div class="bg-gray-900 rounded-lg p-3 text-xs font-mono text-green-400 overflow-x-auto">
+                        <p class="text-gray-500"># Header requerido:</p>
+                        <p>Authorization: Bearer gps_XXXX...</p>
+                        <br>
+                        <p class="text-gray-500"># Endpoint de estado:</p>
+                        <p>GET /api-keys/api/v1/status</p>
+                        <br>
+                        <p class="text-gray-500"># Dispositivos:</p>
+                        <p>GET /api-keys/api/v1/devices</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ TABLA DE KEYS ═══ -->
+        <div class="xl:col-span-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-base font-semibold text-gray-900">API Keys Registradas</h2>
+                    </div>
+                    <span class="text-sm text-gray-400">{{ keys|length }} clave{{ 's' if keys|length != 1 else '' }}</span>
+                </div>
+
+                {% if keys %}
+                    <div class="divide-y divide-gray-50">
+                        {% for key in keys %}
+                        <div class="px-6 py-5 hover:bg-gray-50/50 transition-colors
+                                    {% if not key.is_active %}opacity-60{% endif %}">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                        <h3 class="text-sm font-semibold text-gray-900">{{ key.name }}</h3>
+
+                                        <!-- Estado -->
+                                        {% if key.status_label == 'activa' %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                Activa
+                                            </span>
+                                        {% elif key.status_label == 'expirada' %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                Expirada
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                                Revocada
+                                            </span>
+                                        {% endif %}
+
+                                        <!-- Permiso -->
+                                        {% if key.permissions == 'admin' %}
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">⚡ Admin</span>
+                                        {% elif key.permissions == 'write' %}
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">✏️ Write</span>
+                                        {% else %}
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">🔍 Read</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Token prefix -->
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <code class="key-badge text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md border">
+                                            {{ key.prefix }}••••••••••••••••••••••
+                                        </code>
+                                    </div>
+
+                                    <!-- Meta info -->
+                                    <div class="flex flex-wrap gap-3 text-xs text-gray-500 mb-2">
+                                        <span class="flex items-center gap-1">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+                                            {{ key.user.username }}
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                                            Creada: {{ key.created_at.strftime('%d/%m/%Y') }}
+                                        </span>
+                                        {% if key.expires_at %}
+                                        <span class="flex items-center gap-1 {% if key.is_expired %}text-red-500{% endif %}">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            Vence: {{ key.expires_at.strftime('%d/%m/%Y') }}
+                                        </span>
+                                        {% else %}
+                                        <span class="flex items-center gap-1 text-emerald-600">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                                            Sin expiración
+                                        </span>
+                                        {% endif %}
+                                        <span class="flex items-center gap-1">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75z"/></svg>
+                                            {{ key.usage_count }} usos
+                                        </span>
+                                    </div>
+
+                                    <!-- Scopes chips -->
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for scope in key.scopes_list %}
+                                            <span class="px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 font-medium">
+                                                {{ scope }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+
+                                    {% if key.notes %}
+                                    <p class="mt-2 text-xs text-gray-400 italic">{{ key.notes }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Acciones -->
+                                <div class="flex flex-col gap-2 flex-shrink-0">
+                                    {% if key.is_active and not key.is_expired %}
+                                        <form method="POST" action="{{ url_for('api_keys.revoke_key', key_id=key.id) }}"
+                                              onsubmit="return confirm('¿Revocar la clave {{ key.name }}? Dejará de funcionar inmediatamente.')">
+                                            <button type="submit"
+                                                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                                Revocar
+                                            </button>
+                                        </form>
+                                    {% elif not key.is_active and not key.is_expired %}
+                                        <form method="POST" action="{{ url_for('api_keys.activate_key', key_id=key.id) }}">
+                                            <button type="submit"
+                                                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                Activar
+                                            </button>
+                                        </form>
+                                    {% endif %}
+
+                                    <form method="POST" action="{{ url_for('api_keys.delete_key', key_id=key.id) }}"
+                                          onsubmit="return confirm('¿Eliminar PERMANENTEMENTE la clave {{ key.name }}?')">
+                                        <button type="submit"
+                                                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <!-- Estado vacío -->
+                    <div class="px-6 py-16 text-center">
+                        <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="h-8 w-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-1">Sin API Keys</h3>
+                        <p class="text-sm text-gray-500">Crea tu primera clave usando el formulario de la izquierda.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Documentación rápida -->
+            <div class="mt-6 bg-gray-900 rounded-2xl shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
+                        <svg class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-sm font-semibold text-gray-100">Ejemplos de uso — API REST</h2>
+                </div>
+                <div class="p-6 space-y-4 text-xs font-mono">
+                    <div>
+                        <p class="text-gray-500 mb-1"># Verificar estado de la API</p>
+                        <div class="bg-gray-800 rounded-lg p-3 text-green-400">
+                            curl -H "Authorization: Bearer gps_xxxxxxxx..." \<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;{{ request.host_url }}api-keys/api/v1/status
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1"># Obtener lista de dispositivos</p>
+                        <div class="bg-gray-800 rounded-lg p-3 text-green-400">
+                            curl -H "Authorization: Bearer gps_xxxxxxxx..." \<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;{{ request.host_url }}api-keys/api/v1/devices
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1"># Respuesta de ejemplo</p>
+                        <div class="bg-gray-800 rounded-lg p-3 text-blue-300">
+                            {<br>
+                            &nbsp;&nbsp;"status": "ok",<br>
+                            &nbsp;&nbsp;"service": "GPS Comercial API",<br>
+                            &nbsp;&nbsp;"version": "1.0",<br>
+                            &nbsp;&nbsp;"timestamp": "2026-04-11T12:00:00Z"<br>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

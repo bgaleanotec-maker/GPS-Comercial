@@ -10,7 +10,8 @@ import pytz
 from werkzeug.utils import secure_filename
 import os
 from flask import current_app
-from app.main.routes import get_devices_view, get_device_positions_view, calculate_distance_from_points
+from app.main.routes import get_device_positions_view, calculate_distance_from_points
+from app.traccar import get_devices
 from app.analytics.export_utils import generate_dashboard_excel
 
 @bp.route('/visit-report', methods=['GET', 'POST'])
@@ -57,7 +58,7 @@ def visit_report():
             .order_by(Visit.timestamp.desc()).limit(100).all()
     
     # Obtener mapa de dispositivos
-    devices = get_devices_view()
+    devices = get_devices()
     device_map = {device['id']: device['name'] for device in devices} if devices else {}
     
     # Agregar nombre de dispositivo a cada visita
@@ -140,7 +141,7 @@ def analytics_dashboard():
     end_date_utc = end_date.astimezone(pytz.utc)
     
     # Obtener dispositivos de Traccar
-    devices = get_devices_view()
+    devices = get_devices()
     device_map = {device['id']: device['name'] for device in devices} if devices else {}
     
     # === ANÁLISIS POR EMPLEADO ===
@@ -299,7 +300,7 @@ def export_dashboard():
     end_date_utc = end_date.astimezone(pytz.utc)
     
     # Obtener dispositivos
-    devices = get_devices_view()
+    devices = get_devices()
     device_map = {device['id']: device['name'] for device in devices} if devices else {}
     
     # Query de visitas
