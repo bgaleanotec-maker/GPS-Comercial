@@ -45,12 +45,16 @@ def _init_database(app):
             from app.models import User, Setting
 
             # Admin por defecto
-            if not User.query.filter_by(username='admin').first():
-                admin = User(username='admin', full_name='Administrador',
+            admin_user = User.query.filter_by(username='admin').first()
+            if not admin_user:
+                admin_user = User(username='admin', full_name='Administrador',
                              email='admin@gps.com', role='admin')
-                admin.set_password(os.environ.get('ADMIN_INITIAL_PASSWORD', 'admin123'))
-                db.session.add(admin)
+                admin_user.set_password(os.environ.get('ADMIN_INITIAL_PASSWORD', 'admin123'))
+                db.session.add(admin_user)
                 logger.info("Admin creado")
+            # Asegurar que admin tenga telefono configurado
+            if admin_user and not admin_user.phone_number:
+                admin_user.phone_number = '573222699322'
 
             # Settings por defecto
             defaults = {
@@ -59,20 +63,25 @@ def _init_database(app):
                 'report_time': '08:00', 'report_recipients': '',
                 'sst_recipients': '',
                 'whatsapp_enabled': 'true',
-                'ultramsg_instance_id': os.environ.get('ULTRAMSG_INSTANCE_ID', ''),
-                'ultramsg_token': os.environ.get('ULTRAMSG_TOKEN', ''),
+                'ultramsg_instance_id': os.environ.get('ULTRAMSG_INSTANCE_ID', 'instance154562'),
+                'ultramsg_token': os.environ.get('ULTRAMSG_TOKEN', 'gxcg5k06jjz7fmi0'),
                 'whatsapp_report_time': '18:00',
                 'emergency_whatsapp_enabled': 'true',
                 'admin_whatsapp_number': '573222699322',
+            }
+            # Keys que siempre deben actualizarse desde env/defaults si estan vacios
+            force_update_keys = {
+                'ultramsg_instance_id', 'ultramsg_token',
+                'whatsapp_enabled', 'emergency_whatsapp_enabled',
+                'admin_whatsapp_number',
             }
             for key, value in defaults.items():
                 existing = Setting.query.filter_by(key=key).first()
                 if not existing:
                     db.session.add(Setting(key=key, value=value))
-                elif not existing.value and value:
-                    # Actualizar settings vacios con valores de env vars
+                elif key in force_update_keys and not existing.value and value:
                     existing.value = value
-                    logger.info("Setting '%s' actualizado desde defaults/env", key)
+                    logger.info("Setting '%s' actualizado: %s", key, value[:20] if len(value) > 20 else value)
 
             db.session.commit()
     except Exception as e:
