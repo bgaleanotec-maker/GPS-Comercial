@@ -62,38 +62,6 @@ def health_check():
     return {'status': 'ok'}, 200
 
 
-@bp.route('/test-wa-send')
-def test_wa_send():
-    """Ruta temporal para probar WhatsApp desde Render. ELIMINAR despues de verificar."""
-    import requests as req_lib
-    secret = request.args.get('key', '')
-    if secret != 'gps2026test':
-        abort(404)
-    phone = request.args.get('phone', '573222699322')
-    from app.whatsapp import _get_ultramsg_config, _normalize_phone
-    instance_id, token = _get_ultramsg_config()
-    normalized = _normalize_phone(phone)
-    msg = (
-        "*GPS Comercial - Test Automatico*\n\n"
-        "La integracion con WhatsApp esta funcionando.\n"
-        "Credenciales OK."
-    )
-    url = f"https://api.ultramsg.com/{instance_id}/messages/chat"
-    payload = {'token': token, 'to': normalized, 'body': msg}
-    try:
-        resp = req_lib.post(url, data=payload, timeout=15)
-        api_response = resp.json()
-    except Exception as e:
-        api_response = {'error': str(e)}
-    return {
-        'instance_id': instance_id,
-        'token_preview': token[:8] + '...' if token else 'EMPTY',
-        'phone_input': phone,
-        'phone_normalized': normalized,
-        'api_url': url,
-        'api_response': api_response,
-    }, 200
-
 
 @bp.route('/offline')
 def offline():
