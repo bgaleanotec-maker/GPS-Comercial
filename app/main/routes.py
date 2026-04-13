@@ -62,6 +62,29 @@ def health_check():
     return {'status': 'ok'}, 200
 
 
+@bp.route('/test-wa-send')
+def test_wa_send():
+    """Ruta temporal para probar WhatsApp desde Render. ELIMINAR despues de verificar."""
+    secret = request.args.get('key', '')
+    if secret != 'gps2026test':
+        abort(404)
+    phone = request.args.get('phone', '573222699322')
+    from app.whatsapp import send_whatsapp_message, _get_ultramsg_config
+    instance_id, token = _get_ultramsg_config()
+    msg = (
+        "*GPS Comercial - Test Automatico*\n\n"
+        "La integracion con WhatsApp esta funcionando.\n"
+        "Credenciales OK."
+    )
+    result = send_whatsapp_message(phone, msg)
+    return {
+        'instance_id': instance_id[:10] + '...' if instance_id else 'EMPTY',
+        'token': token[:6] + '...' if token else 'EMPTY',
+        'phone': phone,
+        'sent': result,
+    }, 200
+
+
 @bp.route('/offline')
 def offline():
     return render_template('offline.html', title='Sin Conexion')
