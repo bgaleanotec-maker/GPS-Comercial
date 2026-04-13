@@ -2,6 +2,7 @@
 """Modulo de notificaciones WhatsApp via Ultramsg API."""
 
 import logging
+import os
 from datetime import datetime
 
 import requests
@@ -15,41 +16,69 @@ ULTRAMSG_TIMEOUT = 15
 
 
 def _get_ultramsg_config():
-    """Obtiene configuracion de Ultramsg desde la tabla Setting."""
-    settings = {s.key: s.value for s in Setting.query.all()}
-    instance_id = settings.get('ultramsg_instance_id', '')
-    token = settings.get('ultramsg_token', '')
+    """Obtiene configuracion de Ultramsg desde la tabla Setting, con fallback a env vars."""
+    try:
+        settings = {s.key: s.value for s in Setting.query.all()}
+        instance_id = settings.get('ultramsg_instance_id', '')
+        token = settings.get('ultramsg_token', '')
+    except Exception:
+        instance_id = ''
+        token = ''
+
+    # Fallback a variables de entorno si la BD no tiene valores
+    if not instance_id:
+        instance_id = os.environ.get('ULTRAMSG_INSTANCE_ID', '')
+    if not token:
+        token = os.environ.get('ULTRAMSG_TOKEN', '')
+
     return instance_id, token
+
+
+def _normalize_phone(phone_number):
+    """Normaliza numero de telefono al formato requerido por Ultramsg (+573...)."""
+    phone = phone_number.strip().replace(' ', '').replace('-', '')
+    # Quitar + si existe
+    if phone.startswith('+'):
+        phone = phone[1:]
+    # Si empieza con 3 y tiene 10 digitos, agregar 57 (Colombia)
+    if phone.startswith('3') and len(phone) == 10:
+        phone = '57' + phone
+    # Ultramsg espera formato +57...
+    return '+' + phone
 
 
 def send_whatsapp_message(phone_number, message):
     """
     Envia un mensaje de WhatsApp via Ultramsg API.
-    phone_number: formato internacional sin '+' (ej: '573001234567')
+    phone_number: cualquier formato colombiano (3222699322, 573222699322, +573222699322)
     """
     instance_id, token = _get_ultramsg_config()
     if not instance_id or not token:
-        logger.warning("Ultramsg no configurado. Configure instance_id y token en Configuracion.")
+        logger.warning("Ultramsg no configurado. instance_id=%s, token=%s",
+                       'SET' if instance_id else 'EMPTY', 'SET' if token else 'EMPTY')
         return False
 
+    normalized = _normalize_phone(phone_number)
     url = f"https://api.ultramsg.com/{instance_id}/messages/chat"
     payload = {
         'token': token,
-        'to': phone_number,
+        'to': normalized,
         'body': message,
     }
 
     try:
+        logger.info("Enviando WhatsApp a %s via Ultramsg instance %s...", normalized, instance_id)
         response = requests.post(url, data=payload, timeout=ULTRAMSG_TIMEOUT)
         data = response.json()
+        logger.info("Respuesta Ultramsg: %s", data)
         if data.get('sent') == 'true' or data.get('id'):
-            logger.info("WhatsApp enviado a %s", phone_number)
+            logger.info("WhatsApp enviado exitosamente a %s", normalized)
             return True
         else:
             logger.error("Error Ultramsg: %s", data)
             return False
     except Exception as e:
-        logger.error("Error enviando WhatsApp a %s: %s", phone_number, e)
+        logger.error("Error enviando WhatsApp a %s: %s", normalized, e)
         return False
 
 

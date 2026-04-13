@@ -102,29 +102,62 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Hora de Envio WhatsApp</label>
-                        <input type="text" name="whatsapp_report_time" value="{{ form.whatsapp_report_time or '08:00' }}" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="08:00">
+                        <input type="text" name="whatsapp_report_time" value="{{ form.whatsapp_report_time or '18:00' }}" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="18:00">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Ultramsg Instance ID</label>
-                        <input type="text" name="ultramsg_instance_id" value="{{ form.ultramsg_instance_id or '' }}" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="instance12345">
+                        <input type="text" name="ultramsg_instance_id" value="{{ form.ultramsg_instance_id or '' }}" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="instance154562">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Ultramsg Token</label>
-                        <input type="password" name="ultramsg_token" value="{{ form.ultramsg_token or '' }}" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="tu-token-aqui">
+                        <input type="text" name="ultramsg_token" value="{{ form.ultramsg_token or '' }}" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="tu-token-aqui">
                     </div>
                 </div>
+
+                <!-- Alertas de Emergencia WhatsApp -->
+                <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <h4 class="text-sm font-semibold text-red-800 mb-3">Alertas de Emergencia</h4>
+                    <p class="text-xs text-red-600 mb-3">Alertas inmediatas por frenado extremo, posible accidente o velocidad mayor a 120 km/h.</p>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-medium text-red-700">Activar Alertas Emergencia</label>
+                            <select name="emergency_whatsapp_enabled" class="mt-1 block w-full shadow-sm sm:text-sm border-red-300 rounded-md">
+                                <option value="false" {% if form.emergency_whatsapp_enabled == 'true' %}{% else %}selected{% endif %}>Desactivado</option>
+                                <option value="true" {% if form.emergency_whatsapp_enabled == 'true' %}selected{% endif %}>Activado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-red-700">WhatsApp Admin (emergencias)</label>
+                            <input type="text" name="admin_whatsapp_number" value="{{ form.admin_whatsapp_number or '573222699322' }}" class="mt-1 block w-full shadow-sm sm:text-sm border-red-300 rounded-md" placeholder="573222699322">
+                            <p class="text-xs text-red-500 mt-1">Formato: 573XXXXXXXXX (sin +)</p>
+                        </div>
+                    </div>
+                </div>
+
                 <p class="text-xs text-gray-400 mt-2">Los lideres de negocio (rol "lider") con telefono configurado recibiran reportes de su equipo.</p>
 
             </div>
-            <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex items-center justify-end space-x-4">
+            <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex flex-wrap items-center justify-end gap-3">
                 <button type="submit" name="send_report" value="1" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Enviar Reporte de Hoy Ahora
                 </button>
                 <button type="submit" name="submit" value="1" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Guardar Configuración
+                    Guardar Configuracion
                 </button>
             </div>
         </form>
+
+        <!-- Boton de prueba WhatsApp (fuera del form principal) -->
+        <div class="px-6 py-4 border-t border-gray-100">
+            <form action="{{ url_for('scoring.test_whatsapp') }}" method="post" class="flex flex-wrap items-center gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="phone" value="573222699322" class="shadow-sm sm:text-sm border-gray-300 rounded-md w-48" placeholder="573XXXXXXXXX">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.66 0-3.203-.51-4.482-1.379l-.32-.193-2.876.854.854-2.876-.193-.32A7.963 7.963 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/></svg>
+                    Enviar Prueba WhatsApp
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

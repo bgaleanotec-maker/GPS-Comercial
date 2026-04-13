@@ -57,13 +57,22 @@ def _init_database(app):
                 'start_time': '06:00', 'end_time': '20:00',
                 'active_days': '1,2,3,4,5', 'visit_interval': '60',
                 'report_time': '08:00', 'report_recipients': '',
-                'sst_recipients': '', 'whatsapp_enabled': 'false',
-                'ultramsg_instance_id': '', 'ultramsg_token': '',
-                'whatsapp_report_time': '08:00',
+                'sst_recipients': '',
+                'whatsapp_enabled': 'true',
+                'ultramsg_instance_id': os.environ.get('ULTRAMSG_INSTANCE_ID', ''),
+                'ultramsg_token': os.environ.get('ULTRAMSG_TOKEN', ''),
+                'whatsapp_report_time': '18:00',
+                'emergency_whatsapp_enabled': 'true',
+                'admin_whatsapp_number': '573222699322',
             }
             for key, value in defaults.items():
-                if not Setting.query.filter_by(key=key).first():
+                existing = Setting.query.filter_by(key=key).first()
+                if not existing:
                     db.session.add(Setting(key=key, value=value))
+                elif not existing.value and value:
+                    # Actualizar settings vacios con valores de env vars
+                    existing.value = value
+                    logger.info("Setting '%s' actualizado desde defaults/env", key)
 
             db.session.commit()
     except Exception as e:

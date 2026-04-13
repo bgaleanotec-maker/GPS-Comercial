@@ -104,7 +104,9 @@ def manage_settings():
                 'whatsapp_enabled': request.form.get('whatsapp_enabled', 'false'),
                 'ultramsg_instance_id': request.form.get('ultramsg_instance_id', '').strip(),
                 'ultramsg_token': request.form.get('ultramsg_token', '').strip(),
-                'whatsapp_report_time': request.form.get('whatsapp_report_time', '08:00').strip(),
+                'whatsapp_report_time': request.form.get('whatsapp_report_time', '18:00').strip(),
+                'emergency_whatsapp_enabled': request.form.get('emergency_whatsapp_enabled', 'false'),
+                'admin_whatsapp_number': request.form.get('admin_whatsapp_number', '').strip(),
             }
 
             for key, value in settings_to_save.items():
@@ -137,6 +139,32 @@ def manage_settings():
         form.whatsapp_enabled = settings.get('whatsapp_enabled', 'false')
         form.ultramsg_instance_id = settings.get('ultramsg_instance_id', '')
         form.ultramsg_token = settings.get('ultramsg_token', '')
-        form.whatsapp_report_time = settings.get('whatsapp_report_time', '08:00')
+        form.whatsapp_report_time = settings.get('whatsapp_report_time', '18:00')
+        form.emergency_whatsapp_enabled = settings.get('emergency_whatsapp_enabled', 'false')
+        form.admin_whatsapp_number = settings.get('admin_whatsapp_number', '573222699322')
 
     return render_template('scoring/manage_settings.html', title='Configuración General', form=form)
+
+
+@bp.route('/test-whatsapp', methods=['POST'])
+@login_required
+def test_whatsapp():
+    """Envia un mensaje de prueba por WhatsApp al admin."""
+    if current_user.role != 'admin':
+        abort(403)
+
+    from app.whatsapp import send_whatsapp_message
+    phone = request.form.get('phone', '573222699322')
+    message = (
+        "*GPS Comercial - Mensaje de Prueba*\n\n"
+        "Si recibes este mensaje, la integracion con WhatsApp esta funcionando correctamente.\n\n"
+        f"Enviado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    )
+
+    result = send_whatsapp_message(phone, message)
+    if result:
+        flash('Mensaje de prueba enviado exitosamente por WhatsApp.', 'success')
+    else:
+        flash('Error al enviar el mensaje. Revisa los logs y las credenciales de Ultramsg.', 'danger')
+
+    return redirect(url_for('scoring.manage_settings'))
