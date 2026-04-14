@@ -128,8 +128,9 @@ def check_and_send_report(app):
             logger.error("Formato de hora de reporte invalido.")
             return
 
-        if (now_colombia.hour == report_hour and
-                now_colombia.minute == report_minute and
+        # Usar >= para no perder el minuto si el loop no cae exacto
+        report_target = now_colombia.replace(hour=report_hour, minute=report_minute, second=0)
+        if (now_colombia >= report_target and
                 now_colombia.date() != _last_report_sent_day):
 
             logger.info("--- ENVIANDO REPORTE DIARIO AUTOMATICO ---")
@@ -160,8 +161,9 @@ def check_and_send_whatsapp(app):
         except ValueError:
             return
 
-        if (now_colombia.hour == wh_hour and
-                now_colombia.minute == wh_minute and
+        # Usar >= para no perder el minuto si el loop no cae exacto
+        wh_target = now_colombia.replace(hour=wh_hour, minute=wh_minute, second=0)
+        if (now_colombia >= wh_target and
                 now_colombia.date() != _last_whatsapp_sent_day):
             logger.info("--- ENVIANDO NOTIFICACIONES WHATSAPP ---")
             try:
