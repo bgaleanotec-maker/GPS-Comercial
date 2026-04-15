@@ -13,7 +13,7 @@ from app.traccar import (
     get_devices, get_device_by_id, get_device_positions,
     KNOTS_TO_KMH, calculate_route_distances
 )
-from app.utils import haversine_distance, filter_positions_by_working_hours
+from app.utils import haversine_distance, filter_positions_by_working_hours, get_team_ids
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +103,11 @@ def index():
             tasks_month_completed = ScheduledTask.query.filter(ScheduledTask.scheduled_date >= month_start, ScheduledTask.status == 'cumplida').count()
             infractions_month = Infraction.query.filter(Infraction.timestamp >= colombia_tz.localize(datetime.combine(month_start, time.min))).count()
         elif current_user.role == 'lider':
-            team_ids = [u.id for u in User.query.filter_by(categoria=current_user.categoria).all()]
-            total_users = len([u for u in User.query.filter_by(categoria=current_user.categoria).all() if u.employee_status == 'activo'])
+            team_ids = get_team_ids(current_user)
+            if current_user.categoria == 'Todas':
+                total_users = User.query.filter(User.employee_status == 'activo', User.role != 'admin').count()
+            else:
+                total_users = len([u for u in User.query.filter_by(categoria=current_user.categoria).all() if u.employee_status == 'activo'])
             total_allies = Ally.query.count()
             visits_today = Visit.query.filter(Visit.timestamp >= colombia_tz.localize(datetime.combine(today, time.min)), Visit.user_id.in_(team_ids)).count()
             visits_month = Visit.query.filter(Visit.timestamp >= colombia_tz.localize(datetime.combine(month_start, time.min)), Visit.user_id.in_(team_ids)).count()
@@ -151,8 +154,8 @@ def dashboard():
     # Filtro por mercado/categoria
     mercado_filter = request.args.get('mercado', 'all')
 
-    # Lider solo ve su mercado
-    if current_user.role == 'lider':
+    # Lider solo ve su mercado (excepto si tiene 'Todas')
+    if current_user.role == 'lider' and current_user.categoria != 'Todas':
         mercado_filter = current_user.categoria
 
     if current_user.role in ('admin', 'lider'):

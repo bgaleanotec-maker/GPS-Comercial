@@ -49,7 +49,7 @@
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Categoria / Mercado</label>
                     <select name="categoria" class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-sm touch-target focus:ring-2 focus:ring-indigo-500">
-                        {% for cat in ['Vantilisto','Seguros','VantiMax','Comercial','Residencial','Nueva Edificacion'] %}
+                        {% for cat in ['Todas','Vantilisto','Seguros','VantiMax','Comercial','Residencial','Nueva Edificacion','Saturacion'] %}
                         <option value="{{ cat }}" {% if user.categoria == cat %}selected{% endif %}>{{ cat }}</option>
                         {% endfor %}
                     </select>
@@ -57,7 +57,7 @@
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Filial</label>
                     <select name="filial" class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-sm touch-target focus:ring-2 focus:ring-indigo-500">
-                        {% for fil in ['Vanti','GOR','Nacer','Cundi'] %}
+                        {% for fil in ['Todas','Vanti','GOR','Nacer','Cundi'] %}
                         <option value="{{ fil }}" {% if user.filial == fil %}selected{% endif %}>{{ fil }}</option>
                         {% endfor %}
                     </select>

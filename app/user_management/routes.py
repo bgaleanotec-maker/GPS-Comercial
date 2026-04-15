@@ -8,6 +8,7 @@ from app.models import User, Ally, UserAllyAssignment
 from app.forms import UserCreationForm
 from app import db
 from app.traccar import get_devices
+from app.utils import get_team_query, is_leader_of
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ def manage_users():
         new_status = request.form.get('new_status', 'activo')
         u = db.session.get(User, uid)
         if u:
-            if current_user.role == 'lider' and u.categoria != current_user.categoria:
+            if current_user.role == 'lider' and not is_leader_of(current_user, u):
                 abort(403)
             u.employee_status = new_status
             u.status_notes = request.form.get('status_notes', '')
@@ -82,10 +83,8 @@ def manage_users():
     if current_user.role == 'admin':
         users = User.query.order_by(User.full_name).all()
     else:
-        # Lider solo ve su categoria
-        users = User.query.filter_by(
-            categoria=current_user.categoria
-        ).order_by(User.full_name).all()
+        # Lider ve su categoria (o todas si tiene 'Todas')
+        users = get_team_query(current_user).order_by(User.full_name).all()
 
     devices = get_devices() if current_user.role == 'admin' else None
     device_map = {d['id']: d['name'] for d in devices} if devices else {}
@@ -117,8 +116,8 @@ def edit_user(user_id):
     if not user:
         abort(404)
 
-    # Lider solo puede editar usuarios de su categoria
-    if current_user.role == 'lider' and user.categoria != current_user.categoria:
+    # Lider solo puede editar usuarios de su categoria (o todos si 'Todas')
+    if current_user.role == 'lider' and not is_leader_of(current_user, user):
         abort(403)
 
     if request.method == 'POST':

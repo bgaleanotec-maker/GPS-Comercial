@@ -94,6 +94,41 @@ def is_user_trackable(user):
     return True
 
 
+def get_team_query(leader_user, base_query=None):
+    """
+    Retorna un query filtrado por el equipo del lider.
+    Si el lider tiene categoria='Todas', ve TODOS los usuarios.
+    Si tiene una categoria especifica, solo ve su equipo.
+
+    base_query: SQLAlchemy query base (si None, usa User.query)
+    Retorna: query filtrada
+    """
+    from app.models import User
+    q = base_query if base_query is not None else User.query
+    if leader_user.categoria and leader_user.categoria != 'Todas':
+        q = q.filter(User.categoria == leader_user.categoria)
+    return q
+
+
+def get_team_ids(leader_user):
+    """
+    Retorna lista de IDs de usuarios del equipo del lider.
+    Si categoria='Todas', retorna IDs de todos los usuarios.
+    """
+    from app.models import User
+    if leader_user.categoria and leader_user.categoria != 'Todas':
+        return [u.id for u in User.query.filter_by(categoria=leader_user.categoria).all()]
+    else:
+        return [u.id for u in User.query.all()]
+
+
+def is_leader_of(leader_user, target_user):
+    """Verifica si un lider gestiona a un usuario especifico."""
+    if leader_user.categoria == 'Todas':
+        return True
+    return leader_user.categoria == target_user.categoria
+
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     """Calcula la distancia en metros entre dos puntos geograficos."""
     R = 6371000  # Radio de la Tierra en metros

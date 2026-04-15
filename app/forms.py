@@ -81,10 +81,13 @@ class UserEditForm(FlaskForm):
     home_address = StringField('Direccion Residencia')
     work_address = StringField('Direccion Trabajo')
     categoria = SelectField('Categoria', choices=[
+        ('Todas', 'Todas (Todas las gerencias)'),
         ('Vantilisto', 'Vantilisto'), ('Seguros', 'Seguros'), ('VantiMax', 'VantiMax'),
-        ('Comercial', 'Comercial'), ('Residencial', 'Residencial'), ('Nueva Edificacion', 'Nueva Edificacion')
+        ('Comercial', 'Comercial'), ('Residencial', 'Residencial'), ('Nueva Edificacion', 'Nueva Edificacion'),
+        ('Saturacion', 'Saturacion'),
     ])
     filial = SelectField('Filial', choices=[
+        ('Todas', 'Todas (Todas las filiales)'),
         ('Vanti', 'Vanti'), ('GOR', 'GOR'), ('Nacer', 'Nacer'), ('Cundi', 'Cundi')
     ])
     employee_status = SelectField('Estado', choices=[
@@ -105,15 +108,18 @@ class UserCreationForm(FlaskForm):
     
     # === NUEVOS CAMPOS ===
     categoria = SelectField('Categoría', choices=[
+        ('Todas', 'Todas (Todas las gerencias)'),
         ('Vantilisto', 'Vantilisto'),
         ('Seguros', 'Seguros'),
         ('VantiMax', 'VantiMax'),
         ('Comercial', 'Comercial'),
         ('Residencial', 'Residencial'),
-        ('Nueva Edificacion', 'Nueva Edificación')
+        ('Nueva Edificacion', 'Nueva Edificación'),
+        ('Saturacion', 'Saturación'),
     ], validators=[DataRequired()])
-    
+
     filial = SelectField('Filial', choices=[
+        ('Todas', 'Todas (Todas las filiales)'),
         ('Vanti', 'Vanti'),
         ('GOR', 'GOR'),
         ('Nacer', 'Nacer'),

@@ -11,6 +11,7 @@ from app import db
 from app.models import (ScheduledTask, TaskTemplate, TaskAssignment,
                         User, Ally, Visit)
 from app.schedule import bp
+from app.utils import get_team_ids, get_team_query, is_leader_of
 
 logger = logging.getLogger(__name__)
 COLOMBIA_TZ = pytz.timezone('America/Bogota')
@@ -220,9 +221,9 @@ def control_tower():
         ScheduledTask.scheduled_date <= date_to,
     )
 
-    # Filtro por lider: solo su equipo (misma categoria)
+    # Filtro por lider: solo su equipo (misma categoria, o todas si 'Todas')
     if current_user.role == 'lider':
-        team_ids = [u.id for u in User.query.filter_by(categoria=current_user.categoria).all()]
+        team_ids = get_team_ids(current_user)
         query = query.filter(ScheduledTask.user_id.in_(team_ids))
 
     if employee_filter:
@@ -255,7 +256,7 @@ def control_tower():
     if current_user.role == 'admin':
         employees = User.query.filter(User.role.in_(['empleado', 'lider'])).order_by(User.full_name).all()
     else:
-        employees = User.query.filter_by(categoria=current_user.categoria).order_by(User.full_name).all()
+        employees = get_team_query(current_user).order_by(User.full_name).all()
 
     # Resumen por empleado
     employee_summary = {}
@@ -352,10 +353,7 @@ def assign_task():
             User.employee_status == 'activo'
         ).order_by(User.full_name).all()
     else:
-        employees = User.query.filter_by(
-            categoria=current_user.categoria,
-            employee_status='activo'
-        ).order_by(User.full_name).all()
+        employees = get_team_query(current_user, User.query.filter_by(employee_status='activo')).order_by(User.full_name).all()
 
     allies = Ally.query.order_by(Ally.name).all()
 
@@ -377,7 +375,7 @@ def manage_templates():
     if current_user.role not in ('admin', 'lider'):
         abort(403)
 
-    if current_user.role == 'admin':
+    if current_user.role == 'admin' or current_user.categoria == 'Todas':
         templates = TaskTemplate.query.order_by(TaskTemplate.created_at.desc()).all()
     else:
         templates = TaskTemplate.query.filter_by(
@@ -460,12 +458,12 @@ def create_template():
         return redirect(url_for('schedule.manage_templates'))
 
     # GET
-    if current_user.role == 'admin':
+    if current_user.role == 'admin' or current_user.categoria == 'Todas':
         employees = User.query.filter(
             User.role.in_(['empleado', 'lider']),
             User.employee_status == 'activo'
         ).order_by(User.full_name).all()
-        categorias = sorted(set(u.categoria for u in User.query.all() if u.categoria))
+        categorias = sorted(set(u.categoria for u in User.query.all() if u.categoria and u.categoria != 'Todas'))
     else:
         employees = User.query.filter_by(
             categoria=current_user.categoria,
@@ -554,7 +552,14 @@ def leader_dashboard():
 
     # Equipo del lider
     if current_user.role == 'lider':
-        team = User.query.filter_by(categoria=current_user.categoria).all()
+        if current_user.categoria == 'Todas':
+            cat_filter = request.args.get('categoria', '')
+            if cat_filter:
+                team = User.query.filter_by(categoria=cat_filter).all()
+            else:
+                team = User.query.filter(User.role.in_(['empleado', 'lider'])).all()
+        else:
+            team = User.query.filter_by(categoria=current_user.categoria).all()
     else:
         cat_filter = request.args.get('categoria', '')
         if cat_filter:
@@ -613,7 +618,7 @@ def leader_dashboard():
     employee_data.sort(key=lambda x: x['cumplimiento'], reverse=True)
 
     # Templates activas
-    if current_user.role == 'lider':
+    if current_user.role == 'lider' and current_user.categoria != 'Todas':
         active_templates = TaskTemplate.query.filter_by(
             categoria=current_user.categoria, is_active=True
         ).count()
