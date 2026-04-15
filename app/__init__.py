@@ -132,6 +132,16 @@ def create_app(config_class=Config):
     from app.schedule import bp as schedule_bp
     app.register_blueprint(schedule_bp, url_prefix='/schedule')
 
+    # Forzar cambio de contrasena en cualquier ruta protegida
+    @app.before_request
+    def check_password_change():
+        from flask_login import current_user
+        from flask import request, redirect, url_for
+        if current_user.is_authenticated and getattr(current_user, 'must_change_password', False):
+            allowed = ('auth.change_password', 'auth.logout', 'static')
+            if request.endpoint and request.endpoint not in allowed:
+                return redirect(url_for('auth.change_password'))
+
     # Crear/actualizar tablas e inicializar datos
     _init_database(app)
 

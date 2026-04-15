@@ -30,6 +30,9 @@ class User(UserMixin, db.Model):
     # Contacto
     phone_number = db.Column(db.String(20))  # Para WhatsApp (formato: 573001234567)
 
+    # Seguridad
+    must_change_password = db.Column(db.Boolean, default=True)  # Forzar cambio de clave en primer login
+
     # Estado del empleado
     employee_status = db.Column(db.String(30), default='activo')  # activo, vacaciones, incapacidad, licencia, retirado
     status_start_date = db.Column(db.Date)  # Inicio del estado (ej: inicio vacaciones)

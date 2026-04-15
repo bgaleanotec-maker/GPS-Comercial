@@ -36,9 +36,10 @@ def manage_users():
             employee_status='activo',
         )
         user.set_password('Vanti2025')
+        user.must_change_password = True
         db.session.add(user)
         db.session.commit()
-        flash(f'Usuario "{form.full_name.data}" creado como {role}. Clave: Vanti2025', 'success')
+        flash(f'Usuario "{form.full_name.data}" creado como {role}. Clave temporal: Vanti2025 (debera cambiarla al ingresar)', 'success')
         return redirect(url_for('user_management.manage_users'))
 
     # Asociar dispositivo (solo admin)
@@ -135,11 +136,19 @@ def edit_user(user_id):
             user.categoria = request.form.get('categoria', user.categoria)
             user.filial = request.form.get('filial', user.filial)
 
-        # Reset password si se solicita
+        # Reset password: admin genera clave temporal, usuario debera cambiarla
+        reset_action = request.form.get('reset_password')
         new_password = request.form.get('new_password', '').strip()
-        if new_password:
+        if reset_action == 'generate':
+            import secrets
+            temp_pw = 'Vanti' + secrets.token_urlsafe(4)
+            user.set_password(temp_pw)
+            user.must_change_password = True
+            flash(f'Clave temporal generada: <strong>{temp_pw}</strong> — El usuario debera cambiarla al ingresar.', 'success_key')
+        elif new_password:
             user.set_password(new_password)
-            flash('Contrasena actualizada.', 'info')
+            user.must_change_password = True
+            flash('Contrasena actualizada. El usuario debera cambiarla al ingresar.', 'info')
 
         db.session.commit()
         flash(f'Usuario {user.username} actualizado.', 'success')
