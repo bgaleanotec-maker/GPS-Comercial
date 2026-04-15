@@ -62,6 +62,11 @@ def health_check():
     return {'status': 'ok'}, 200
 
 
+@bp.route('/docs')
+def docs():
+    """Documentacion BPM del sistema - accesible sin login."""
+    return render_template('docs.html', title='Documentacion BPM')
+
 
 @bp.route('/offline')
 def offline():
@@ -71,7 +76,66 @@ def offline():
 @bp.route('/')
 @bp.route('/index')
 def index():
-    return render_template('index.html', title='Inicio')
+    from flask_login import current_user
+    stats = None
+    if current_user.is_authenticated:
+        from app.models import User, Visit, ScheduledTask, Ally, Infraction
+        colombia_tz = pytz.timezone('America/Bogota')
+        now = datetime.now(colombia_tz)
+        today = now.date()
+        month_start = today.replace(day=1)
+
+        # Stats globales o por equipo
+        if current_user.role == 'admin':
+            total_users = User.query.filter(User.employee_status == 'activo').count()
+            total_allies = Ally.query.count()
+            visits_today = Visit.query.filter(Visit.timestamp >= colombia_tz.localize(datetime.combine(today, time.min))).count()
+            visits_month = Visit.query.filter(Visit.timestamp >= colombia_tz.localize(datetime.combine(month_start, time.min))).count()
+            tasks_today = ScheduledTask.query.filter_by(scheduled_date=today).count()
+            tasks_completed = ScheduledTask.query.filter_by(scheduled_date=today, status='cumplida').count()
+            tasks_month = ScheduledTask.query.filter(ScheduledTask.scheduled_date >= month_start).count()
+            tasks_month_completed = ScheduledTask.query.filter(ScheduledTask.scheduled_date >= month_start, ScheduledTask.status == 'cumplida').count()
+            infractions_month = Infraction.query.filter(Infraction.timestamp >= colombia_tz.localize(datetime.combine(month_start, time.min))).count()
+        elif current_user.role == 'lider':
+            team_ids = [u.id for u in User.query.filter_by(categoria=current_user.categoria).all()]
+            total_users = len([u for u in User.query.filter_by(categoria=current_user.categoria).all() if u.employee_status == 'activo'])
+            total_allies = Ally.query.count()
+            visits_today = Visit.query.filter(Visit.timestamp >= colombia_tz.localize(datetime.combine(today, time.min)), Visit.user_id.in_(team_ids)).count()
+            visits_month = Visit.query.filter(Visit.timestamp >= colombia_tz.localize(datetime.combine(month_start, time.min)), Visit.user_id.in_(team_ids)).count()
+            tasks_today = ScheduledTask.query.filter(ScheduledTask.scheduled_date == today, ScheduledTask.user_id.in_(team_ids)).count()
+            tasks_completed = ScheduledTask.query.filter(ScheduledTask.scheduled_date == today, ScheduledTask.status == 'cumplida', ScheduledTask.user_id.in_(team_ids)).count()
+            tasks_month = ScheduledTask.query.filter(ScheduledTask.scheduled_date >= month_start, ScheduledTask.user_id.in_(team_ids)).count()
+            tasks_month_completed = ScheduledTask.query.filter(ScheduledTask.scheduled_date >= month_start, ScheduledTask.status == 'cumplida', ScheduledTask.user_id.in_(team_ids)).count()
+            infractions_month = 0
+        else:
+            total_users = 0
+            total_allies = Ally.query.count()
+            visits_today = Visit.query.filter(Visit.timestamp >= colombia_tz.localize(datetime.combine(today, time.min)), Visit.user_id == current_user.id).count()
+            visits_month = Visit.query.filter(Visit.timestamp >= colombia_tz.localize(datetime.combine(month_start, time.min)), Visit.user_id == current_user.id).count()
+            tasks_today = ScheduledTask.query.filter_by(scheduled_date=today, user_id=current_user.id).count()
+            tasks_completed = ScheduledTask.query.filter_by(scheduled_date=today, status='cumplida', user_id=current_user.id).count()
+            tasks_month = ScheduledTask.query.filter(ScheduledTask.scheduled_date >= month_start, ScheduledTask.user_id == current_user.id).count()
+            tasks_month_completed = ScheduledTask.query.filter(ScheduledTask.scheduled_date >= month_start, ScheduledTask.status == 'cumplida', ScheduledTask.user_id == current_user.id).count()
+            infractions_month = 0
+
+        cumplimiento_hoy = (tasks_completed / tasks_today * 100) if tasks_today > 0 else 0
+        cumplimiento_mes = (tasks_month_completed / tasks_month * 100) if tasks_month > 0 else 0
+
+        stats = {
+            'total_users': total_users,
+            'total_allies': total_allies,
+            'visits_today': visits_today,
+            'visits_month': visits_month,
+            'tasks_today': tasks_today,
+            'tasks_completed': tasks_completed,
+            'tasks_month': tasks_month,
+            'tasks_month_completed': tasks_month_completed,
+            'cumplimiento_hoy': cumplimiento_hoy,
+            'cumplimiento_mes': cumplimiento_mes,
+            'infractions_month': infractions_month,
+        }
+
+    return render_template('index.html', title='Inicio', stats=stats)
 
 
 @bp.route('/dashboard')
