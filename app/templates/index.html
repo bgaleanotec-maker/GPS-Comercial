@@ -2,332 +2,721 @@
 
 {% block head %}
 <style>
-    @keyframes float-slow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-    @keyframes float-med { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-    @keyframes fade-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-    @keyframes count-up { from{opacity:0;transform:scale(0.5)} to{opacity:1;transform:scale(1)} }
-    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-    @keyframes pulse-ring { 0%{transform:scale(0.8);opacity:0.5} 100%{transform:scale(1.4);opacity:0} }
-    .float-slow { animation:float-slow 6s ease-in-out infinite }
-    .float-med { animation:float-med 4.5s ease-in-out infinite }
-    .fade-up { animation:fade-up 0.6s ease-out both }
-    .fade-up-1 { animation:fade-up 0.6s ease-out 0.1s both }
-    .fade-up-2 { animation:fade-up 0.6s ease-out 0.2s both }
-    .fade-up-3 { animation:fade-up 0.6s ease-out 0.3s both }
-    .fade-up-4 { animation:fade-up 0.6s ease-out 0.4s both }
-    .count-pop { animation:count-up 0.4s ease-out both }
-    .shimmer-bar { background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0) 100%); background-size:200% 100%; animation:shimmer 2.5s linear infinite }
-    .progress-ring { border-radius:50%; background:conic-gradient(var(--progress-color) var(--progress-pct), #e5e7eb var(--progress-pct)) }
-    .brand-grid { background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px); background-size:40px 40px }
+    /* Circular progress indicator */
+    .circular-progress {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .circular-progress::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: conic-gradient(
+            var(--progress-color, #6366f1) calc(var(--progress, 0) * 1%),
+            #e5e7eb calc(var(--progress, 0) * 1%)
+        );
+        mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #fff calc(100% - 9px));
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #fff calc(100% - 9px));
+    }
+    .circular-progress-sm {
+        width: 90px;
+        height: 90px;
+    }
+    .circular-progress-sm::before {
+        mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #fff calc(100% - 7px));
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #fff calc(100% - 7px));
+    }
+
+    /* Hero gradient */
+    .hero-gradient {
+        background: linear-gradient(135deg, #4338ca 0%, #6d28d9 40%, #7c3aed 70%, #4338ca 100%);
+        background-size: 300% 300%;
+        animation: hero-shift 8s ease infinite;
+    }
+    @keyframes hero-shift {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+
+    /* Landing hero */
+    .landing-hero {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4338ca 50%, #6d28d9 75%, #4c1d95 100%);
+        background-size: 400% 400%;
+        animation: hero-shift 12s ease infinite;
+        min-height: 100vh;
+    }
+
+    /* Card hover */
+    .kpi-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px -12px rgba(0,0,0,0.15);
+    }
+
+    /* Action card */
+    .action-card {
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .action-card:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 12px 24px -8px rgba(0,0,0,0.12);
+    }
+
+    /* Feature card */
+    .feature-card {
+        transition: all 0.3s ease;
+    }
+    .feature-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 24px 48px -16px rgba(0,0,0,0.18);
+    }
+
+    /* Animated counter */
+    @keyframes countUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .count-animate {
+        animation: countUp 0.6s ease forwards;
+    }
+
+    /* Fade in stagger */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up {
+        animation: fadeInUp 0.5s ease forwards;
+        opacity: 0;
+    }
+    .fade-in-up:nth-child(1) { animation-delay: 0.05s; }
+    .fade-in-up:nth-child(2) { animation-delay: 0.1s; }
+    .fade-in-up:nth-child(3) { animation-delay: 0.15s; }
+    .fade-in-up:nth-child(4) { animation-delay: 0.2s; }
+    .fade-in-up:nth-child(5) { animation-delay: 0.25s; }
+    .fade-in-up:nth-child(6) { animation-delay: 0.3s; }
+    .fade-in-up:nth-child(7) { animation-delay: 0.35s; }
+    .fade-in-up:nth-child(8) { animation-delay: 0.4s; }
+
+    /* Pulse ring */
+    @keyframes pulse-ring {
+        0% { transform: scale(0.9); opacity: 0.7; }
+        50% { transform: scale(1.05); opacity: 0.3; }
+        100% { transform: scale(0.9); opacity: 0.7; }
+    }
+    .pulse-ring {
+        animation: pulse-ring 2.5s ease-in-out infinite;
+    }
+
+    /* Glass card */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+
 {% if current_user.is_authenticated and stats %}
-{# ======================== AUTHENTICATED: DASHBOARD HOME ======================== #}
-<div class="min-h-screen bg-gray-50">
+{# ===================== AUTHENTICATED VIEW ===================== #}
 
-    {# Hero Banner #}
-    <div class="relative bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-900 overflow-hidden">
-        <div class="absolute inset-0 brand-grid"></div>
-        <div class="absolute -top-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl float-slow"></div>
-        <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl float-med"></div>
-        <div class="absolute top-1/2 left-0 right-0 h-px shimmer-bar"></div>
+<div x-data="{
+    visitsToday: 0,
+    visitsMonth: 0,
+    tasksToday: 0,
+    tasksCompleted: 0,
+    tasksMonth: 0,
+    tasksMonthCompleted: 0,
+    cumpHoy: 0,
+    cumpMes: 0,
+    infractions: 0,
+    totalUsers: 0,
+    totalAllies: 0,
+    targetVisitsToday: {{ stats.visits_today|default(0) }},
+    targetVisitsMonth: {{ stats.visits_month|default(0) }},
+    targetTasksToday: {{ stats.tasks_today|default(0) }},
+    targetTasksCompleted: {{ stats.tasks_completed|default(0) }},
+    targetTasksMonth: {{ stats.tasks_month|default(0) }},
+    targetTasksMonthCompleted: {{ stats.tasks_month_completed|default(0) }},
+    targetCumpHoy: {{ stats.cumplimiento_hoy|default(0)|round(1) }},
+    targetCumpMes: {{ stats.cumplimiento_mes|default(0)|round(1) }},
+    targetInfractions: {{ stats.infractions_month|default(0) }},
+    targetTotalUsers: {{ stats.total_users|default(0) }},
+    targetTotalAllies: {{ stats.total_allies|default(0) }},
+    animateCounter(prop, target, duration) {
+        let start = 0;
+        const step = target / (duration / 16);
+        const interval = setInterval(() => {
+            start += step;
+            if (start >= target) { this[prop] = target; clearInterval(interval); }
+            else { this[prop] = Math.round(start * 10) / 10; }
+        }, 16);
+    },
+    init() {
+        this.animateCounter('visitsToday', this.targetVisitsToday, 800);
+        this.animateCounter('visitsMonth', this.targetVisitsMonth, 1000);
+        this.animateCounter('tasksToday', this.targetTasksToday, 800);
+        this.animateCounter('tasksCompleted', this.targetTasksCompleted, 800);
+        this.animateCounter('tasksMonth', this.targetTasksMonth, 900);
+        this.animateCounter('tasksMonthCompleted', this.targetTasksMonthCompleted, 900);
+        this.animateCounter('cumpHoy', this.targetCumpHoy, 1200);
+        this.animateCounter('cumpMes', this.targetCumpMes, 1200);
+        this.animateCounter('infractions', this.targetInfractions, 800);
+        this.animateCounter('totalUsers', this.targetTotalUsers, 700);
+        this.animateCounter('totalAllies', this.targetTotalAllies, 700);
+    }
+}">
 
-        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                {# Welcome #}
-                <div class="fade-up">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="h-12 w-12 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/10">
-                            <span class="text-white font-bold text-xl">{{ (current_user.full_name or current_user.username)[0].upper() }}</span>
+    <!-- ====== HERO SECTION ====== -->
+    <section class="hero-gradient text-white relative overflow-hidden">
+        <!-- Decorative shapes -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-purple-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-300/5 rounded-full blur-3xl pulse-ring"></div>
+        </div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                <!-- Left: Welcome -->
+                <div class="flex-1">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight">
+                            Bienvenido, {{ current_user.full_name or current_user.username }}
+                        </h1>
+                        {% if current_user.role == 'admin' %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-400/20 text-amber-200 border border-amber-400/30">
+                            Administrador
+                        </span>
+                        {% elif current_user.role == 'lider' %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-400/20 text-blue-200 border border-blue-400/30">
+                            Lider
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
+                            Empleado
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <p class="text-indigo-200 text-sm md:text-base mb-1">
+                        <span class="opacity-80">
+                            Hoy es <span x-text="new Date().toLocaleDateString('es-CO', {weekday:'long', year:'numeric', month:'long', day:'numeric'})"></span>
+                            &mdash;
+                            <span x-text="new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})"></span>
+                        </span>
+                    </p>
+
+                    {% if current_user.categoria %}
+                    <p class="text-indigo-300/80 text-xs mt-1">Categoria: {{ current_user.categoria }}</p>
+                    {% endif %}
+
+                    <div class="flex items-center gap-6 mt-5">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold" x-text="Math.round(visitsToday)">0</div>
+                            <div class="text-xs text-indigo-300 mt-0.5">Visitas hoy</div>
                         </div>
-                        <div>
-                            <h1 class="text-2xl sm:text-3xl font-bold text-white">Bienvenido, {{ current_user.full_name or current_user.username }}</h1>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
-                                    {% if current_user.role == 'admin' %}bg-indigo-400/20 text-indigo-300 border border-indigo-400/30
-                                    {% elif current_user.role == 'lider' %}bg-purple-400/20 text-purple-300 border border-purple-400/30
-                                    {% else %}bg-white/10 text-white/70 border border-white/20{% endif %}">
-                                    {{ current_user.role|capitalize }}
-                                </span>
-                                {% if current_user.categoria %}
-                                <span class="text-xs text-indigo-300/60">{{ current_user.categoria }}</span>
-                                {% endif %}
-                                <span class="text-xs text-indigo-300/40">{{ datetime.now(pytz.timezone('America/Bogota')).strftime('%A %d de %B, %Y') }}</span>
-                            </div>
+                        <div class="w-px h-10 bg-white/20"></div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold" x-text="Math.round(targetTasksToday - tasksCompleted)">0</div>
+                            <div class="text-xs text-indigo-300 mt-0.5">Tareas pendientes</div>
+                        </div>
+                        <div class="w-px h-10 bg-white/20"></div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold" x-text="Math.round(totalAllies)">0</div>
+                            <div class="text-xs text-indigo-300 mt-0.5">Aliados</div>
                         </div>
                     </div>
                 </div>
 
-                {# Hero KPIs #}
-                <div class="flex items-center gap-4 fade-up-2">
-                    {# Cumplimiento Circular #}
-                    <div class="text-center">
-                        <div class="relative w-20 h-20 mx-auto">
-                            <div class="progress-ring w-full h-full flex items-center justify-center"
-                                 style="--progress-color: {% if stats.cumplimiento_hoy >= 80 %}#34d399{% elif stats.cumplimiento_hoy >= 50 %}#fbbf24{% else %}#f87171{% endif %}; --progress-pct: {{ stats.cumplimiento_hoy }}%">
-                                <div class="w-14 h-14 rounded-full bg-indigo-950 flex items-center justify-center">
-                                    <span class="text-white font-bold text-lg count-pop">{{ "%.0f"|format(stats.cumplimiento_hoy) }}%</span>
-                                </div>
-                            </div>
-                        </div>
-                        <p class="text-[10px] text-indigo-300/60 mt-1">Cumplimiento Hoy</p>
-                    </div>
-
-                    <div class="h-16 w-px bg-white/10"></div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="text-center px-3 py-2 bg-white/5 rounded-xl border border-white/10">
-                            <div class="text-xl font-bold text-white count-pop">{{ stats.visits_today }}</div>
-                            <div class="text-[10px] text-indigo-300/60">Visitas Hoy</div>
-                        </div>
-                        <div class="text-center px-3 py-2 bg-white/5 rounded-xl border border-white/10">
-                            <div class="text-xl font-bold text-white count-pop">{{ stats.tasks_completed }}/{{ stats.tasks_today }}</div>
-                            <div class="text-[10px] text-indigo-300/60">Tareas Hoy</div>
+                <!-- Right: Big circular progress -->
+                <div class="flex flex-col items-center">
+                    <div class="circular-progress" :style="'--progress: ' + cumpHoy + '; --progress-color: ' + (cumpHoy >= 80 ? '#22c55e' : cumpHoy >= 50 ? '#f59e0b' : '#ef4444')">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold" x-text="cumpHoy.toFixed(1) + '%'">0%</div>
+                            <div class="text-xs text-indigo-200 mt-0.5">Cumplimiento</div>
                         </div>
                     </div>
+                    <p class="text-indigo-200 text-xs mt-2">Cumplimiento de hoy</p>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10 pb-12">
+    <!-- ====== KPI DASHBOARD ====== -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10 mb-10">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-{{ '6' if current_user.role == 'admin' else '5' }} gap-4">
 
-        {# KPI Cards #}
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8 fade-up-1">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-emerald-600 count-pop">{{ stats.visits_today }}</div>
-                <div class="text-xs text-gray-500 mt-1">Visitas Hoy</div>
+            <!-- 1. Visitas Hoy -->
+            <div class="kpi-card bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in-up">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Visitas Hoy</span>
+                    <span class="w-9 h-9 flex items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </span>
+                </div>
+                <div class="text-3xl font-bold text-gray-900" x-text="Math.round(visitsToday)">0</div>
+                <div class="mt-1 text-xs text-emerald-600 font-medium">Registradas</div>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-blue-600 count-pop">{{ stats.visits_month }}</div>
-                <div class="text-xs text-gray-500 mt-1">Visitas Mes</div>
+
+            <!-- 2. Visitas del Mes -->
+            <div class="kpi-card bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in-up">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Visitas Mes</span>
+                    <span class="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </span>
+                </div>
+                <div class="text-3xl font-bold text-gray-900" x-text="Math.round(visitsMonth)">0</div>
+                <div class="mt-1 text-xs text-blue-600 font-medium">Acumuladas</div>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-amber-600 count-pop">{{ stats.tasks_completed }}<span class="text-lg text-gray-400">/{{ stats.tasks_today }}</span></div>
-                <div class="text-xs text-gray-500 mt-1">Tareas Hoy</div>
+
+            <!-- 3. Tareas Hoy -->
+            <div class="kpi-card bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in-up">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tareas Hoy</span>
+                    <span class="w-9 h-9 flex items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    </span>
+                </div>
+                <div class="text-3xl font-bold text-gray-900">
+                    <span x-text="Math.round(tasksCompleted)">0</span>
+                    <span class="text-lg text-gray-400 font-normal">/</span>
+                    <span class="text-lg text-gray-500" x-text="Math.round(tasksToday)">0</span>
+                </div>
+                <div class="mt-1 text-xs text-amber-600 font-medium">Completadas / Total</div>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="relative w-14 h-14 mx-auto">
-                    <div class="progress-ring w-full h-full flex items-center justify-center"
-                         style="--progress-color: {% if stats.cumplimiento_mes >= 80 %}#34d399{% elif stats.cumplimiento_mes >= 50 %}#fbbf24{% else %}#f87171{% endif %}; --progress-pct: {{ stats.cumplimiento_mes }}%">
-                        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-                            <span class="font-bold text-sm">{{ "%.0f"|format(stats.cumplimiento_mes) }}%</span>
-                        </div>
+
+            <!-- 4. Cumplimiento Hoy -->
+            <div class="kpi-card bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in-up flex flex-col items-center">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 self-start">Cumplimiento Hoy</span>
+                <div class="circular-progress-sm circular-progress" :style="'--progress: ' + cumpHoy + '; --progress-color: ' + (cumpHoy >= 80 ? '#22c55e' : cumpHoy >= 50 ? '#f59e0b' : '#ef4444')">
+                    <div class="text-center">
+                        <span class="text-xl font-bold text-gray-900" x-text="cumpHoy.toFixed(1) + '%'">0%</span>
                     </div>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">Cumplimiento Mes</div>
             </div>
+
+            <!-- 5. Cumplimiento Mes -->
+            <div class="kpi-card bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in-up flex flex-col items-center">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 self-start">Cumplimiento Mes</span>
+                <div class="circular-progress-sm circular-progress" :style="'--progress: ' + cumpMes + '; --progress-color: ' + (cumpMes >= 80 ? '#22c55e' : cumpMes >= 50 ? '#f59e0b' : '#ef4444')">
+                    <div class="text-center">
+                        <span class="text-xl font-bold text-gray-900" x-text="cumpMes.toFixed(1) + '%'">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Infracciones Mes (admin only) -->
             {% if current_user.role == 'admin' %}
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-indigo-600 count-pop">{{ stats.total_users }}</div>
-                <div class="text-xs text-gray-500 mt-1">Equipo Activo</div>
-            </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-red-500 count-pop">{{ stats.infractions_month }}</div>
-                <div class="text-xs text-gray-500 mt-1">Infracciones Mes</div>
-            </div>
-            {% elif current_user.role == 'lider' %}
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-indigo-600 count-pop">{{ stats.total_users }}</div>
-                <div class="text-xs text-gray-500 mt-1">Mi Equipo</div>
-            </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-purple-600 count-pop">{{ stats.total_allies }}</div>
-                <div class="text-xs text-gray-500 mt-1">Aliados</div>
-            </div>
-            {% else %}
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-purple-600 count-pop">{{ stats.tasks_month_completed }}<span class="text-lg text-gray-400">/{{ stats.tasks_month }}</span></div>
-                <div class="text-xs text-gray-500 mt-1">Tareas Mes</div>
-            </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center hover:shadow-md transition">
-                <div class="text-3xl font-bold text-green-600 count-pop">{{ stats.total_allies }}</div>
-                <div class="text-xs text-gray-500 mt-1">Aliados</div>
+            <div class="kpi-card bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in-up">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Infracciones</span>
+                    <span class="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-600">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </span>
+                </div>
+                <div class="text-3xl font-bold" :class="infractions > 0 ? 'text-red-600' : 'text-gray-900'" x-text="Math.round(infractions)">0</div>
+                <div class="mt-1 text-xs text-red-500 font-medium">Este mes</div>
             </div>
             {% endif %}
+
+        </div>
+    </section>
+
+    <!-- ====== QUICK ACTIONS ====== -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-1 h-7 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-full"></div>
+            <h2 class="text-xl font-bold text-gray-900">Acciones Rapidas</h2>
         </div>
 
-        {# Quick Actions #}
-        <div class="mb-8 fade-up-2">
-            <h2 class="text-lg font-bold text-gray-900 mb-4">Acciones Rapidas</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                <a href="{{ url_for('main.dashboard') }}" class="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-indigo-200 transition-all">
-                    <div class="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center mb-3 group-hover:bg-indigo-600 transition-colors">
-                        <svg class="w-5 h-5 text-indigo-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-gray-900">Dashboard GPS</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Monitoreo en tiempo real</p>
-                </a>
-                <a href="{{ url_for('schedule.my_schedule') }}" class="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-purple-200 transition-all">
-                    <div class="w-11 h-11 rounded-xl bg-purple-100 flex items-center justify-center mb-3 group-hover:bg-purple-600 transition-colors">
-                        <svg class="w-5 h-5 text-purple-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-gray-900">Mi Agenda</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Cronograma semanal</p>
-                </a>
-                <a href="{{ url_for('analytics.visit_report') }}" class="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-emerald-200 transition-all">
-                    <div class="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center mb-3 group-hover:bg-emerald-600 transition-colors">
-                        <svg class="w-5 h-5 text-emerald-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-gray-900">Registrar Visita</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Manual con evidencia</p>
-                </a>
-                <a href="{{ url_for('analytics.analytics_dashboard') }}" class="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all">
-                    <div class="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center mb-3 group-hover:bg-blue-600 transition-colors">
-                        <svg class="w-5 h-5 text-blue-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625z"/></svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-gray-900">Analitica</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Reportes y metricas</p>
-                </a>
-                {% if current_user.role in ('admin', 'lider') %}
-                <a href="{{ url_for('schedule.leader_dashboard') }}" class="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-violet-200 transition-all">
-                    <div class="w-11 h-11 rounded-xl bg-violet-100 flex items-center justify-center mb-3 group-hover:bg-violet-600 transition-colors">
-                        <svg class="w-5 h-5 text-violet-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-gray-900">Mi Negocio</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Dashboard de lider</p>
-                </a>
-                <a href="{{ url_for('schedule.control_tower') }}" class="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-amber-200 transition-all">
-                    <div class="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center mb-3 group-hover:bg-amber-600 transition-colors">
-                        <svg class="w-5 h-5 text-amber-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15"/></svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-gray-900">Torre de Control</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Monitoreo de equipo</p>
-                </a>
-                <a href="{{ url_for('schedule.assign_task') }}" class="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-rose-200 transition-all">
-                    <div class="w-11 h-11 rounded-xl bg-rose-100 flex items-center justify-center mb-3 group-hover:bg-rose-600 transition-colors">
-                        <svg class="w-5 h-5 text-rose-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/></svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-gray-900">Asignar Tarea</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">A mi equipo</p>
-                </a>
-                <a href="{{ url_for('schedule.manage_templates') }}" class="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-teal-200 transition-all">
-                    <div class="w-11 h-11 rounded-xl bg-teal-100 flex items-center justify-center mb-3 group-hover:bg-teal-600 transition-colors">
-                        <svg class="w-5 h-5 text-teal-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"/></svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-gray-900">Plantillas</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Tareas recurrentes</p>
-                </a>
-                {% endif %}
-            </div>
+        {% if current_user.role in ('admin', 'lider') %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <!-- Dashboard GPS -->
+            <a href="{{ url_for('main.dashboard') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 group-hover:shadow-indigo-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-indigo-700">Dashboard GPS</span>
+            </a>
+
+            <!-- Torre de Control -->
+            <a href="{{ url_for('schedule.control_tower') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-200 group-hover:shadow-purple-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-purple-700">Torre de Control</span>
+            </a>
+
+            <!-- Mi Negocio -->
+            <a href="{{ url_for('schedule.leader_dashboard') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-200 group-hover:shadow-emerald-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-emerald-700">Mi Negocio</span>
+            </a>
+
+            <!-- Asignar Tarea -->
+            <a href="{{ url_for('schedule.assign_task') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-200 group-hover:shadow-amber-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-amber-700">Asignar Tarea</span>
+            </a>
+
+            <!-- Plantillas -->
+            <a href="{{ url_for('schedule.manage_templates') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center text-white shadow-lg shadow-cyan-200 group-hover:shadow-cyan-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-cyan-700">Plantillas</span>
+            </a>
+
+            <!-- Analitica -->
+            <a href="{{ url_for('analytics.analytics_dashboard') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-rose-200 group-hover:shadow-rose-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-rose-700">Analitica</span>
+            </a>
+
+            <!-- Registrar Visita -->
+            <a href="{{ url_for('analytics.visit_report') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-200 group-hover:shadow-teal-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-teal-700">Registrar Visita</span>
+            </a>
+
+            <!-- Mi Agenda -->
+            <a href="{{ url_for('schedule.my_schedule') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-200 group-hover:shadow-violet-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-violet-700">Mi Agenda</span>
+            </a>
         </div>
 
-        {# Capacidades del Sistema #}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 fade-up-3">
-            <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 text-white">
-                <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+        {% else %}
+        {# empleado actions #}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <!-- Mi Agenda -->
+            <a href="{{ url_for('schedule.my_schedule') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-200 group-hover:shadow-violet-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
-                <h3 class="font-bold mb-1">Tracking GPS en Tiempo Real</h3>
-                <p class="text-sm text-indigo-200">Geocercas inteligentes, validacion automatica de visitas, clasificacion vehiculo/caminando y alertas de velocidad.</p>
-            </div>
-            <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-6 text-white">
-                <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25"/></svg>
-                </div>
-                <h3 class="font-bold mb-1">Gestion de Tareas Avanzada</h3>
-                <p class="text-sm text-purple-200">Plantillas recurrentes, priorizacion, asignacion masiva por lider, validacion GPS automatica y torre de control.</p>
-            </div>
-            <div class="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-6 text-white">
-                <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
-                </div>
-                <h3 class="font-bold mb-1">Alertas y Reportes</h3>
-                <p class="text-sm text-emerald-200">Notificaciones WhatsApp, reportes diarios por email, alertas de emergencia, scoring de conduccion segura.</p>
-            </div>
-        </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-violet-700">Mi Agenda</span>
+            </a>
 
-        {# Footer creditos #}
-        <div class="text-center py-6 border-t border-gray-200 fade-up-4">
-            <p class="text-sm text-gray-500">Elaborado por <span class="font-semibold text-indigo-600">Brayan G</span> y <span class="font-semibold text-indigo-600">Equipo de Herramientas</span></p>
-            <div class="flex items-center justify-center gap-3 mt-2">
-                <span class="text-xs text-gray-400">GPS Comercial v2.0</span>
-                <span class="text-xs text-gray-300">|</span>
-                <a href="{{ url_for('main.docs') }}" class="text-xs text-indigo-500 hover:text-indigo-700 transition">Documentacion BPM</a>
+            <!-- Dashboard -->
+            <a href="{{ url_for('main.dashboard') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 group-hover:shadow-indigo-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-indigo-700">Dashboard</span>
+            </a>
+
+            <!-- Registrar Visita -->
+            <a href="{{ url_for('analytics.visit_report') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-200 group-hover:shadow-teal-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-teal-700">Registrar Visita</span>
+            </a>
+
+            <!-- Analitica -->
+            <a href="{{ url_for('analytics.analytics_dashboard') }}" class="action-card group bg-white rounded-2xl shadow-md border border-gray-100 p-5 flex flex-col items-center gap-3 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-rose-200 group-hover:shadow-rose-300">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-rose-700">Analitica</span>
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- ====== SYSTEM CAPABILITIES ====== -->
+    <section class="bg-gradient-to-b from-gray-50 to-white py-14">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-10">
+                <h2 class="text-2xl font-bold text-gray-900">Capacidades del Sistema</h2>
+                <p class="mt-2 text-sm text-gray-500">Todo lo que necesitas para gestionar tu flota comercial</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Tracking GPS -->
+                <div class="feature-card bg-white rounded-2xl shadow-lg border border-gray-100 p-7">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white mb-5 shadow-lg shadow-indigo-200">
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Tracking GPS en Tiempo Real</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        Geocercas inteligentes con validacion automatica de visitas. Monitoreo continuo de rutas comerciales y deteccion de paradas no programadas.
+                    </p>
+                    <ul class="mt-4 space-y-2">
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Geocercas inteligentes
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Validacion automatica de presencia
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Historial de recorridos
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Gestion de Tareas -->
+                <div class="feature-card bg-white rounded-2xl shadow-lg border border-gray-100 p-7">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white mb-5 shadow-lg shadow-emerald-200">
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Gestion de Tareas Avanzada</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        Plantillas recurrentes, priorizacion inteligente y asignacion masiva. Control total sobre la productividad del equipo comercial.
+                    </p>
+                    <ul class="mt-4 space-y-2">
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Plantillas recurrentes
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Priorizacion y asignacion masiva
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Seguimiento en tiempo real
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Alertas y Reportes -->
+                <div class="feature-card bg-white rounded-2xl shadow-lg border border-gray-100 p-7">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white mb-5 shadow-lg shadow-amber-200">
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Alertas y Reportes</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        Notificaciones por WhatsApp y email. Alertas de emergencia, scoring de conduccion y reportes automatizados de rendimiento.
+                    </p>
+                    <ul class="mt-4 space-y-2">
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            WhatsApp y email integrados
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Alertas de emergencia
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Scoring de conduccion
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- ====== FOOTER ====== -->
+    <footer class="bg-gray-900 text-white py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                    <h3 class="text-lg font-bold">GPS Comercial <span class="text-indigo-400">v2.0</span></h3>
+                    <p class="text-sm text-gray-400 mt-1">Sistema Integral de Gestion de Flotas</p>
+                    <p class="text-xs text-gray-500 mt-2">Elaborado por Brayan G y Equipo de Herramientas</p>
+                </div>
+                <div class="flex items-center gap-6">
+                    <a href="{{ url_for('main.docs') }}" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+                        Documentacion BPM
+                    </a>
+                    <span class="text-gray-600">|</span>
+                    <span class="text-xs text-gray-500">&copy; <span x-text="new Date().getFullYear()"></span> GPS Comercial</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
 </div>
 
 {% else %}
-{# ======================== PUBLIC: LANDING PAGE ======================== #}
-<div class="min-h-screen">
-    {# Hero #}
-    <div class="relative bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-900 overflow-hidden">
-        <div class="absolute inset-0 brand-grid"></div>
-        <div class="absolute -top-40 -right-40 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-3xl float-slow"></div>
-        <div class="absolute -bottom-40 -left-40 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-3xl float-med"></div>
-        <div class="absolute top-1/2 left-0 right-0 h-px shimmer-bar"></div>
+{# ===================== NON-AUTHENTICATED VIEW ===================== #}
 
-        <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 text-center">
-            <div class="fade-up">
-                <div class="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur rounded-full border border-white/10 mb-6">
-                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                    <span class="text-xs text-indigo-300 font-medium">Sistema Activo 24/7</span>
+<div x-data="{ step: 0 }" x-init="setTimeout(() => step = 1, 100)">
+
+    <!-- ====== FULL-PAGE HERO ====== -->
+    <section class="landing-hero relative overflow-hidden flex flex-col">
+        <!-- Decorative elements -->
+        <div class="absolute inset-0 pointer-events-none overflow-hidden">
+            <div class="absolute top-20 left-10 w-72 h-72 bg-indigo-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-indigo-300/5 rounded-full blur-3xl pulse-ring"></div>
+            <!-- Grid pattern overlay -->
+            <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 60px 60px;"></div>
+        </div>
+
+        <div class="relative flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 py-24 md:py-32 min-h-[80vh]">
+            <!-- Logo mark -->
+            <div class="mb-8" x-show="step >= 1" x-transition.duration.700ms>
+                <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
+                    <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
                 </div>
             </div>
 
-            <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight fade-up-1">
-                GPS <span class="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">COMERCIAL</span>
+            <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-4"
+                x-show="step >= 1" x-transition.duration.700ms>
+                GPS Comercial
             </h1>
-            <p class="mt-6 text-lg sm:text-xl text-indigo-200 max-w-2xl mx-auto fade-up-2">
-                Sistema Integral de Gestion de Flotas Comerciales, Seguimiento GPS y Control de Actividades en Tiempo Real
+
+            <p class="text-lg md:text-xl text-indigo-200 max-w-2xl mx-auto mb-3"
+               x-show="step >= 1" x-transition.duration.700ms>
+                Sistema Integral de Gestion de Flotas Comerciales
             </p>
 
-            <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 fade-up-3">
-                <a href="{{ url_for('auth.login') }}" class="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-indigo-900 font-bold rounded-xl hover:bg-indigo-50 shadow-xl shadow-indigo-500/20 transition-all text-sm">
+            <p class="text-sm text-indigo-300/70 mb-10"
+               x-show="step >= 1" x-transition.duration.700ms>
+                Elaborado por Brayan G y Equipo de Herramientas
+            </p>
+
+            <!-- Feature highlights -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto mb-12"
+                 x-show="step >= 1" x-transition.duration.700ms>
+                <div class="glass-card rounded-2xl p-5 text-center">
+                    <div class="w-12 h-12 mx-auto rounded-xl bg-indigo-500/30 flex items-center justify-center text-indigo-200 mb-3">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <h3 class="text-white font-semibold text-sm mb-1">Rastreo en Vivo</h3>
+                    <p class="text-indigo-300/70 text-xs">GPS en tiempo real con geocercas inteligentes</p>
+                </div>
+                <div class="glass-card rounded-2xl p-5 text-center">
+                    <div class="w-12 h-12 mx-auto rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-200 mb-3">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    </div>
+                    <h3 class="text-white font-semibold text-sm mb-1">Gestion de Tareas</h3>
+                    <p class="text-indigo-300/70 text-xs">Asignacion, seguimiento y cumplimiento</p>
+                </div>
+                <div class="glass-card rounded-2xl p-5 text-center">
+                    <div class="w-12 h-12 mx-auto rounded-xl bg-violet-500/30 flex items-center justify-center text-violet-200 mb-3">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </div>
+                    <h3 class="text-white font-semibold text-sm mb-1">Analitica Avanzada</h3>
+                    <p class="text-indigo-300/70 text-xs">Reportes, alertas y scoring automatizado</p>
+                </div>
+            </div>
+
+            <!-- CTA Buttons -->
+            <div class="flex flex-col sm:flex-row items-center gap-4"
+                 x-show="step >= 1" x-transition.duration.700ms>
+                <a href="{{ url_for('auth.login') }}"
+                   class="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-indigo-700 font-bold rounded-xl shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:bg-gray-50 transition-all duration-300 text-sm">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
                     Iniciar Sesion
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
                 </a>
-                <a href="{{ url_for('main.docs') }}" class="inline-flex items-center gap-2 px-8 py-3.5 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 border border-white/20 transition-all text-sm">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+                <a href="{{ url_for('main.docs') }}"
+                   class="inline-flex items-center gap-2 px-8 py-3.5 bg-white/10 text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300 text-sm backdrop-blur-sm">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                     Ver Documentacion
                 </a>
             </div>
+        </div>
+    </section>
 
-            {# Process Steps #}
-            <div class="mt-20 grid grid-cols-2 sm:grid-cols-4 gap-4 fade-up-4">
-                <div class="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-5 text-center">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center mx-auto mb-3">
-                        <svg class="w-5 h-5 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+    <!-- ====== PROCESS OVERVIEW ====== -->
+    <section class="bg-white py-16 md:py-20">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-14">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Como Funciona</h2>
+                <p class="text-gray-500 text-sm max-w-lg mx-auto">Un proceso integrado de cuatro pasos para el control total de tu operacion comercial</p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                <!-- Step 1 -->
+                <div class="text-center relative">
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 mb-4 relative z-10">
+                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </div>
-                    <div class="text-xs font-bold text-white mb-1">Monitoreo GPS</div>
-                    <div class="text-[10px] text-indigo-300/60">Rastreo 24/7</div>
+                    <div class="hidden md:block absolute top-8 left-[60%] right-[-40%] h-0.5 bg-gradient-to-r from-indigo-300 to-purple-300 z-0"></div>
+                    <div class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold mb-2">1</div>
+                    <h3 class="text-sm font-bold text-gray-900 mb-1">Monitoreo GPS</h3>
+                    <p class="text-xs text-gray-500">Rastreo satelital en tiempo real de toda la flota</p>
                 </div>
-                <div class="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-5 text-center">
-                    <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
-                        <svg class="w-5 h-5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+
+                <!-- Step 2 -->
+                <div class="text-center relative">
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-200 mb-4 relative z-10">
+                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     </div>
-                    <div class="text-xs font-bold text-white mb-1">Auto-Deteccion</div>
-                    <div class="text-[10px] text-indigo-300/60">Geocercas inteligentes</div>
+                    <div class="hidden md:block absolute top-8 left-[60%] right-[-40%] h-0.5 bg-gradient-to-r from-purple-300 to-emerald-300 z-0"></div>
+                    <div class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold mb-2">2</div>
+                    <h3 class="text-sm font-bold text-gray-900 mb-1">Deteccion Automatica</h3>
+                    <p class="text-xs text-gray-500">Geocercas y validacion automatica de visitas</p>
                 </div>
-                <div class="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-5 text-center">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-3">
-                        <svg class="w-5 h-5 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25"/></svg>
+
+                <!-- Step 3 -->
+                <div class="text-center relative">
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-200 mb-4 relative z-10">
+                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                     </div>
-                    <div class="text-xs font-bold text-white mb-1">Gestion Tareas</div>
-                    <div class="text-[10px] text-indigo-300/60">Asignacion y control</div>
+                    <div class="hidden md:block absolute top-8 left-[60%] right-[-40%] h-0.5 bg-gradient-to-r from-emerald-300 to-amber-300 z-0"></div>
+                    <div class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold mb-2">3</div>
+                    <h3 class="text-sm font-bold text-gray-900 mb-1">Gestion de Tareas</h3>
+                    <p class="text-xs text-gray-500">Asignacion y seguimiento de actividades</p>
                 </div>
-                <div class="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-5 text-center">
-                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
-                        <svg class="w-5 h-5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75z"/></svg>
+
+                <!-- Step 4 -->
+                <div class="text-center relative">
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-200 mb-4 relative z-10">
+                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     </div>
-                    <div class="text-xs font-bold text-white mb-1">Reportes</div>
-                    <div class="text-[10px] text-indigo-300/60">Email y WhatsApp</div>
+                    <div class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold mb-2">4</div>
+                    <h3 class="text-sm font-bold text-gray-900 mb-1">Reportes Inteligentes</h3>
+                    <p class="text-xs text-gray-500">Analitica avanzada y alertas automatizadas</p>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    {# Footer #}
-    <div class="bg-gray-900 py-8">
-        <div class="max-w-5xl mx-auto px-4 text-center">
-            <p class="text-sm text-gray-400">Elaborado por <span class="text-indigo-400 font-semibold">Brayan G</span> y <span class="text-indigo-400 font-semibold">Equipo de Herramientas</span></p>
-            <p class="text-xs text-gray-600 mt-2">GPS Comercial v2.0 - Sistema Integral de Gestion de Flotas</p>
+    <!-- ====== FOOTER (Non-auth) ====== -->
+    <footer class="bg-gray-900 text-white py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                    <h3 class="text-lg font-bold">GPS Comercial <span class="text-indigo-400">v2.0</span></h3>
+                    <p class="text-sm text-gray-400 mt-1">Sistema Integral de Gestion de Flotas</p>
+                    <p class="text-xs text-gray-500 mt-2">Elaborado por Brayan G y Equipo de Herramientas</p>
+                </div>
+                <div class="flex items-center gap-6">
+                    <a href="{{ url_for('main.docs') }}" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+                        Documentacion BPM
+                    </a>
+                    <span class="text-gray-600">|</span>
+                    <span class="text-xs text-gray-500">&copy; <span x-text="new Date().getFullYear()"></span> GPS Comercial</span>
+                </div>
+            </div>
         </div>
-    </div>
+    </footer>
+
 </div>
+
 {% endif %}
+
 {% endblock %}
