@@ -1114,32 +1114,32 @@
                             </thead>
                             <tbody class="divide-y divide-slate-800">
                                 <tr>
-                                    <td class="py-3 px-4 font-mono text-brand-700 text-sm">start_time</td>
+                                    <td class="py-3 px-4 font-mono text-indigo-400 text-sm">start_time</td>
                                     <td class="py-3 px-4 text-gray-600">Hora de inicio de la jornada laboral</td>
                                     <td class="py-3 px-4"><code class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-sm">07:00</code></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3 px-4 font-mono text-brand-700 text-sm">end_time</td>
+                                    <td class="py-3 px-4 font-mono text-indigo-400 text-sm">end_time</td>
                                     <td class="py-3 px-4 text-gray-600">Hora de fin de la jornada laboral</td>
                                     <td class="py-3 px-4"><code class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-sm">18:00</code></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3 px-4 font-mono text-brand-700 text-sm">active_days</td>
+                                    <td class="py-3 px-4 font-mono text-indigo-400 text-sm">active_days</td>
                                     <td class="py-3 px-4 text-gray-600">Dias habiles de la semana (0=Lunes, 6=Domingo)</td>
                                     <td class="py-3 px-4"><code class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-sm">0,1,2,3,4</code></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3 px-4 font-mono text-brand-700 text-sm">visit_interval</td>
+                                    <td class="py-3 px-4 font-mono text-indigo-400 text-sm">visit_interval</td>
                                     <td class="py-3 px-4 text-gray-600">Intervalo minimo en minutos entre visitas al mismo aliado</td>
                                     <td class="py-3 px-4"><code class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-sm">60</code></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3 px-4 font-mono text-brand-700 text-sm">report_hour</td>
+                                    <td class="py-3 px-4 font-mono text-indigo-400 text-sm">report_hour</td>
                                     <td class="py-3 px-4 text-gray-600">Hora de envio del reporte diario por WhatsApp</td>
                                     <td class="py-3 px-4"><code class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-sm">18:30</code></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3 px-4 font-mono text-brand-700 text-sm">geocerca_radius</td>
+                                    <td class="py-3 px-4 font-mono text-indigo-400 text-sm">geocerca_radius</td>
                                     <td class="py-3 px-4 text-gray-600">Radio por defecto de deteccion de visita (metros)</td>
                                     <td class="py-3 px-4"><code class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-sm">100</code></td>
                                 </tr>
@@ -1195,15 +1195,15 @@
                         Se configuran mediante reglas que definen umbrales y condiciones de activacion.
                     </p>
                     <div class="grid sm:grid-cols-3 gap-4">
-                        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-                            <p class="font-bold text-red-800 text-lg mb-1">Velocidad Extrema</p>
+                        <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
+                            <p class="font-bold text-red-300 text-lg mb-1">Velocidad Extrema</p>
                             <p class="text-sm text-red-600">Supera el umbral maximo configurado (ej. 120 km/h)</p>
                         </div>
-                        <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
-                            <p class="font-bold text-orange-800 text-lg mb-1">Frenado Brusco</p>
+                        <div class="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 text-center">
+                            <p class="font-bold text-orange-300 text-lg mb-1">Frenado Brusco</p>
                             <p class="text-sm text-orange-600">Desaceleracion que excede el limite seguro</p>
                         </div>
-                        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                        <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-center">
                             <p class="font-bold text-yellow-800 text-lg mb-1">Inactividad</p>
                             <p class="text-sm text-yellow-600">Sin reporte GPS por tiempo prolongado</p>
                         </div>
