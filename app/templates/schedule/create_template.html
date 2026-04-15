@@ -6,21 +6,21 @@
     <!-- Header -->
     <div class="flex items-center gap-3 mb-6">
         <a href="{{ url_for('schedule.templates_list') if url_for('schedule.templates_list') is defined else '#' }}"
-           class="p-2 rounded-lg hover:bg-gray-100 transition touch-target"
+           class="p-2 rounded-lg hover:bg-slate-800 transition touch-target"
            onclick="history.back(); return false;">
-            <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
         </a>
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
-            <p class="text-sm text-gray-500">Configurar tarea recurrente</p>
+            <h1 class="text-2xl font-bold text-slate-100">{{ title }}</h1>
+            <p class="text-sm text-slate-400">Configurar tarea recurrente</p>
         </div>
     </div>
 
     <!-- Form -->
     <form method="POST" action="{{ url_for('schedule.create_template') }}"
-          class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          class="bg-slate-900 rounded-2xl shadow-lg shadow-black/10 border border-slate-800/50 overflow-hidden"
           x-data="{
               recurrenceType: 'daily',
               assignToAll: true
@@ -31,26 +31,26 @@
 
             <!-- Titulo -->
             <div>
-                <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Titulo <span class="text-red-500">*</span></label>
+                <label for="title" class="block text-sm font-medium text-slate-300 mb-1">Titulo <span class="text-red-400">*</span></label>
                 <input type="text" id="title" name="title" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target"
+                       class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target"
                        placeholder="Nombre de la plantilla">
             </div>
 
             <!-- Descripcion -->
             <div>
-                <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Descripcion</label>
+                <label for="description" class="block text-sm font-medium text-slate-300 mb-1">Descripcion</label>
                 <textarea id="description" name="description" rows="3"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                           placeholder="Descripcion de la tarea (opcional)"></textarea>
             </div>
 
             <!-- Tipo y Prioridad -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label for="task_type" class="block text-sm font-medium text-gray-700 mb-1">Tipo de tarea</label>
+                    <label for="task_type" class="block text-sm font-medium text-slate-300 mb-1">Tipo de tarea</label>
                     <select id="task_type" name="task_type"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
+                            class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
                         <option value="visita">Visita</option>
                         <option value="llamada">Llamada</option>
                         <option value="seguimiento">Seguimiento</option>
@@ -60,9 +60,9 @@
                     </select>
                 </div>
                 <div>
-                    <label for="priority" class="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
+                    <label for="priority" class="block text-sm font-medium text-slate-300 mb-1">Prioridad</label>
                     <select id="priority" name="priority"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
+                            class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
                         <option value="baja">Baja</option>
                         <option value="media" selected>Media</option>
                         <option value="alta">Alta</option>
@@ -73,9 +73,9 @@
             <!-- Categoria (admin only) -->
             {% if categorias and categorias|length > 1 %}
             <div>
-                <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <label for="categoria" class="block text-sm font-medium text-slate-300 mb-1">Categoria</label>
                 <select id="categoria" name="categoria"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
+                        class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
                     {% for cat in categorias %}
                     <option value="{{ cat }}">{{ cat }}</option>
                     {% endfor %}
@@ -83,13 +83,13 @@
             </div>
             {% endif %}
 
-            <hr class="border-gray-200">
+            <hr class="border-slate-800">
 
             <!-- Recurrencia -->
             <div>
-                <label for="recurrence_type" class="block text-sm font-medium text-gray-700 mb-1">Frecuencia de recurrencia</label>
+                <label for="recurrence_type" class="block text-sm font-medium text-slate-300 mb-1">Frecuencia de recurrencia</label>
                 <select id="recurrence_type" name="recurrence_type" x-model="recurrenceType"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
+                        class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
                     <option value="daily">Diaria</option>
                     <option value="weekly">Semanal</option>
                     <option value="monthly">Mensual</option>
@@ -98,13 +98,13 @@
 
             <!-- Weekly days -->
             <div x-show="recurrenceType === 'weekly'" x-cloak x-transition>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Dias de la semana</label>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Dias de la semana</label>
                 <div class="flex flex-wrap gap-2">
                     {% set weekly_days = [('0', 'Lun'), ('1', 'Mar'), ('2', 'Mie'), ('3', 'Jue'), ('4', 'Vie'), ('5', 'Sab'), ('6', 'Dom')] %}
                     {% for value, label in weekly_days %}
-                    <label class="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition has-[:checked]:bg-indigo-100 has-[:checked]:border-indigo-400 touch-target">
-                        <input type="checkbox" name="recurrence_days" value="{{ value }}" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-sm">{{ label }}</span>
+                    <label class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:bg-indigo-500/10 hover:border-indigo-500/30 transition has-[:checked]:bg-indigo-500/15 has-[:checked]:border-indigo-500/30 touch-target">
+                        <input type="checkbox" name="recurrence_days" value="{{ value }}" class="rounded bg-slate-700 border-slate-600 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-sm text-slate-300">{{ label }}</span>
                     </label>
                     {% endfor %}
                 </div>
@@ -112,10 +112,10 @@
 
             <!-- Monthly days -->
             <div x-show="recurrenceType === 'monthly'" x-cloak x-transition>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Dias del mes</label>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Dias del mes</label>
                 <div class="grid grid-cols-7 sm:grid-cols-10 gap-1.5">
                     {% for day in range(1, 32) %}
-                    <label class="flex items-center justify-center w-full aspect-square bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition has-[:checked]:bg-indigo-100 has-[:checked]:border-indigo-400 text-sm touch-target">
+                    <label class="flex items-center justify-center w-full aspect-square bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:bg-indigo-500/10 hover:border-indigo-500/30 transition has-[:checked]:bg-indigo-500/15 has-[:checked]:border-indigo-500/30 text-sm text-slate-300 touch-target">
                         <input type="checkbox" name="recurrence_days" value="{{ day }}" class="sr-only">
                         <span>{{ day }}</span>
                     </label>
@@ -125,19 +125,28 @@
 
             <!-- Fecha fin recurrencia -->
             <div>
-                <label for="recurrence_end_date" class="block text-sm font-medium text-gray-700 mb-1">Fecha fin de recurrencia (opcional)</label>
+                <label for="recurrence_end_date" class="block text-sm font-medium text-slate-300 mb-1">Fecha fin de recurrencia (opcional)</label>
                 <input type="date" id="recurrence_end_date" name="recurrence_end_date"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
+                       class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
             </div>
 
-            <hr class="border-gray-200">
+            <!-- Hora programada -->
+            <div>
+                <label for="scheduled_time" class="block text-sm font-medium text-slate-300 mb-1">Hora programada (opcional)</label>
+                <input type="time" id="scheduled_time" name="scheduled_time"
+                       class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target"
+                       placeholder="23:00">
+                <p class="text-xs text-slate-500 mt-1">Ej: 23:00 para tareas nocturnas</p>
+            </div>
+
+            <hr class="border-slate-800">
 
             <!-- Aliado -->
             {% if allies %}
             <div>
-                <label for="ally_id" class="block text-sm font-medium text-gray-700 mb-1">Aliado (opcional)</label>
+                <label for="ally_id" class="block text-sm font-medium text-slate-300 mb-1">Aliado (opcional)</label>
                 <select id="ally_id" name="ally_id"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
+                        class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
                     <option value="">-- Sin aliado --</option>
                     {% for ally in allies %}
                     <option value="{{ ally.id }}">{{ ally.name }}</option>
@@ -148,48 +157,48 @@
 
             <!-- Tiempo minimo en sitio -->
             <div>
-                <label for="min_time_on_site" class="block text-sm font-medium text-gray-700 mb-1">Tiempo minimo en sitio (minutos)</label>
+                <label for="min_time_on_site" class="block text-sm font-medium text-slate-300 mb-1">Tiempo minimo en sitio (minutos)</label>
                 <input type="number" id="min_time_on_site" name="min_time_on_site" value="30" min="0"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
+                       class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
             </div>
 
-            <hr class="border-gray-200">
+            <hr class="border-slate-800">
 
             <!-- Asignacion -->
             <div>
                 <label class="inline-flex items-center gap-2 cursor-pointer touch-target">
                     <input type="checkbox" name="assign_to_all" value="1" x-model="assignToAll"
-                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                    <span class="text-sm font-medium text-gray-700">Asignar a todo el equipo</span>
+                           class="rounded bg-slate-700 border-slate-600 text-indigo-600 focus:ring-indigo-500">
+                    <span class="text-sm font-medium text-slate-300">Asignar a todo el equipo</span>
                 </label>
             </div>
 
             <!-- Seleccion de empleados -->
             <div x-show="!assignToAll" x-cloak x-transition>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar empleados</label>
-                <div class="max-h-60 overflow-y-auto border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Seleccionar empleados</label>
+                <div class="max-h-60 overflow-y-auto border border-slate-700 rounded-xl p-3 space-y-2 bg-slate-800">
                     {% for emp in employees %}
-                    <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white cursor-pointer transition touch-target">
+                    <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-700 cursor-pointer transition touch-target">
                         <input type="checkbox" name="user_ids" value="{{ emp.id }}"
-                               class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-sm text-gray-700">{{ emp.full_name or emp.username }}</span>
+                               class="rounded bg-slate-700 border-slate-600 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-sm text-slate-300">{{ emp.full_name or emp.username }}</span>
                     </label>
                     {% endfor %}
                     {% if not employees %}
-                    <p class="text-sm text-gray-400 text-center py-2">No hay empleados disponibles</p>
+                    <p class="text-sm text-slate-500 text-center py-2">No hay empleados disponibles</p>
                     {% endif %}
                 </div>
             </div>
         </div>
 
         <!-- Form Footer -->
-        <div class="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-3 sm:justify-end">
+        <div class="px-4 sm:px-6 py-4 bg-slate-800/50 border-t border-slate-800 flex flex-col sm:flex-row gap-3 sm:justify-end">
             <button type="button" onclick="history.back()"
-                    class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-100 transition touch-target">
+                    class="w-full sm:w-auto px-5 py-2.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-700 transition touch-target">
                 Cancelar
             </button>
             <button type="submit"
-                    class="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition touch-target">
+                    class="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-500 transition touch-target">
                 Crear Plantilla
             </button>
         </div>

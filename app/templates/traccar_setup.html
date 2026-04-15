@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es" class="bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurar Traccar - GPS Comercial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        [x-cloak] { display: none !important; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 3px; }
+        .glow-card { box-shadow: 0 0 30px rgba(79,70,229,0.08), 0 10px 40px rgba(0,0,0,0.3); }
+        .step-line { position: relative; }
+        .step-line::before {
+            content: '';
+            position: absolute;
+            left: 23px;
+            top: 48px;
+            bottom: -24px;
+            width: 2px;
+            background: linear-gradient(to bottom, #4f46e5, #7c3aed);
+            opacity: 0.3;
+        }
+        .step-line:last-child::before { display: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-300">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/60">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="{{ url_for('auth.login') }}" class="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <span class="text-sm font-medium">Volver al Login</span>
+            </a>
+            <div class="flex items-center gap-2">
+                <div class="h-8 w-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <svg class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                </div>
+                <span class="text-sm font-bold text-slate-100">GPS Comercial</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Hero -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full mb-4">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3"/></svg>
+                <span class="text-xs font-semibold text-indigo-400">GUIA RAPIDA</span>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-3">
+                Configura tu <span class="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">GPS</span> en 5 minutos
+            </h1>
+            <p class="text-slate-400 max-w-lg mx-auto">Sigue estos pasos para instalar y configurar Traccar Client en tu celular. Es rapido, seguro y solo necesitas hacerlo una vez.</p>
+        </div>
+
+        <!-- Download Section -->
+        <div class="bg-slate-900 border border-slate-800/50 rounded-2xl p-6 mb-8 glow-card">
+            <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                Paso 1: Descarga Traccar Client
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <a href="https://play.google.com/store/apps/details?id=org.traccar.client" target="_blank" rel="noopener"
+                   class="flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl hover:border-emerald-500/30 hover:bg-emerald-500/5 transition group">
+                    <div class="w-14 h-14 bg-emerald-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-8 h-8 text-emerald-400" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 010 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-white group-hover:text-emerald-400 transition">Google Play</p>
+                        <p class="text-xs text-slate-400">Android 6.0+</p>
+                        <p class="text-[10px] text-slate-500 mt-1">Descargar gratis</p>
+                    </div>
+                </a>
+                <a href="https://apps.apple.com/app/traccar-client/id843156974" target="_blank" rel="noopener"
+                   class="flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl hover:border-blue-500/30 hover:bg-blue-500/5 transition group">
+                    <div class="w-14 h-14 bg-blue-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-8 h-8 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-white group-hover:text-blue-400 transition">App Store</p>
+                        <p class="text-xs text-slate-400">iOS 14.0+</p>
+                        <p class="text-[10px] text-slate-500 mt-1">Descargar gratis</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Configuration Steps -->
+        <div class="space-y-6 mb-8" x-data="{ activeStep: null }">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/></svg>
+                Paso 2: Configurar la App
+            </h2>
+
+            <!-- Step 2.1 -->
+            <div class="step-line">
+                <div @click="activeStep = activeStep === 1 ? null : 1"
+                     class="flex items-start gap-4 p-4 bg-slate-900 border border-slate-800/50 rounded-xl cursor-pointer hover:border-indigo-500/30 transition glow-card">
+                    <div class="w-12 h-12 bg-indigo-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span class="text-lg font-bold text-indigo-400">1</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-white">Abre la app Traccar Client</h3>
+                        <p class="text-xs text-slate-400 mt-1">Despues de instalarla, abrela. Veras una pantalla con campos de configuracion.</p>
+                        <div x-show="activeStep === 1" x-cloak x-transition class="mt-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                            <p class="text-xs text-slate-300">La primera vez que abras la app veras un formulario con campos vacios. No te preocupes, solo necesitas llenar 3 datos.</p>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-500 flex-shrink-0 transition-transform" :class="{'rotate-180': activeStep === 1}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </div>
+            </div>
+
+            <!-- Step 2.2 -->
+            <div class="step-line">
+                <div @click="activeStep = activeStep === 2 ? null : 2"
+                     class="flex items-start gap-4 p-4 bg-slate-900 border border-slate-800/50 rounded-xl cursor-pointer hover:border-indigo-500/30 transition glow-card">
+                    <div class="w-12 h-12 bg-purple-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span class="text-lg font-bold text-purple-400">2</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-white">Configura el servidor</h3>
+                        <p class="text-xs text-slate-400 mt-1">Ingresa la URL del servidor GPS de la empresa.</p>
+                        <div x-show="activeStep === 2" x-cloak x-transition class="mt-3 space-y-3">
+                            <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">URL del Servidor</p>
+                                <div class="flex items-center gap-2">
+                                    <code class="flex-1 px-3 py-2 bg-slate-900 rounded-lg text-indigo-400 text-sm font-mono border border-slate-700">http://64.227.85.213:5055</code>
+                                    <button onclick="navigator.clipboard.writeText('http://64.227.85.213:5055')" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition">Copiar</button>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                <p class="text-xs text-amber-400"><strong>Importante:</strong> El puerto es 5055, NO 8082. El 5055 es para dispositivos GPS.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-500 flex-shrink-0 transition-transform" :class="{'rotate-180': activeStep === 2}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </div>
+            </div>
+
+            <!-- Step 2.3 -->
+            <div class="step-line">
+                <div @click="activeStep = activeStep === 3 ? null : 3"
+                     class="flex items-start gap-4 p-4 bg-slate-900 border border-slate-800/50 rounded-xl cursor-pointer hover:border-indigo-500/30 transition glow-card">
+                    <div class="w-12 h-12 bg-emerald-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span class="text-lg font-bold text-emerald-400">3</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-white">Configura tu identificador</h3>
+                        <p class="text-xs text-slate-400 mt-1">El identificador unico te lo asigna tu administrador.</p>
+                        <div x-show="activeStep === 3" x-cloak x-transition class="mt-3 space-y-3">
+                            <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                                <p class="text-xs text-slate-300 mb-2">En el campo <strong class="text-white">"Device Identifier"</strong> ingresa el numero que te fue asignado. Ejemplo:</p>
+                                <code class="px-3 py-2 bg-slate-900 rounded-lg text-emerald-400 text-sm font-mono border border-slate-700 block text-center">123456</code>
+                            </div>
+                            <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                <p class="text-xs text-blue-400">Si no conoces tu identificador, consulta con tu administrador o lider de equipo.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-500 flex-shrink-0 transition-transform" :class="{'rotate-180': activeStep === 3}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </div>
+            </div>
+
+            <!-- Step 2.4 -->
+            <div class="step-line">
+                <div @click="activeStep = activeStep === 4 ? null : 4"
+                     class="flex items-start gap-4 p-4 bg-slate-900 border border-slate-800/50 rounded-xl cursor-pointer hover:border-indigo-500/30 transition glow-card">
+                    <div class="w-12 h-12 bg-amber-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span class="text-lg font-bold text-amber-400">4</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-white">Configura la frecuencia</h3>
+                        <p class="text-xs text-slate-400 mt-1">Define cada cuanto envia tu ubicacion.</p>
+                        <div x-show="activeStep === 4" x-cloak x-transition class="mt-3 space-y-3">
+                            <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                                <p class="text-xs text-slate-300 mb-2">Configuracion recomendada:</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="p-2 bg-slate-900 rounded-lg border border-slate-700 text-center">
+                                        <p class="text-[10px] text-slate-500 uppercase font-bold">Frecuencia</p>
+                                        <p class="text-lg font-bold text-white">60</p>
+                                        <p class="text-[10px] text-slate-400">segundos</p>
+                                    </div>
+                                    <div class="p-2 bg-slate-900 rounded-lg border border-slate-700 text-center">
+                                        <p class="text-[10px] text-slate-500 uppercase font-bold">Distancia</p>
+                                        <p class="text-lg font-bold text-white">100</p>
+                                        <p class="text-[10px] text-slate-400">metros</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-500 flex-shrink-0 transition-transform" :class="{'rotate-180': activeStep === 4}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </div>
+            </div>
+
+            <!-- Step 2.5 -->
+            <div>
+                <div @click="activeStep = activeStep === 5 ? null : 5"
+                     class="flex items-start gap-4 p-4 bg-slate-900 border border-slate-800/50 rounded-xl cursor-pointer hover:border-emerald-500/30 transition glow-card">
+                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-emerald-400">Activa el servicio</h3>
+                        <p class="text-xs text-slate-400 mt-1">Toca el boton "Service Status" para activar el rastreo.</p>
+                        <div x-show="activeStep === 5" x-cloak x-transition class="mt-3 space-y-3">
+                            <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                <p class="text-xs text-emerald-400 mb-2"><strong>Listo!</strong> Cuando veas el indicador en verde, tu GPS esta transmitiendo correctamente.</p>
+                            </div>
+                            <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 space-y-2">
+                                <p class="text-xs font-bold text-white">Consejos importantes:</p>
+                                <ul class="text-xs text-slate-300 space-y-1.5 list-none">
+                                    <li class="flex items-start gap-2"><span class="text-indigo-400 mt-0.5">&#9679;</span> Permite que la app funcione en segundo plano</li>
+                                    <li class="flex items-start gap-2"><span class="text-indigo-400 mt-0.5">&#9679;</span> Desactiva la optimizacion de bateria para esta app</li>
+                                    <li class="flex items-start gap-2"><span class="text-indigo-400 mt-0.5">&#9679;</span> Permite el acceso a ubicacion "Siempre"</li>
+                                    <li class="flex items-start gap-2"><span class="text-indigo-400 mt-0.5">&#9679;</span> No cierres la app, dejala en segundo plano</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-500 flex-shrink-0 transition-transform" :class="{'rotate-180': activeStep === 5}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battery Optimization Guide -->
+        <div class="bg-slate-900 border border-slate-800/50 rounded-2xl p-6 mb-8 glow-card" x-data="{ expanded: false }">
+            <div @click="expanded = !expanded" class="flex items-center justify-between cursor-pointer">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                    Optimizacion de Bateria (Android)
+                </h2>
+                <svg class="w-5 h-5 text-slate-500 transition-transform" :class="{'rotate-180': expanded}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+            </div>
+            <div x-show="expanded" x-cloak x-transition class="mt-4 space-y-3">
+                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <p class="text-xs text-amber-400"><strong>Problema comun:</strong> Android puede matar la app en segundo plano para ahorrar bateria. Sigue estos pasos para evitarlo.</p>
+                </div>
+                <div class="space-y-2">
+                    <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                        <p class="text-xs text-slate-300"><strong class="text-white">Samsung:</strong> Ajustes > Cuidado del dispositivo > Bateria > Apps sin restricciones > Activar Traccar Client</p>
+                    </div>
+                    <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                        <p class="text-xs text-slate-300"><strong class="text-white">Xiaomi/Redmi:</strong> Ajustes > Apps > Traccar Client > Ahorro de bateria > Sin restricciones + Autostart activado</p>
+                    </div>
+                    <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                        <p class="text-xs text-slate-300"><strong class="text-white">Huawei:</strong> Ajustes > Bateria > Inicio de apps > Traccar Client > Gestionar manualmente (activar las 3 opciones)</p>
+                    </div>
+                    <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                        <p class="text-xs text-slate-300"><strong class="text-white">Motorola/Stock:</strong> Ajustes > Apps > Traccar Client > Bateria > Sin restricciones</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="bg-slate-900 border border-slate-800/50 rounded-2xl p-6 mb-8 glow-card" x-data="{ expanded: false }">
+            <div @click="expanded = !expanded" class="flex items-center justify-between cursor-pointer">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.384-3.19A2.625 2.625 0 015.25 9.75V6.375m0 0a2.625 2.625 0 012.625-2.625h8.25a2.625 2.625 0 012.625 2.625V9.75m-13.5-3.375h13.5"/></svg>
+                    Problemas frecuentes
+                </h2>
+                <svg class="w-5 h-5 text-slate-500 transition-transform" :class="{'rotate-180': expanded}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+            </div>
+            <div x-show="expanded" x-cloak x-transition class="mt-4 space-y-3">
+                <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                    <p class="text-xs font-bold text-white mb-1">No aparezco en el mapa</p>
+                    <p class="text-xs text-slate-400">Verifica que el servicio este activo (verde), que tengas conexion a internet, y que el identificador sea correcto.</p>
+                </div>
+                <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                    <p class="text-xs font-bold text-white mb-1">El GPS se desconecta solo</p>
+                    <p class="text-xs text-slate-400">Tu celular esta cerrando la app. Revisa la seccion de optimizacion de bateria arriba.</p>
+                </div>
+                <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                    <p class="text-xs font-bold text-white mb-1">La ubicacion no es precisa</p>
+                    <p class="text-xs text-slate-400">Activa el GPS de alta precision: Ajustes > Ubicacion > Modo > Alta precision (GPS + WiFi + Redes)</p>
+                </div>
+                <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                    <p class="text-xs font-bold text-white mb-1">Consume mucha bateria</p>
+                    <p class="text-xs text-slate-400">Aumenta el intervalo de reporte a 120 segundos. El consumo normal es entre 3-5% diario.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Summary Card -->
+        <div class="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 rounded-2xl p-6 mb-8">
+            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08"/></svg>
+                Resumen de configuracion
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="p-3 bg-slate-900/60 rounded-lg text-center">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Servidor</p>
+                    <p class="text-xs text-indigo-400 font-mono mt-1">64.227.85.213:5055</p>
+                </div>
+                <div class="p-3 bg-slate-900/60 rounded-lg text-center">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Frecuencia</p>
+                    <p class="text-xs text-white font-bold mt-1">60 seg</p>
+                </div>
+                <div class="p-3 bg-slate-900/60 rounded-lg text-center">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Distancia</p>
+                    <p class="text-xs text-white font-bold mt-1">100 m</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="text-center">
+            <a href="{{ url_for('auth.login') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition shadow-lg shadow-indigo-500/25">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
+                Ir al Login
+            </a>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/60 mt-12 py-6 text-center">
+        <p class="text-xs text-slate-500">Elaborado por Brayan G y Equipo de Herramientas</p>
+        <p class="text-[10px] text-slate-600 mt-1">GPS Comercial v2.0</p>
+    </footer>
+</body>
+</html>

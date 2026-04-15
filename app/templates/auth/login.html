@@ -26,17 +26,17 @@
     .fade-in-up-delay-3 { animation: fade-in-up 0.6s ease-out 0.3s both; }
     .fade-in-up-delay-4 { animation: fade-in-up 0.6s ease-out 0.4s both; }
     .shimmer-line {
-        background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 100%);
+        background: linear-gradient(90deg, rgba(148,163,184,0) 0%, rgba(148,163,184,0.06) 50%, rgba(148,163,184,0) 100%);
         background-size: 200% 100%;
         animation: shimmer 3s linear infinite;
     }
     .input-modern:focus {
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
     }
     .brand-grid {
         background-image:
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            linear-gradient(rgba(148,163,184,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(148,163,184,0.03) 1px, transparent 1px);
         background-size: 40px 40px;
     }
 </style>
@@ -46,14 +46,14 @@
 <div class="min-h-screen flex" x-data="{ loaded: false }" x-init="setTimeout(() => loaded = true, 50)">
 
     <!-- Panel Izquierdo: Branding -->
-    <div class="hidden lg:flex w-1/2 bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-900 p-12 text-white flex-col justify-between relative overflow-hidden">
+    <div class="hidden lg:flex w-1/2 bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 p-12 text-white flex-col justify-between relative overflow-hidden">
 
         <!-- Fondo con patron de cuadricula -->
         <div class="absolute inset-0 brand-grid"></div>
 
         <!-- Orbes decorativos con gradiente -->
-        <div class="absolute -top-24 -right-24 w-96 h-96 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 rounded-full blur-3xl animate-float-slow"></div>
-        <div class="absolute -bottom-32 -left-32 w-80 h-80 bg-gradient-to-tr from-purple-500/15 to-indigo-400/15 rounded-full blur-3xl animate-float-medium"></div>
+        <div class="absolute -top-24 -right-24 w-96 h-96 bg-gradient-to-br from-indigo-500/15 to-purple-600/15 rounded-full blur-3xl animate-float-slow"></div>
+        <div class="absolute -bottom-32 -left-32 w-80 h-80 bg-gradient-to-tr from-purple-500/10 to-indigo-400/10 rounded-full blur-3xl animate-float-medium"></div>
 
         <!-- Linea shimmer decorativa -->
         <div class="absolute top-1/3 left-0 right-0 h-px shimmer-line"></div>
@@ -155,27 +155,27 @@
     </div>
 
     <!-- Panel Derecho: Formulario -->
-    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-gray-50">
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-slate-950">
         <div class="w-full max-w-sm" x-show="loaded" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
 
             <!-- Logo movil -->
             <div class="lg:hidden text-center mb-10">
-                <div class="inline-flex items-center space-x-2.5 text-indigo-600">
+                <div class="inline-flex items-center space-x-2.5 text-indigo-400">
                     <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
                         </svg>
                     </div>
-                    <span class="text-xl font-bold tracking-tight">GPS Comercial</span>
+                    <span class="text-xl font-bold tracking-tight text-slate-100">GPS Comercial</span>
                 </div>
             </div>
 
             <!-- Encabezado del formulario -->
             <div class="mb-8">
-                <h2 class="text-2xl font-bold text-gray-900 tracking-tight">
+                <h2 class="text-2xl font-bold text-slate-100 tracking-tight">
                     Bienvenido de nuevo
                 </h2>
-                <p class="mt-1.5 text-sm text-gray-500">
+                <p class="mt-1.5 text-sm text-slate-400">
                     Ingresa tus credenciales para acceder al sistema
                 </p>
             </div>
@@ -185,9 +185,9 @@
             {% if messages %}
             {% for category, message in messages %}
             <div class="mb-5 p-3 rounded-2xl text-sm border
-                {% if category == 'error' or category == 'danger' %}bg-red-50 border-red-100 text-red-700
-                {% elif category == 'success' %}bg-green-50 border-green-100 text-green-700
-                {% else %}bg-blue-50 border-blue-100 text-blue-700{% endif %}">
+                {% if category == 'error' or category == 'danger' %}bg-red-500/10 border-red-500/20 text-red-400
+                {% elif category == 'success' %}bg-green-500/10 border-green-500/20 text-green-400
+                {% else %}bg-blue-500/10 border-blue-500/20 text-blue-400{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -199,49 +199,49 @@
 
                 <!-- Campo usuario -->
                 <div>
-                    <label for="{{ form.username.id }}" class="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wider">
+                    <label for="{{ form.username.id }}" class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
                         Usuario
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                            <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <svg class="h-4 w-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                             </svg>
                         </div>
-                        {{ form.username(class="input-modern block w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-3 focus:ring-indigo-500/10 transition-all duration-200 placeholder-gray-400", placeholder="Ingresa tu usuario") }}
+                        {{ form.username(class="input-modern block w-full pl-10 pr-4 py-2.5 text-sm bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/20 transition-all duration-200 placeholder-slate-500 text-slate-200", placeholder="Ingresa tu usuario") }}
                     </div>
                     {% for error in form.username.errors %}
-                        <p class="mt-1.5 text-xs text-red-500">{{ error }}</p>
+                        <p class="mt-1.5 text-xs text-red-400">{{ error }}</p>
                     {% endfor %}
                 </div>
 
                 <!-- Campo contrasena -->
                 <div>
-                    <label for="{{ form.password.id }}" class="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wider">
+                    <label for="{{ form.password.id }}" class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
                         Contrasena
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                            <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <svg class="h-4 w-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
                             </svg>
                         </div>
-                        {{ form.password(class="input-modern block w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-3 focus:ring-indigo-500/10 transition-all duration-200 placeholder-gray-400", placeholder="Ingresa tu contrasena") }}
+                        {{ form.password(class="input-modern block w-full pl-10 pr-4 py-2.5 text-sm bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/20 transition-all duration-200 placeholder-slate-500 text-slate-200", placeholder="Ingresa tu contrasena") }}
                     </div>
                     {% for error in form.password.errors %}
-                        <p class="mt-1.5 text-xs text-red-500">{{ error }}</p>
+                        <p class="mt-1.5 text-xs text-red-400">{{ error }}</p>
                     {% endfor %}
                 </div>
 
                 <!-- Recordarme -->
                 <div class="flex items-center">
-                    {{ form.remember_me(class="h-4 w-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-2 focus:ring-indigo-500/20 focus:ring-offset-0 transition-colors cursor-pointer") }}
-                    {{ form.remember_me.label(class="ml-2.5 block text-sm text-gray-600 cursor-pointer select-none") }}
+                    {{ form.remember_me(class="h-4 w-4 text-indigo-600 bg-slate-800 border-slate-600 rounded focus:ring-2 focus:ring-indigo-500/20 focus:ring-offset-0 focus:ring-offset-slate-950 transition-colors cursor-pointer") }}
+                    {{ form.remember_me.label(class="ml-2.5 block text-sm text-slate-400 cursor-pointer select-none") }}
                 </div>
 
                 <!-- Boton submit -->
                 <div>
-                    {{ form.submit(class="w-full flex justify-center py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md touch-target") }}
+                    {{ form.submit(class="w-full flex justify-center py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 focus:ring-indigo-500 cursor-pointer transition-all duration-200 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 touch-target") }}
                 </div>
             </form>
 
@@ -249,18 +249,22 @@
             <div class="mt-8">
                 <div class="relative">
                     <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-200"></div>
+                        <div class="w-full border-t border-slate-800"></div>
                     </div>
                     <div class="relative flex justify-center">
-                        <span class="px-3 bg-gray-50 text-xs text-gray-400">Recursos</span>
+                        <span class="px-3 bg-slate-950 text-xs text-slate-500">Recursos</span>
                     </div>
                 </div>
                 <div class="mt-4 flex flex-col items-center gap-3">
-                    <a href="{{ url_for('main.docs') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all duration-200 group">
-                        <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+                    <a href="{{ url_for('main.docs') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 border border-slate-800/50 rounded-xl text-sm text-slate-300 hover:border-indigo-500/40 hover:text-indigo-400 hover:bg-slate-800/50 transition-all duration-200 group">
+                        <svg class="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
                         Documentacion BPM del Sistema
                     </a>
-                    <p class="text-center text-xs text-gray-400 leading-relaxed">
+                    <a href="{{ url_for('main.traccar_setup') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 border border-slate-800/50 rounded-xl text-sm text-slate-300 hover:border-emerald-500/40 hover:text-emerald-400 hover:bg-slate-800/50 transition-all duration-200 group">
+                        <svg class="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
+                        Configurar GPS en tu Celular
+                    </a>
+                    <p class="text-center text-xs text-slate-500 leading-relaxed">
                         Si no tienes acceso, contacta al administrador del sistema.
                     </p>
                 </div>

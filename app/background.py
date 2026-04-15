@@ -17,8 +17,10 @@ from app.traccar import get_devices_for_app, get_latest_position_for_app, KNOTS_
 
 logger = logging.getLogger(__name__)
 
-# Variable para rastrear el ultimo dia que se envio el reporte
+# Variables para rastrear el ultimo dia que se envio el reporte
 _last_report_sent_day = None
+_last_task_summary_sent_day = None
+_last_task_overdue_check_hour = -1
 
 
 def check_for_visits(app, device, all_allies):
@@ -274,6 +276,33 @@ def _background_loop(app):
                     generate_recurring_tasks()
                 except Exception as ge:
                     logger.debug("Generacion tareas recurrentes: %s", ge)
+                # WhatsApp: alertas de tareas vencidas (cada hora en horario laboral)
+                try:
+                    global _last_task_overdue_check_hour
+                    colombia_tz = pytz.timezone('America/Bogota')
+                    current_hour = datetime.now(colombia_tz).hour
+                    if current_hour != _last_task_overdue_check_hour and 8 <= current_hour <= 20:
+                        from app.whatsapp import send_task_overdue_alerts
+                        sent = send_task_overdue_alerts(app)
+                        if sent:
+                            logger.info("Alertas WhatsApp tareas vencidas: %d enviadas", sent)
+                        _last_task_overdue_check_hour = current_hour
+                except Exception as toe:
+                    logger.debug("Alertas tareas vencidas: %s", toe)
+                # WhatsApp: resumen diario de tareas a lideres (a las 19:00)
+                try:
+                    global _last_task_summary_sent_day
+                    colombia_tz = pytz.timezone('America/Bogota')
+                    now_col = datetime.now(colombia_tz)
+                    if (now_col.hour >= 19 and
+                            now_col.date() != _last_task_summary_sent_day):
+                        from app.whatsapp import send_leader_daily_task_summary
+                        sent = send_leader_daily_task_summary(app)
+                        if sent:
+                            logger.info("Resumen diario tareas enviado a %d lideres", sent)
+                        _last_task_summary_sent_day = now_col.date()
+                except Exception as tse:
+                    logger.debug("Resumen diario tareas: %s", tse)
         except Exception as e:
             logger.error("Error en el hilo de fondo: %s", e)
         time.sleep(60)

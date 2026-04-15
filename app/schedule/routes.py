@@ -425,6 +425,8 @@ def create_template():
         categoria = current_user.categoria if current_user.role == 'lider' else request.form.get('categoria', '')
         validation_type = 'manual' if task_type in ('gestion', 'checklist', 'otro') else 'gps'
 
+        scheduled_time = request.form.get('scheduled_time', '').strip()
+
         template = TaskTemplate(
             created_by=current_user.id,
             categoria=categoria,
@@ -436,6 +438,7 @@ def create_template():
             recurrence_type=recurrence_type,
             recurrence_days=recurrence_days,
             recurrence_end_date=end_date,
+            scheduled_time=scheduled_time if scheduled_time else None,
             ally_id=ally_id if ally_id else None,
             min_time_on_site=min_time,
             assign_to_all=assign_to_all,

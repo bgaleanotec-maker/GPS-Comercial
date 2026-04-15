@@ -149,22 +149,29 @@ def manage_settings():
 @bp.route('/test-whatsapp', methods=['POST'])
 @login_required
 def test_whatsapp():
-    """Envia un mensaje de prueba por WhatsApp al admin."""
+    """Envia un mensaje de prueba por WhatsApp al admin. Soporta distintos tipos."""
     if current_user.role != 'admin':
         abort(403)
 
-    from app.whatsapp import send_whatsapp_message
-    phone = request.form.get('phone', '573222699322')
-    message = (
-        "*GPS Comercial - Mensaje de Prueba*\n\n"
-        "Si recibes este mensaje, la integracion con WhatsApp esta funcionando correctamente.\n\n"
-        f"Enviado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-    )
+    from app.whatsapp import send_manual_whatsapp_test
+    phone = request.form.get('phone', '').strip()
+    msg_type = request.form.get('message_type', 'test')
 
-    result = send_whatsapp_message(phone, message)
+    if not phone:
+        settings = {s.key: s.value for s in Setting.query.all()}
+        phone = settings.get('admin_whatsapp_number', '573222699322')
+
+    result = send_manual_whatsapp_test(phone, msg_type)
+    type_labels = {
+        'summary': 'Resumen diario de tareas',
+        'overdue': 'Alerta tarea vencida',
+        'test': 'Mensaje de prueba',
+    }
+    label = type_labels.get(msg_type, 'Mensaje')
+
     if result:
-        flash('Mensaje de prueba enviado exitosamente por WhatsApp.', 'success')
+        flash(f'{label} enviado exitosamente a {phone}.', 'success')
     else:
-        flash('Error al enviar el mensaje. Revisa los logs y las credenciales de Ultramsg.', 'danger')
+        flash(f'Error al enviar {label.lower()}. Revisa los logs y credenciales.', 'danger')
 
     return redirect(url_for('scoring.manage_settings'))

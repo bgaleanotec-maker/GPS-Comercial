@@ -35,11 +35,11 @@
     {% if devices %}
     <!-- Filtro por mercado -->
     {% if categorias is defined and categorias %}
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 mb-4 flex flex-wrap items-center gap-2">
-        <span class="text-xs text-gray-500 font-medium">Mercado:</span>
-        <a href="?mercado=all" class="px-3 py-1.5 rounded-xl text-xs font-medium transition touch-target {% if mercado_filter == 'all' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">Todos</a>
+    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-3 mb-4 flex flex-wrap items-center gap-2">
+        <span class="text-xs text-slate-400 font-medium">Mercado:</span>
+        <a href="?mercado=all" class="px-3 py-1.5 rounded-xl text-xs font-medium transition touch-target {% if mercado_filter == 'all' %}bg-indigo-600 text-white{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}">Todos</a>
         {% for cat in categorias %}
-        <a href="?mercado={{ cat }}" class="px-3 py-1.5 rounded-xl text-xs font-medium transition touch-target {% if mercado_filter == cat %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">{{ cat }}</a>
+        <a href="?mercado={{ cat }}" class="px-3 py-1.5 rounded-xl text-xs font-medium transition touch-target {% if mercado_filter == cat %}bg-indigo-600 text-white{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}">{{ cat }}</a>
         {% endfor %}
     </div>
     {% endif %}
@@ -47,7 +47,7 @@
     <!-- Cards de dispositivos -->
     <div class="space-y-3">
         {% for device in devices %}
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition overflow-hidden">
+        <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 hover:shadow-md transition overflow-hidden">
             <div class="p-4">
                 <div class="flex items-start justify-between gap-3">
                     <!-- Left: Info -->
@@ -55,23 +55,23 @@
                         <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm
                             {% if device.status == 'online' %}bg-gradient-to-br from-emerald-400 to-emerald-600
                             {% elif device.status == 'offline' %}bg-gradient-to-br from-red-400 to-red-600
-                            {% else %}bg-gradient-to-br from-gray-300 to-gray-500{% endif %}">
+                            {% else %}bg-gradient-to-br from-slate-500 to-slate-700{% endif %}">
                             <span class="text-white font-bold">{{ device.name[0:2].upper() }}</span>
                         </div>
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
-                                <h3 class="text-sm font-semibold text-gray-900">{{ device.name }}{% if device.employee_name %} <span class="font-normal text-gray-400">- {{ device.employee_name }}</span>{% endif %}</h3>
+                                <h3 class="text-sm font-semibold text-slate-100">{{ device.name }}{% if device.employee_name %} <span class="font-normal text-slate-400">- {{ device.employee_name }}</span>{% endif %}</h3>
                                 {% if device.status == 'online' %}
-                                <span class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>ONLINE
+                                <span class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-900/50 text-emerald-400">
+                                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>ONLINE
                                 </span>
                                 {% elif device.status == 'offline' %}
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600">OFFLINE</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-900/50 text-red-400">OFFLINE</span>
                                 {% else %}
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">{{ device.status|upper if device.status else 'N/A' }}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">{{ device.status|upper if device.status else 'N/A' }}</span>
                                 {% endif %}
                                 {% if device.employee_categoria %}
-                                <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-600">{{ device.employee_categoria }}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-900/50 text-purple-400">{{ device.employee_categoria }}</span>
                                 {% endif %}
                             </div>
 
@@ -79,35 +79,35 @@
                             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
                                 <!-- Total hoy -->
                                 <div class="flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                                    <span class="text-xs text-gray-600"><span class="font-semibold text-gray-900">{{ "%.2f"|format(device.distance_today|default(0)) }}</span> km hoy</span>
+                                    <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                                    <span class="text-xs text-slate-400"><span class="font-semibold text-slate-100">{{ "%.2f"|format(device.distance_today|default(0)) }}</span> km hoy</span>
                                 </div>
                                 <!-- Vehiculo -->
                                 <div class="flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
-                                    <span class="text-xs text-blue-700 font-medium">{{ "%.1f"|format(device.vehicle_km_today|default(0)) }} km</span>
+                                    <svg class="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
+                                    <span class="text-xs text-blue-400 font-medium">{{ "%.1f"|format(device.vehicle_km_today|default(0)) }} km</span>
                                 </div>
                                 <!-- A pie -->
                                 <div class="flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg>
-                                    <span class="text-xs text-orange-700 font-medium">{{ "%.1f"|format(device.walking_km_today|default(0)) }} km</span>
+                                    <svg class="w-3.5 h-3.5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg>
+                                    <span class="text-xs text-orange-400 font-medium">{{ "%.1f"|format(device.walking_km_today|default(0)) }} km</span>
                                 </div>
                                 <!-- Vel max -->
                                 {% if device.max_speed_today|default(0) > 0 %}
                                 <div class="flex items-center gap-1">
                                     <svg class="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
-                                    <span class="text-xs text-gray-500">{{ "%.0f"|format(device.max_speed_today) }} km/h max</span>
+                                    <span class="text-xs text-slate-400">{{ "%.0f"|format(device.max_speed_today) }} km/h max</span>
                                 </div>
                                 {% endif %}
                                 <!-- Mes y total -->
-                                <span class="text-[10px] text-gray-400">Mes: {{ "%.1f"|format(device.distance_month|default(0)) }} km</span>
-                                <span class="text-[10px] text-gray-400">Total: {{ "%.0f"|format(device.distance_total|default(0)) }} km</span>
+                                <span class="text-[10px] text-slate-500">Mes: {{ "%.1f"|format(device.distance_month|default(0)) }} km</span>
+                                <span class="text-[10px] text-slate-500">Total: {{ "%.0f"|format(device.distance_total|default(0)) }} km</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Right: Action -->
-                    <a href="{{ url_for('main.device_details', device_id=device.id) }}" class="px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-medium hover:bg-indigo-100 transition flex-shrink-0 touch-target">
+                    <a href="{{ url_for('main.device_details', device_id=device.id) }}" class="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-medium hover:bg-indigo-500 transition flex-shrink-0 touch-target">
                         Detalles
                     </a>
                 </div>
@@ -116,9 +116,9 @@
         {% endfor %}
     </div>
     {% else %}
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-        <svg class="mx-auto w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-        <p class="mt-4 text-gray-500">No se pudo conectar a Traccar o no hay dispositivos.</p>
+    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-12 text-center">
+        <svg class="mx-auto w-16 h-16 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+        <p class="mt-4 text-slate-400">No se pudo conectar a Traccar o no hay dispositivos.</p>
     </div>
     {% endif %}
 </div>

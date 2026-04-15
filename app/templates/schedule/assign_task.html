@@ -24,11 +24,11 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
-            <p class="text-sm text-gray-500">Asignar una tarea a uno o mas empleados</p>
+            <h1 class="text-2xl font-bold text-slate-100">{{ title }}</h1>
+            <p class="text-sm text-slate-400">Asignar una tarea a uno o mas empleados</p>
         </div>
         <a href="{{ url_for('schedule.control_tower') }}"
-           class="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition">
+           class="inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -40,13 +40,13 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Section: Empleados -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4">
+        <div class="bg-slate-900 rounded-2xl shadow-lg shadow-black/10 border border-slate-800/50 p-4 sm:p-6 mb-4">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-base font-semibold text-gray-800">Empleados</h2>
+                <h2 class="text-base font-semibold text-slate-100">Empleados</h2>
                 <button type="button"
                         @click="selectedAll = !selectedAll; toggleAll([{% for e in employees %}{{ e.id }}{% if not loop.last %},{% endif %}{% endfor %}])"
                         class="text-xs font-medium px-3 py-1.5 rounded-lg border transition touch-target"
-                        :class="selectedAll ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'">
+                        :class="selectedAll ? 'bg-indigo-500/15 border-indigo-500/20 text-indigo-400' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'">
                     <span x-text="selectedAll ? 'Deseleccionar todos' : 'Seleccionar todos'"></span>
                 </button>
             </div>
@@ -54,16 +54,16 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
                 {% for emp in employees %}
                 <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition touch-target"
-                       :class="selectedUsers.includes({{ emp.id }}) ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'">
+                       :class="selectedUsers.includes({{ emp.id }}) ? 'border-indigo-500/30 bg-indigo-500/10' : 'border-slate-700 hover:bg-slate-800'">
                     <input type="checkbox" name="user_ids" value="{{ emp.id }}"
-                           class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                           class="h-4 w-4 text-indigo-600 bg-slate-800 border-slate-600 rounded focus:ring-indigo-500"
                            :checked="selectedUsers.includes({{ emp.id }})"
                            @change="toggleUser({{ emp.id }})">
                     <div class="flex-1 min-w-0">
-                        <div class="text-sm font-medium text-gray-900 truncate">{{ emp.full_name or emp.username }}</div>
+                        <div class="text-sm font-medium text-slate-200 truncate">{{ emp.full_name or emp.username }}</div>
                     </div>
                     {% if emp.categoria %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-500/15 text-slate-400 border border-slate-500/20 whitespace-nowrap">
                         {{ emp.categoria }}
                     </span>
                     {% endif %}
@@ -71,46 +71,46 @@
                 {% endfor %}
             </div>
 
-            <p class="text-xs text-gray-400 mt-3" x-show="selectedUsers.length > 0"
+            <p class="text-xs text-slate-500 mt-3" x-show="selectedUsers.length > 0"
                x-text="selectedUsers.length + ' empleado(s) seleccionado(s)'"></p>
 
             {% if not employees %}
-            <p class="text-sm text-gray-400 text-center py-6">No hay empleados disponibles.</p>
+            <p class="text-sm text-slate-500 text-center py-6">No hay empleados disponibles.</p>
             {% endif %}
         </div>
 
         <!-- Section: Detalle de la Tarea -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4">
-            <h2 class="text-base font-semibold text-gray-800 mb-4">Detalle de la Tarea</h2>
+        <div class="bg-slate-900 rounded-2xl shadow-lg shadow-black/10 border border-slate-800/50 p-4 sm:p-6 mb-4">
+            <h2 class="text-base font-semibold text-slate-100 mb-4">Detalle de la Tarea</h2>
 
             <div class="space-y-4">
                 <!-- Titulo -->
                 <div>
-                    <label for="title" class="block text-xs font-medium text-gray-500 mb-1">Titulo *</label>
+                    <label for="title" class="block text-xs font-medium text-slate-400 mb-1">Titulo *</label>
                     <input type="text" id="title" name="title" required
                            placeholder="Ej: Visita a cliente principal"
-                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition touch-target">
+                           class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition touch-target">
                 </div>
 
                 <!-- Descripcion -->
                 <div>
-                    <label for="description" class="block text-xs font-medium text-gray-500 mb-1">Descripcion</label>
+                    <label for="description" class="block text-xs font-medium text-slate-400 mb-1">Descripcion</label>
                     <textarea id="description" name="description" rows="3"
                               placeholder="Detalles adicionales de la tarea..."
-                              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"></textarea>
+                              class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"></textarea>
                 </div>
 
                 <!-- Fecha y Tipo (side by side) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="scheduled_date" class="block text-xs font-medium text-gray-500 mb-1">Fecha programada *</label>
+                        <label for="scheduled_date" class="block text-xs font-medium text-slate-400 mb-1">Fecha programada *</label>
                         <input type="date" id="scheduled_date" name="scheduled_date" required
-                               class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition touch-target">
+                               class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition touch-target">
                     </div>
                     <div>
-                        <label for="task_type" class="block text-xs font-medium text-gray-500 mb-1">Tipo de tarea</label>
+                        <label for="task_type" class="block text-xs font-medium text-slate-400 mb-1">Tipo de tarea</label>
                         <select id="task_type" name="task_type"
-                                class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition touch-target bg-white">
+                                class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition touch-target">
                             <option value="visita">Visita</option>
                             <option value="reunion">Reunion</option>
                             <option value="gestion">Gestion</option>
@@ -122,29 +122,29 @@
 
                 <!-- Prioridad -->
                 <div x-data="{ priority: 'media' }">
-                    <label class="block text-xs font-medium text-gray-500 mb-2">Prioridad</label>
+                    <label class="block text-xs font-medium text-slate-400 mb-2">Prioridad</label>
                     <div class="flex gap-3">
                         <label class="flex-1 cursor-pointer" @click="priority = 'alta'">
                             <input type="radio" name="priority" value="alta" class="sr-only" :checked="priority === 'alta'">
                             <div class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-medium transition touch-target"
-                                 :class="priority === 'alta' ? 'border-red-400 bg-red-50 text-red-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'">
-                                <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                 :class="priority === 'alta' ? 'border-red-400/50 bg-red-500/10 text-red-400' : 'border-slate-700 text-slate-400 hover:bg-slate-800'">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
                                 Alta
                             </div>
                         </label>
                         <label class="flex-1 cursor-pointer" @click="priority = 'media'">
                             <input type="radio" name="priority" value="media" class="sr-only" checked :checked="priority === 'media'">
                             <div class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-medium transition touch-target"
-                                 :class="priority === 'media' ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'">
-                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                 :class="priority === 'media' ? 'border-amber-400/50 bg-amber-500/10 text-amber-400' : 'border-slate-700 text-slate-400 hover:bg-slate-800'">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
                                 Media
                             </div>
                         </label>
                         <label class="flex-1 cursor-pointer" @click="priority = 'baja'">
                             <input type="radio" name="priority" value="baja" class="sr-only" :checked="priority === 'baja'">
                             <div class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-medium transition touch-target"
-                                 :class="priority === 'baja' ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'">
-                                <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                                 :class="priority === 'baja' ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 text-slate-400 hover:bg-slate-800'">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
                                 Baja
                             </div>
                         </label>
@@ -154,19 +154,19 @@
         </div>
 
         <!-- Section: Ubicacion (opcional) -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6">
-            <h2 class="text-base font-semibold text-gray-800 mb-4">Ubicacion (opcional)</h2>
+        <div class="bg-slate-900 rounded-2xl shadow-lg shadow-black/10 border border-slate-800/50 p-4 sm:p-6 mb-6">
+            <h2 class="text-base font-semibold text-slate-100 mb-4">Ubicacion (opcional)</h2>
             <div>
-                <label for="ally_id" class="block text-xs font-medium text-gray-500 mb-1">Aliado / Punto de visita</label>
+                <label for="ally_id" class="block text-xs font-medium text-slate-400 mb-1">Aliado / Punto de visita</label>
                 <select id="ally_id" name="ally_id"
-                        class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition touch-target bg-white">
+                        class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition touch-target">
                     <option value="">-- Sin aliado asignado --</option>
                     {% for ally in allies %}
                     <option value="{{ ally.id }}">{{ ally.name }}{% if ally.category %} ({{ ally.category }}){% endif %}</option>
                     {% endfor %}
                 </select>
                 {% if allies and allies|length > 0 %}
-                <p class="text-xs text-gray-400 mt-1">{{ allies|length }} aliado(s) disponible(s)</p>
+                <p class="text-xs text-slate-500 mt-1">{{ allies|length }} aliado(s) disponible(s)</p>
                 {% endif %}
             </div>
         </div>
@@ -174,7 +174,7 @@
         <!-- Submit -->
         <div class="flex flex-col sm:flex-row items-center gap-3">
             <button type="submit"
-                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-sm rounded-xl shadow-md hover:from-indigo-700 hover:to-purple-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition touch-target"
+                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold text-sm rounded-xl shadow-md hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-950 transition touch-target"
                     :disabled="selectedUsers.length === 0"
                     :class="selectedUsers.length === 0 ? 'opacity-50 cursor-not-allowed' : ''">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -183,7 +183,7 @@
                 Asignar Tarea
             </button>
             <a href="{{ url_for('schedule.control_tower') }}"
-               class="text-sm text-gray-500 hover:text-gray-700 transition">
+               class="text-sm text-slate-400 hover:text-slate-300 transition">
                 Cancelar
             </a>
         </div>

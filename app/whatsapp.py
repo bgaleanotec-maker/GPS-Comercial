@@ -141,6 +141,254 @@ def format_leader_summary(leader_name, team_devices, team_visits):
     return "\n".join(lines)
 
 
+def format_task_overdue_message(user_name, task_title, scheduled_date, task_type):
+    """Formato de mensaje WhatsApp para tarea vencida."""
+    return (
+        f"⏰ *Tarea Vencida*\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👤 *{user_name}*\n"
+        f"📋 {task_title}\n"
+        f"📅 Fecha: {scheduled_date}\n"
+        f"🏷️ Tipo: {task_type}\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"_Esta tarea no fue completada a tiempo._\n"
+        f"_GPS Comercial - Sistema Automatico_"
+    )
+
+
+def format_leader_daily_task_summary(leader_name, date_str, employee_tasks):
+    """
+    Formato de resumen diario de tareas para el lider.
+    employee_tasks: lista de dicts {name, total, cumplidas, vencidas, pendientes}
+    """
+    lines = [
+        f"📊 *Resumen Diario de Tareas*",
+        f"━━━━━━━━━━━━━━━━━━━",
+        f"👔 *Gerente:* {leader_name}",
+        f"📅 *Fecha:* {date_str}",
+        f"━━━━━━━━━━━━━━━━━━━",
+        "",
+    ]
+
+    total_all = 0
+    cumplidas_all = 0
+    vencidas_all = 0
+
+    for emp in employee_tasks:
+        total_all += emp['total']
+        cumplidas_all += emp['cumplidas']
+        vencidas_all += emp['vencidas']
+
+        if emp['total'] == 0:
+            continue
+
+        pct = (emp['cumplidas'] / emp['total'] * 100) if emp['total'] > 0 else 0
+        status_icon = '✅' if pct >= 80 else ('⚠️' if pct >= 50 else '🔴')
+
+        lines.append(f"{status_icon} *{emp['name']}*")
+        lines.append(f"   ✅ {emp['cumplidas']}/{emp['total']} tareas ({pct:.0f}%)")
+        if emp['vencidas'] > 0:
+            lines.append(f"   🔴 {emp['vencidas']} vencida(s)")
+        if emp.get('pending_titles'):
+            for t in emp['pending_titles'][:3]:
+                lines.append(f"   ⏳ _{t}_")
+        lines.append("")
+
+    # Resumen global
+    pct_global = (cumplidas_all / total_all * 100) if total_all > 0 else 0
+    lines.extend([
+        f"━━━━━━━━━━━━━━━━━━━",
+        f"📈 *Cumplimiento Global:* {pct_global:.0f}%",
+        f"✅ Cumplidas: {cumplidas_all} | 🔴 Vencidas: {vencidas_all}",
+        f"📋 Total: {total_all}",
+        f"━━━━━━━━━━━━━━━━━━━",
+        f"_GPS Comercial - Reporte Automatico_",
+    ])
+
+    return "\n".join(lines)
+
+
+def send_task_overdue_alerts(app):
+    """
+    Envia alertas WhatsApp cuando tareas pasan de la hora programada sin completarse.
+    Se ejecuta desde el background worker.
+    """
+    from app.models import User, ScheduledTask, TaskTemplate
+    from app import db
+
+    with app.app_context():
+        settings = {s.key: s.value for s in Setting.query.all()}
+        if settings.get('whatsapp_enabled', 'false') != 'true':
+            return 0
+
+        colombia_tz = pytz.timezone('America/Bogota')
+        now = datetime.now(colombia_tz)
+        today = now.date()
+
+        # Buscar tareas pendientes de hoy que tengan template con hora programada
+        overdue_tasks = ScheduledTask.query.filter(
+            ScheduledTask.scheduled_date == today,
+            ScheduledTask.status == 'pendiente',
+        ).all()
+
+        sent_count = 0
+        for task in overdue_tasks:
+            # Si la tarea tiene template con hora programada, verificar si paso la hora
+            if task.template_id and task.template:
+                sched_time = getattr(task.template, 'scheduled_time', None)
+                if sched_time:
+                    try:
+                        hour, minute = map(int, sched_time.split(':'))
+                        if now.hour > hour or (now.hour == hour and now.minute > minute + 30):
+                            # La tarea lleva 30+ min de retraso
+                            user = task.user
+                            if user and user.phone_number:
+                                msg = format_task_overdue_message(
+                                    user.full_name or user.username,
+                                    task.title,
+                                    task.scheduled_date.strftime('%d/%m/%Y'),
+                                    task.task_type
+                                )
+                                if send_whatsapp_message(user.phone_number, msg):
+                                    sent_count += 1
+                    except (ValueError, AttributeError):
+                        pass
+
+        return sent_count
+
+
+def send_leader_daily_task_summary(app):
+    """
+    Envia resumen diario de tareas al lider/gerente de cada negocio.
+    Se ejecuta al final del dia desde el background worker.
+    """
+    from app.models import User, ScheduledTask
+    from app import db
+
+    with app.app_context():
+        settings = {s.key: s.value for s in Setting.query.all()}
+        if settings.get('whatsapp_enabled', 'false') != 'true':
+            return 0
+
+        colombia_tz = pytz.timezone('America/Bogota')
+        now = datetime.now(colombia_tz)
+        today = now.date()
+        date_str = today.strftime('%d/%m/%Y')
+
+        leaders = User.query.filter_by(role='lider').all()
+        sent_count = 0
+
+        for leader in leaders:
+            if not leader.phone_number:
+                continue
+
+            # Obtener equipo del lider
+            team = User.query.filter_by(
+                categoria=leader.categoria,
+                employee_status='activo'
+            ).all()
+
+            employee_tasks = []
+            for member in team:
+                tasks = ScheduledTask.query.filter_by(
+                    user_id=member.id,
+                    scheduled_date=today,
+                ).all()
+
+                total = len(tasks)
+                cumplidas = sum(1 for t in tasks if t.status == 'cumplida')
+                vencidas = sum(1 for t in tasks if t.is_overdue)
+                pending_titles = [t.title for t in tasks if t.status == 'pendiente']
+
+                employee_tasks.append({
+                    'name': member.full_name or member.username,
+                    'total': total,
+                    'cumplidas': cumplidas,
+                    'vencidas': vencidas,
+                    'pendientes': total - cumplidas,
+                    'pending_titles': pending_titles,
+                })
+
+            # Solo enviar si hay tareas
+            if any(e['total'] > 0 for e in employee_tasks):
+                msg = format_leader_daily_task_summary(
+                    leader.full_name or leader.username,
+                    date_str,
+                    employee_tasks
+                )
+                if send_whatsapp_message(leader.phone_number, msg):
+                    sent_count += 1
+
+        return sent_count
+
+
+def send_manual_whatsapp_test(phone_number, message_type='summary'):
+    """
+    Envia un mensaje WhatsApp manual de prueba. Usado por el admin.
+    message_type: 'summary' | 'overdue' | 'custom'
+    """
+    from app.models import User, ScheduledTask
+
+    colombia_tz = pytz.timezone('America/Bogota')
+    now = datetime.now(colombia_tz)
+    today = now.date()
+
+    if message_type == 'summary':
+        # Generar un resumen de ejemplo con datos reales
+        leaders = User.query.filter_by(role='lider').all()
+        if leaders:
+            leader = leaders[0]
+            team = User.query.filter_by(
+                categoria=leader.categoria,
+                employee_status='activo'
+            ).all()
+            employee_tasks = []
+            for member in team:
+                tasks = ScheduledTask.query.filter_by(
+                    user_id=member.id,
+                    scheduled_date=today,
+                ).all()
+                employee_tasks.append({
+                    'name': member.full_name or member.username,
+                    'total': len(tasks),
+                    'cumplidas': sum(1 for t in tasks if t.status == 'cumplida'),
+                    'vencidas': sum(1 for t in tasks if t.is_overdue),
+                    'pending_titles': [t.title for t in tasks if t.status == 'pendiente'][:3],
+                })
+            msg = format_leader_daily_task_summary(
+                leader.full_name or leader.username,
+                today.strftime('%d/%m/%Y'),
+                employee_tasks
+            )
+        else:
+            msg = (
+                f"📊 *Resumen Diario de Prueba*\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"📅 {today.strftime('%d/%m/%Y')}\n"
+                f"✅ 5/8 tareas cumplidas (62%)\n"
+                f"🔴 2 vencidas\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"_GPS Comercial - Mensaje de Prueba_"
+            )
+    elif message_type == 'overdue':
+        msg = format_task_overdue_message(
+            'Empleado de Prueba',
+            'Visita comercial aliado principal',
+            today.strftime('%d/%m/%Y'),
+            'visita'
+        )
+    else:
+        msg = (
+            f"🔔 *GPS Comercial*\n"
+            f"━━━━━━━━━━━━━━━\n"
+            f"Mensaje de prueba enviado.\n"
+            f"WhatsApp configurado correctamente.\n"
+            f"_{now.strftime('%d/%m/%Y %H:%M')}_"
+        )
+
+    return send_whatsapp_message(phone_number, msg)
+
+
 def send_leader_notifications(app):
     """
     Envia notificaciones WhatsApp a los lideres de negocio configurados.

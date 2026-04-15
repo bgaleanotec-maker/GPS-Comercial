@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS Comercial - Documentacion del Sistema</title>
+    <title>SmartFlow GPS Comercial - Documentacion del Sistema</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -12,16 +12,21 @@
                     colors: {
                         brand: {
                             50: '#eef2ff',
-                            100: '#e0e7ff',
-                            200: '#c7d2fe',
-                            300: '#a5b4fc',
-                            400: '#818cf8',
+                            100: '#1e1b4b',
+                            200: '#a5b4fc',
+                            300: '#818cf8',
+                            400: '#6366f1',
                             500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            800: '#3730a3',
-                            900: '#312e81',
-                            950: '#1e1b4b',
+                            600: '#6366f1',
+                            700: '#818cf8',
+                            800: '#1e1b4b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        surface: {
+                            DEFAULT: '#0f172a',
+                            light: '#1e293b',
+                            border: '#334155',
                         }
                     }
                 }
@@ -35,15 +40,15 @@
             #sidebar, #mobile-menu-btn, #back-to-top, .no-print { display: none !important; }
             #main-content { margin-left: 0 !important; width: 100% !important; }
             .page-break { page-break-before: always; }
-            body { font-size: 11pt; }
+            body { font-size: 11pt; background: white; color: black; }
             .print-compact { padding: 0.5rem !important; }
         }
 
         /* Sidebar active link */
         .nav-link.active {
             background-color: rgba(99, 102, 241, 0.15);
-            color: #4f46e5;
-            border-left: 3px solid #4f46e5;
+            color: #818cf8;
+            border-left: 3px solid #6366f1;
             font-weight: 600;
         }
 
@@ -53,16 +58,20 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #6366f1;
+            color: #818cf8;
             font-size: 1.5rem;
             min-width: 2rem;
             flex-shrink: 0;
         }
 
         /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.7); }
         #sidebar::-webkit-scrollbar { width: 4px; }
-        #sidebar::-webkit-scrollbar-track { background: transparent; }
-        #sidebar::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 2px; }
+        #sidebar::-webkit-scrollbar-track { background: #0f172a; }
+        #sidebar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.5); border-radius: 2px; }
 
         /* Gradient text */
         .gradient-text {
@@ -75,7 +84,7 @@
         /* Card hover */
         .module-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
         }
         .module-card { transition: all 0.2s ease; }
 
@@ -91,16 +100,24 @@
             transform: translateX(-50%);
             width: 2px;
             height: 1.5rem;
-            background: #a5b4fc;
+            background: #6366f1;
         }
 
         /* Table striping */
         .striped-table tbody tr:nth-child(even) {
-            background-color: #f8fafc;
+            background-color: rgba(30, 41, 59, 0.5);
+        }
+
+        /* Links */
+        a:not(.nav-link):not([class*="text-"]) {
+            color: #818cf8;
+        }
+        a:not(.nav-link):not([class*="text-"]):hover {
+            color: #a5b4fc;
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased">
+<body class="bg-slate-950 text-slate-300 antialiased">
 
     <!-- Mobile menu button -->
     <button id="mobile-menu-btn" onclick="toggleSidebar()"
@@ -112,19 +129,19 @@
 
     <!-- ==================== SIDEBAR ==================== -->
     <aside id="sidebar"
-        class="fixed top-0 left-0 h-full w-72 bg-white border-r border-gray-200 z-40 overflow-y-auto
+        class="fixed top-0 left-0 h-full w-72 bg-slate-900 border-r border-slate-800 z-40 overflow-y-auto
                transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
 
         <!-- Sidebar header -->
-        <div class="px-6 py-5 border-b border-gray-100 bg-gradient-to-br from-brand-900 to-brand-700">
-            <h2 class="text-white font-bold text-lg leading-tight">GPS Comercial</h2>
-            <p class="text-brand-200 text-xs mt-1">Documentacion BPM v2.0</p>
+        <div class="px-6 py-5 border-b border-slate-800 bg-gradient-to-br from-slate-900 to-indigo-950">
+            <h2 class="text-white font-bold text-lg leading-tight">SmartFlow GPS Comercial</h2>
+            <p class="text-indigo-400 text-xs mt-1">Documentacion BPM v2.0</p>
         </div>
 
         <!-- Back to login -->
-        <div class="px-4 py-3 border-b border-gray-100">
+        <div class="px-4 py-3 border-b border-slate-800">
             <a href="/auth/login"
-               class="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-800 font-medium transition no-print">
+               class="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition no-print">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
@@ -134,42 +151,42 @@
 
         <!-- Navigation -->
         <nav class="px-3 py-4 space-y-1">
-            <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Contenido</p>
+            <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Contenido</p>
 
-            <a href="#vision-general" class="nav-link block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+            <a href="#vision-general" class="nav-link block px-3 py-2 rounded-md text-sm text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition">
                 1. Vision General del Sistema
             </a>
-            <a href="#mapa-procesos" class="nav-link block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+            <a href="#mapa-procesos" class="nav-link block px-3 py-2 rounded-md text-sm text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition">
                 2. Mapa de Procesos (BPM)
             </a>
-            <a href="#roles-permisos" class="nav-link block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+            <a href="#roles-permisos" class="nav-link block px-3 py-2 rounded-md text-sm text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition">
                 3. Roles y Permisos
             </a>
-            <a href="#modulos-sistema" class="nav-link block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+            <a href="#modulos-sistema" class="nav-link block px-3 py-2 rounded-md text-sm text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition">
                 4. Modulos del Sistema
             </a>
-            <a href="#flujos-trabajo" class="nav-link block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+            <a href="#flujos-trabajo" class="nav-link block px-3 py-2 rounded-md text-sm text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition">
                 5. Flujos de Trabajo Detallados
             </a>
-            <a href="#configuracion" class="nav-link block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+            <a href="#configuracion" class="nav-link block px-3 py-2 rounded-md text-sm text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition">
                 6. Configuracion del Sistema
             </a>
-            <a href="#integraciones" class="nav-link block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+            <a href="#integraciones" class="nav-link block px-3 py-2 rounded-md text-sm text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition">
                 7. Integraciones
             </a>
-            <a href="#glosario" class="nav-link block px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition">
+            <a href="#glosario" class="nav-link block px-3 py-2 rounded-md text-sm text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition">
                 8. Glosario de Terminos
             </a>
         </nav>
 
         <!-- Sidebar footer -->
-        <div class="absolute bottom-0 left-0 right-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
-            <p class="text-xs text-gray-400 text-center">Brayan G y Equipo de Herramientas</p>
+        <div class="absolute bottom-0 left-0 right-0 px-6 py-4 border-t border-slate-800 bg-slate-950">
+            <p class="text-xs text-slate-500 text-center">Elaborado por Brayan G y Equipo de Herramientas</p>
         </div>
     </aside>
 
     <!-- Sidebar overlay for mobile -->
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden"></div>
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden"></div>
 
     <!-- ==================== MAIN CONTENT ==================== -->
     <div id="main-content" class="lg:ml-72 min-h-screen">
@@ -233,7 +250,7 @@
             <!-- Wave divider -->
             <div class="absolute bottom-0 left-0 right-0">
                 <svg viewBox="0 0 1440 60" fill="none" class="w-full">
-                    <path d="M0 60V30C240 0 480 0 720 30C960 60 1200 60 1440 30V60H0Z" fill="#f9fafb"/>
+                    <path d="M0 60V30C240 0 480 0 720 30C960 60 1200 60 1440 30V60H0Z" fill="#020617"/>
                 </svg>
             </div>
         </header>
@@ -246,59 +263,59 @@
             <!-- ============================================================ -->
             <section id="vision-general" class="pt-16">
                 <div class="flex items-center gap-3 mb-8">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-100 text-brand-700 font-bold text-lg">1</span>
-                    <h2 class="text-3xl font-bold text-gray-900">Vision General del Sistema</h2>
+                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-lg">1</span>
+                    <h2 class="text-3xl font-bold text-slate-100">Vision General del Sistema</h2>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
-                    <p class="text-lg text-gray-600 leading-relaxed mb-6">
-                        <strong class="text-gray-900">GPS Comercial</strong> es una plataforma integral de seguimiento de flotas
-                        y gestion comercial desarrollada para <strong class="text-brand-600">Vanti</strong>, empresa colombiana
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-8">
+                    <p class="text-lg text-slate-300 leading-relaxed mb-6">
+                        <strong class="text-slate-100">GPS Comercial</strong> es una plataforma integral de seguimiento de flotas
+                        y gestion comercial desarrollada para <strong class="text-indigo-400">Vanti</strong>, empresa colombiana
                         del sector de gas natural. El sistema permite monitorear equipos de campo en tiempo real, automatizar
                         la deteccion de visitas comerciales, gestionar tareas y generar analitica avanzada para la toma de decisiones.
                     </p>
 
-                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Capacidades Clave</h3>
+                    <h3 class="text-xl font-semibold text-slate-100 mb-4">Capacidades Clave</h3>
                     <div class="grid sm:grid-cols-2 gap-4 mb-8">
-                        <div class="flex items-start gap-3 p-4 bg-brand-50 rounded-xl">
+                        <div class="flex items-start gap-3 p-4 bg-indigo-500/10 rounded-xl">
                             <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </div>
                             <div>
-                                <p class="font-semibold text-gray-900">Rastreo GPS en Tiempo Real</p>
-                                <p class="text-sm text-gray-600">Monitoreo continuo de vehiculos y empleados en campo con registro de rutas, distancias y velocidades.</p>
+                                <p class="font-semibold text-slate-100">Rastreo GPS en Tiempo Real</p>
+                                <p class="text-sm text-slate-400">Monitoreo continuo de vehiculos y empleados en campo con registro de rutas, distancias y velocidades.</p>
                             </div>
                         </div>
-                        <div class="flex items-start gap-3 p-4 bg-purple-50 rounded-xl">
+                        <div class="flex items-start gap-3 p-4 bg-purple-500/10 rounded-xl">
                             <div class="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
                             <div>
-                                <p class="font-semibold text-gray-900">Deteccion Automatica de Visitas</p>
-                                <p class="text-sm text-gray-600">Geocercas configurables que detectan automaticamente la llegada del empleado al aliado comercial.</p>
+                                <p class="font-semibold text-slate-100">Deteccion Automatica de Visitas</p>
+                                <p class="text-sm text-slate-400">Geocercas configurables que detectan automaticamente la llegada del empleado al aliado comercial.</p>
                             </div>
                         </div>
-                        <div class="flex items-start gap-3 p-4 bg-indigo-50 rounded-xl">
+                        <div class="flex items-start gap-3 p-4 bg-indigo-500/10 rounded-xl">
                             <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                             </div>
                             <div>
-                                <p class="font-semibold text-gray-900">Gestion de Tareas y Plantillas</p>
-                                <p class="text-sm text-gray-600">Asignacion, seguimiento y validacion GPS de tareas con generacion recurrente automatizada.</p>
+                                <p class="font-semibold text-slate-100">Gestion de Tareas y Plantillas</p>
+                                <p class="text-sm text-slate-400">Asignacion, seguimiento y validacion GPS de tareas con generacion recurrente automatizada.</p>
                             </div>
                         </div>
-                        <div class="flex items-start gap-3 p-4 bg-pink-50 rounded-xl">
+                        <div class="flex items-start gap-3 p-4 bg-pink-500/10 rounded-xl">
                             <div class="w-8 h-8 rounded-lg bg-pink-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                             </div>
                             <div>
-                                <p class="font-semibold text-gray-900">Scoring y Analitica</p>
-                                <p class="text-sm text-gray-600">Puntaje de conduccion, KPIs de negocio, exportacion a Excel y comparativas por periodo.</p>
+                                <p class="font-semibold text-slate-100">Scoring y Analitica</p>
+                                <p class="text-sm text-slate-400">Puntaje de conduccion, KPIs de negocio, exportacion a Excel y comparativas por periodo.</p>
                             </div>
                         </div>
                     </div>
 
-                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Arquitectura del Sistema</h3>
+                    <h3 class="text-xl font-semibold text-slate-100 mb-4">Arquitectura del Sistema</h3>
                     <div class="bg-gray-900 rounded-xl p-6 text-sm font-mono">
                         <div class="grid sm:grid-cols-4 gap-4 text-center">
                             <div class="bg-brand-800 rounded-lg p-4">
@@ -331,146 +348,146 @@
             <!-- ============================================================ -->
             <section id="mapa-procesos" class="pt-16 page-break">
                 <div class="flex items-center gap-3 mb-8">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-100 text-brand-700 font-bold text-lg">2</span>
-                    <h2 class="text-3xl font-bold text-gray-900">Mapa de Procesos (BPM)</h2>
+                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-lg">2</span>
+                    <h2 class="text-3xl font-bold text-slate-100">Mapa de Procesos (BPM)</h2>
                 </div>
 
                 <!-- Proceso 1: Gestion de Visitas -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
                     <div class="flex items-center gap-2 mb-6">
                         <span class="w-3 h-3 rounded-full bg-brand-500"></span>
-                        <h3 class="text-xl font-bold text-gray-900">Proceso de Gestion de Visitas</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Proceso de Gestion de Visitas</h3>
                     </div>
 
                     <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
                         <!-- Step 1 -->
-                        <div class="bg-brand-50 border-2 border-brand-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-indigo-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">1</div>
-                            <p class="text-sm font-semibold text-brand-900">Empleado sale</p>
-                            <p class="text-xs text-brand-600">Inicio de jornada</p>
+                            <p class="text-sm font-semibold text-indigo-300">Empleado sale</p>
+                            <p class="text-xs text-indigo-400">Inicio de jornada</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
                         <!-- Step 2 -->
-                        <div class="bg-indigo-50 border-2 border-indigo-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-indigo-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">2</div>
-                            <p class="text-sm font-semibold text-indigo-900">GPS Tracking</p>
+                            <p class="text-sm font-semibold text-indigo-300">GPS Tracking</p>
                             <p class="text-xs text-indigo-600">Monitoreo activo</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
                         <!-- Step 3 -->
-                        <div class="bg-purple-50 border-2 border-purple-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-purple-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">3</div>
-                            <p class="text-sm font-semibold text-purple-900">Geocerca detecta</p>
+                            <p class="text-sm font-semibold text-purple-300">Geocerca detecta</p>
                             <p class="text-xs text-purple-600">Llegada al aliado</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
                         <!-- Step 4 -->
-                        <div class="bg-green-50 border-2 border-green-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-green-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">4</div>
-                            <p class="text-sm font-semibold text-green-900">Visita registrada</p>
+                            <p class="text-sm font-semibold text-green-300">Visita registrada</p>
                             <p class="text-xs text-green-600">Automaticamente</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
                         <!-- Step 5 -->
-                        <div class="bg-amber-50 border-2 border-amber-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-amber-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">5</div>
-                            <p class="text-sm font-semibold text-amber-900">Reporte generado</p>
+                            <p class="text-sm font-semibold text-amber-300">Reporte generado</p>
                             <p class="text-xs text-amber-600">Dashboard / Excel</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Proceso 2: Tareas -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
                     <div class="flex items-center gap-2 mb-6">
                         <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                        <h3 class="text-xl font-bold text-gray-900">Proceso de Tareas</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Proceso de Tareas</h3>
                     </div>
 
                     <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-                        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-emerald-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">1</div>
-                            <p class="text-sm font-semibold text-emerald-900">Lider crea plantilla</p>
+                            <p class="text-sm font-semibold text-emerald-300">Lider crea plantilla</p>
                             <p class="text-xs text-emerald-600">Definicion de tarea</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
-                        <div class="bg-teal-50 border-2 border-teal-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-teal-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">2</div>
-                            <p class="text-sm font-semibold text-teal-900">Sistema genera tareas</p>
+                            <p class="text-sm font-semibold text-teal-300">Sistema genera tareas</p>
                             <p class="text-xs text-teal-600">Automatico / manual</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
-                        <div class="bg-cyan-50 border-2 border-cyan-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-cyan-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-cyan-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">3</div>
-                            <p class="text-sm font-semibold text-cyan-900">Empleado ejecuta</p>
+                            <p class="text-sm font-semibold text-cyan-300">Empleado ejecuta</p>
                             <p class="text-xs text-cyan-600">En campo</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
-                        <div class="bg-blue-50 border-2 border-blue-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-blue-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">4</div>
-                            <p class="text-sm font-semibold text-blue-900">GPS valida presencia</p>
+                            <p class="text-sm font-semibold text-blue-300">GPS valida presencia</p>
                             <p class="text-xs text-blue-600">Verificacion ubicacion</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
-                        <div class="bg-green-50 border-2 border-green-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-green-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">5</div>
-                            <p class="text-sm font-semibold text-green-900">Tarea cumplida</p>
+                            <p class="text-sm font-semibold text-green-300">Tarea cumplida</p>
                             <p class="text-xs text-green-600">Marcada completa</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Proceso 3: Alertas -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8">
                     <div class="flex items-center gap-2 mb-6">
                         <span class="w-3 h-3 rounded-full bg-red-500"></span>
-                        <h3 class="text-xl font-bold text-gray-900">Proceso de Alertas</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Proceso de Alertas</h3>
                     </div>
 
                     <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-                        <div class="bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-red-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">1</div>
-                            <p class="text-sm font-semibold text-red-900">Monitoreo continuo</p>
+                            <p class="text-sm font-semibold text-red-300">Monitoreo continuo</p>
                             <p class="text-xs text-red-600">Tiempo real</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
-                        <div class="bg-orange-50 border-2 border-orange-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-orange-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">2</div>
-                            <p class="text-sm font-semibold text-orange-900">Deteccion de evento</p>
+                            <p class="text-sm font-semibold text-orange-300">Deteccion de evento</p>
                             <p class="text-xs text-orange-600">Velocidad / frenado</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
-                        <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-yellow-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-yellow-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">3</div>
-                            <p class="text-sm font-semibold text-yellow-900">Alerta WhatsApp</p>
+                            <p class="text-sm font-semibold text-yellow-300">Alerta WhatsApp</p>
                             <p class="text-xs text-yellow-600">Ultramsg API</p>
                         </div>
                         <div class="flow-arrow">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </div>
-                        <div class="bg-green-50 border-2 border-green-200 rounded-xl px-4 py-3 text-center min-w-[130px]">
+                        <div class="bg-slate-800 border-2 border-green-500/30 rounded-xl px-4 py-3 text-center min-w-[130px]">
                             <div class="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center mx-auto mb-2 text-sm font-bold">4</div>
-                            <p class="text-sm font-semibold text-green-900">Lider notificado</p>
+                            <p class="text-sm font-semibold text-green-300">Lider notificado</p>
                             <p class="text-xs text-green-600">Accion inmediata</p>
                         </div>
                     </div>
@@ -482,20 +499,20 @@
             <!-- ============================================================ -->
             <section id="roles-permisos" class="pt-16 page-break">
                 <div class="flex items-center gap-3 mb-8">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-100 text-brand-700 font-bold text-lg">3</span>
-                    <h2 class="text-3xl font-bold text-gray-900">Roles y Permisos</h2>
+                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-lg">3</span>
+                    <h2 class="text-3xl font-bold text-slate-100">Roles y Permisos</h2>
                 </div>
 
                 <!-- Role cards -->
                 <div class="grid md:grid-cols-3 gap-6 mb-8">
                     <!-- Admin -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 overflow-hidden">
                         <div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4">
                             <p class="text-white font-bold text-lg">Administrador</p>
                             <p class="text-red-100 text-sm">Acceso completo</p>
                         </div>
                         <div class="p-6">
-                            <ul class="space-y-2 text-sm text-gray-700">
+                            <ul class="space-y-2 text-sm text-slate-300">
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Gestion de usuarios (CRUD)</li>
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Gestion de aliados comerciales</li>
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Reglas y configuracion</li>
@@ -507,13 +524,13 @@
                     </div>
 
                     <!-- Lider -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 overflow-hidden">
                         <div class="bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-4">
                             <p class="text-white font-bold text-lg">Lider de Negocio</p>
                             <p class="text-brand-100 text-sm">Gestion de equipo</p>
                         </div>
                         <div class="p-6">
-                            <ul class="space-y-2 text-sm text-gray-700">
+                            <ul class="space-y-2 text-sm text-slate-300">
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Asignar tareas al equipo</li>
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Crear plantillas recurrentes</li>
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Dashboard de equipo</li>
@@ -525,13 +542,13 @@
                     </div>
 
                     <!-- Empleado -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 overflow-hidden">
                         <div class="bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-4">
                             <p class="text-white font-bold text-lg">Empleado</p>
                             <p class="text-emerald-100 text-sm">Acceso personal</p>
                         </div>
                         <div class="p-6">
-                            <ul class="space-y-2 text-sm text-gray-700">
+                            <ul class="space-y-2 text-sm text-slate-300">
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Mi agenda / cronograma</li>
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Registrar visitas</li>
                                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Completar tareas asignadas</li>
@@ -544,30 +561,30 @@
                 </div>
 
                 <!-- Permissions matrix -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 overflow-x-auto">
-                    <h3 class="text-xl font-bold text-gray-900 mb-4">Matriz de Permisos por Modulo</h3>
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 overflow-x-auto">
+                    <h3 class="text-xl font-bold text-slate-100 mb-4">Matriz de Permisos por Modulo</h3>
                     <table class="striped-table w-full text-sm">
                         <thead>
-                            <tr class="border-b-2 border-gray-200">
-                                <th class="text-left py-3 px-4 font-semibold text-gray-900">Modulo</th>
-                                <th class="text-center py-3 px-4 font-semibold text-red-700">Administrador</th>
-                                <th class="text-center py-3 px-4 font-semibold text-brand-700">Lider</th>
-                                <th class="text-center py-3 px-4 font-semibold text-emerald-700">Empleado</th>
+                            <tr class="border-b-2 border-slate-700 bg-slate-800/50">
+                                <th class="text-left py-3 px-4 font-semibold text-slate-100">Modulo</th>
+                                <th class="text-center py-3 px-4 font-semibold text-red-400">Administrador</th>
+                                <th class="text-center py-3 px-4 font-semibold text-indigo-400">Lider</th>
+                                <th class="text-center py-3 px-4 font-semibold text-emerald-400">Empleado</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            <tr><td class="py-2.5 px-4">Dashboard GPS</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-gray-400">--</td></tr>
-                            <tr><td class="py-2.5 px-4">Torre de Control</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-gray-400">--</td></tr>
-                            <tr><td class="py-2.5 px-4">Mi Negocio</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Propio</td><td class="text-center py-2.5 px-4 text-gray-400">--</td></tr>
-                            <tr><td class="py-2.5 px-4">Agenda / Cronograma</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Propio</td></tr>
-                            <tr><td class="py-2.5 px-4">Plantillas Recurrentes</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Crear/Editar</td><td class="text-center py-2.5 px-4 text-gray-400">--</td></tr>
-                            <tr><td class="py-2.5 px-4">Gestion de Visitas</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Propio</td></tr>
-                            <tr><td class="py-2.5 px-4">Analitica</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Propio</td></tr>
-                            <tr><td class="py-2.5 px-4">Scoring de Conduccion</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Propio</td></tr>
-                            <tr><td class="py-2.5 px-4">Alertas WhatsApp</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Config.</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">Recibe</td><td class="text-center py-2.5 px-4 text-gray-400">--</td></tr>
-                            <tr><td class="py-2.5 px-4">Gestion de Usuarios</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">CRUD</td><td class="text-center py-2.5 px-4 text-gray-400">--</td><td class="text-center py-2.5 px-4 text-gray-400">--</td></tr>
-                            <tr><td class="py-2.5 px-4">Aliados Comerciales</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">CRUD</td><td class="text-center py-2.5 px-4 text-gray-400">--</td><td class="text-center py-2.5 px-4 text-gray-400">--</td></tr>
-                            <tr><td class="py-2.5 px-4">API Keys</td><td class="text-center py-2.5 px-4 text-green-600 font-bold">CRUD</td><td class="text-center py-2.5 px-4 text-gray-400">--</td><td class="text-center py-2.5 px-4 text-gray-400">--</td></tr>
+                        <tbody class="divide-y divide-slate-800">
+                            <tr><td class="py-2.5 px-4">Dashboard GPS</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-slate-600">--</td></tr>
+                            <tr><td class="py-2.5 px-4">Torre de Control</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-slate-600">--</td></tr>
+                            <tr><td class="py-2.5 px-4">Mi Negocio</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Propio</td><td class="text-center py-2.5 px-4 text-slate-600">--</td></tr>
+                            <tr><td class="py-2.5 px-4">Agenda / Cronograma</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Propio</td></tr>
+                            <tr><td class="py-2.5 px-4">Plantillas Recurrentes</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Crear/Editar</td><td class="text-center py-2.5 px-4 text-slate-600">--</td></tr>
+                            <tr><td class="py-2.5 px-4">Gestion de Visitas</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Propio</td></tr>
+                            <tr><td class="py-2.5 px-4">Analitica</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Propio</td></tr>
+                            <tr><td class="py-2.5 px-4">Scoring de Conduccion</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Total</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Equipo</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Propio</td></tr>
+                            <tr><td class="py-2.5 px-4">Alertas WhatsApp</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Config.</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">Recibe</td><td class="text-center py-2.5 px-4 text-slate-600">--</td></tr>
+                            <tr><td class="py-2.5 px-4">Gestion de Usuarios</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">CRUD</td><td class="text-center py-2.5 px-4 text-slate-600">--</td><td class="text-center py-2.5 px-4 text-slate-600">--</td></tr>
+                            <tr><td class="py-2.5 px-4">Aliados Comerciales</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">CRUD</td><td class="text-center py-2.5 px-4 text-slate-600">--</td><td class="text-center py-2.5 px-4 text-slate-600">--</td></tr>
+                            <tr><td class="py-2.5 px-4">API Keys</td><td class="text-center py-2.5 px-4 text-green-400 font-bold">CRUD</td><td class="text-center py-2.5 px-4 text-slate-600">--</td><td class="text-center py-2.5 px-4 text-slate-600">--</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -578,21 +595,21 @@
             <!-- ============================================================ -->
             <section id="modulos-sistema" class="pt-16 page-break">
                 <div class="flex items-center gap-3 mb-8">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-100 text-brand-700 font-bold text-lg">4</span>
-                    <h2 class="text-3xl font-bold text-gray-900">Modulos del Sistema</h2>
+                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-lg">4</span>
+                    <h2 class="text-3xl font-bold text-slate-100">Modulos del Sistema</h2>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-6">
 
                     <!-- Dashboard GPS -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Dashboard GPS</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Dashboard GPS</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Monitoreo de flota en tiempo real con mapa interactivo. Visualiza la ubicacion de todos los empleados,
                             distancia recorrida por jornada, analisis de velocidad promedio y maxima. Incluye historial de
                             rutas y alertas de exceso de velocidad.
@@ -606,14 +623,14 @@
                     </div>
 
                     <!-- Torre de Control -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                            <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Torre de Control</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Torre de Control</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Panel centralizado para monitorear el cumplimiento de tareas de todo el equipo. Filtros por prioridad
                             (alta, media, baja), estado (pendiente, en progreso, completada) y empleado. Vista consolidada
                             para lideres con indicadores de cumplimiento diario.
@@ -626,14 +643,14 @@
                     </div>
 
                     <!-- Mi Negocio -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-lg bg-brand-100 flex items-center justify-center">
-                                <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                            <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Mi Negocio (Lider)</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Mi Negocio (Lider)</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Dashboard ejecutivo para lideres de negocio. KPIs principales: visitas realizadas vs. meta,
                             ranking de empleados por cumplimiento, metricas de productividad del equipo. Comparativa
                             semanal y mensual con indicadores de tendencia.
@@ -646,14 +663,14 @@
                     </div>
 
                     <!-- Agenda/Cronograma -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+                            <div class="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Agenda / Cronograma</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Agenda / Cronograma</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Calendario semanal de tareas asignadas con vista por dia. Cada tarea muestra aliado destino,
                             prioridad y estado. Permite completar tareas con validacion GPS automatica (verificar que el
                             empleado esta en la ubicacion) o marcado manual con observaciones.
@@ -666,14 +683,14 @@
                     </div>
 
                     <!-- Plantillas Recurrentes -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                            <div class="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Plantillas Recurrentes</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Plantillas Recurrentes</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Sistema de generacion automatica de tareas basado en plantillas. El lider define una plantilla
                             con frecuencia (diaria, semanal, mensual), empleado asignado, aliado destino y prioridad.
                             El sistema genera las tareas automaticamente segun la programacion configurada.
@@ -687,14 +704,14 @@
                     </div>
 
                     <!-- Gestion de Visitas -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                            <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Gestion de Visitas</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Gestion de Visitas</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Registro integral de visitas comerciales. Deteccion automatica via geocerca cuando el empleado
                             ingresa al radio del aliado, o registro manual con formulario. Permite adjuntar evidencia
                             fotografica y observaciones. Historial completo de visitas por aliado y empleado.
@@ -707,14 +724,14 @@
                     </div>
 
                     <!-- Analitica -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Analitica</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Analitica</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Modulo de inteligencia de negocio con dashboards interactivos. Permite exportar datos a Excel,
                             comparar periodos (semanal, mensual), visualizar tendencias de cumplimiento y generar
                             reportes detallados por empleado, aliado o equipo completo.
@@ -727,14 +744,14 @@
                     </div>
 
                     <!-- Scoring de Conduccion -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Scoring de Conduccion</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Scoring de Conduccion</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Sistema de calificacion de conduccion basado en reglas configurables. Detecta infracciones como
                             exceso de velocidad, frenado brusco y aceleracion agresiva. Cada infraccion resta puntos segun
                             severidad. Score de 0 a 100 con historico y tendencias.
@@ -747,14 +764,14 @@
                     </div>
 
                     <!-- Alertas WhatsApp -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Alertas WhatsApp</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Alertas WhatsApp</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Notificaciones automaticas via WhatsApp usando la API de Ultramsg. Envia alertas de emergencia
                             (accidentes, paradas prolongadas), reportes diarios consolidados al lider, y notificaciones
                             de eventos criticos en tiempo real.
@@ -767,14 +784,14 @@
                     </div>
 
                     <!-- Gestion de Usuarios -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Gestion de Usuarios</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Gestion de Usuarios</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Administracion completa de usuarios del sistema. Creacion, edicion y desactivacion de cuentas.
                             Asignacion de roles (administrador, lider, empleado), gestion de estado (activo, inactivo, vacaciones)
                             y asociacion con dispositivos GPS de Traccar.
@@ -787,14 +804,14 @@
                     </div>
 
                     <!-- Aliados Comerciales -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Aliados Comerciales</h3>
+                            <h3 class="text-lg font-bold text-slate-100">Aliados Comerciales</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Gestion de puntos comerciales (aliados) de Vanti. Cada aliado tiene coordenadas GPS, direccion,
                             y radio de geocerca configurable para la deteccion automatica de visitas. Permite ajustar el
                             radio segun las condiciones fisicas del punto.
@@ -807,14 +824,14 @@
                     </div>
 
                     <!-- API Keys -->
-                    <div class="module-card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="module-card bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-6">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">API Keys</h3>
+                            <h3 class="text-lg font-bold text-slate-100">API Keys</h3>
                         </div>
-                        <p class="text-sm text-gray-600 leading-relaxed">
+                        <p class="text-sm text-slate-400 leading-relaxed">
                             Modulo de gestion de tokens para integraciones externas. Permite generar, revocar y monitorear
                             API Keys que habilitan el acceso programatico al sistema. Cada key tiene permisos
                             configurables y registro de uso.
@@ -834,49 +851,49 @@
             <!-- ============================================================ -->
             <section id="flujos-trabajo" class="pt-16 page-break">
                 <div class="flex items-center gap-3 mb-8">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-100 text-brand-700 font-bold text-lg">5</span>
-                    <h2 class="text-3xl font-bold text-gray-900">Flujos de Trabajo Detallados</h2>
+                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-lg">5</span>
+                    <h2 class="text-3xl font-bold text-slate-100">Flujos de Trabajo Detallados</h2>
                 </div>
 
                 <!-- Flujo 1: Visita automatica -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
                     <div class="flex items-center gap-3 mb-6">
                         <span class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-bold">A</span>
-                        <h3 class="text-xl font-bold text-gray-900">Registro de Visita Automatica (GPS)</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Registro de Visita Automatica (GPS)</h3>
                     </div>
                     <div class="space-y-4">
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">El empleado inicia su jornada laboral</p>
-                                <p class="text-sm text-gray-600 mt-1">La aplicacion OsmAnd en su dispositivo comienza a enviar posiciones GPS al servidor Traccar de forma continua.</p>
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">El empleado inicia su jornada laboral</p>
+                                <p class="text-sm text-slate-400 mt-1">La aplicacion OsmAnd en su dispositivo comienza a enviar posiciones GPS al servidor Traccar de forma continua.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">GPS Comercial consulta posiciones del servidor Traccar</p>
-                                <p class="text-sm text-gray-600 mt-1">El sistema obtiene las coordenadas actuales del empleado y las compara contra las geocercas de todos los aliados comerciales asignados.</p>
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">GPS Comercial consulta posiciones del servidor Traccar</p>
+                                <p class="text-sm text-slate-400 mt-1">El sistema obtiene las coordenadas actuales del empleado y las compara contra las geocercas de todos los aliados comerciales asignados.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">La geocerca detecta que el empleado ingreso al radio del aliado</p>
-                                <p class="text-sm text-gray-600 mt-1">Se calcula la distancia entre la posicion GPS y las coordenadas del aliado. Si es menor al radio configurado (ej. 100m), se activa la deteccion.</p>
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">La geocerca detecta que el empleado ingreso al radio del aliado</p>
+                                <p class="text-sm text-slate-400 mt-1">Se calcula la distancia entre la posicion GPS y las coordenadas del aliado. Si es menor al radio configurado (ej. 100m), se activa la deteccion.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Se valida el intervalo minimo entre visitas</p>
-                                <p class="text-sm text-gray-600 mt-1">El sistema verifica que no se haya registrado una visita al mismo aliado dentro del intervalo configurado, evitando duplicados.</p>
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Se valida el intervalo minimo entre visitas</p>
+                                <p class="text-sm text-slate-400 mt-1">El sistema verifica que no se haya registrado una visita al mismo aliado dentro del intervalo configurado, evitando duplicados.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold flex-shrink-0">5</div>
-                            <div class="bg-green-50 rounded-lg p-4 flex-1 border border-green-200">
-                                <p class="font-semibold text-green-900">Visita registrada automaticamente en la base de datos</p>
+                            <div class="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-sm font-bold flex-shrink-0">5</div>
+                            <div class="bg-green-500/10 rounded-lg p-4 flex-1 border border-green-500/30">
+                                <p class="font-semibold text-green-300">Visita registrada automaticamente en la base de datos</p>
                                 <p class="text-sm text-green-700 mt-1">Se crea el registro con fecha, hora, empleado, aliado, coordenadas y tipo "automatica". Queda disponible en reportes y analitica.</p>
                             </div>
                         </div>
@@ -884,37 +901,37 @@
                 </div>
 
                 <!-- Flujo 2: Asignacion de tarea -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
                     <div class="flex items-center gap-3 mb-6">
                         <span class="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">B</span>
-                        <h3 class="text-xl font-bold text-gray-900">Asignacion de Tarea por Lider</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Asignacion de Tarea por Lider</h3>
                     </div>
                     <div class="space-y-4">
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">El lider accede al modulo de gestion de tareas</p>
-                                <p class="text-sm text-gray-600 mt-1">Desde la Torre de Control o la agenda, selecciona "Nueva tarea" y escoge el empleado, aliado destino, fecha y prioridad.</p>
+                            <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">El lider accede al modulo de gestion de tareas</p>
+                                <p class="text-sm text-slate-400 mt-1">Desde la Torre de Control o la agenda, selecciona "Nueva tarea" y escoge el empleado, aliado destino, fecha y prioridad.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Define detalles de la tarea</p>
-                                <p class="text-sm text-gray-600 mt-1">Completa titulo, descripcion, observaciones y selecciona si requiere validacion GPS (presencia fisica en el aliado).</p>
+                            <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Define detalles de la tarea</p>
+                                <p class="text-sm text-slate-400 mt-1">Completa titulo, descripcion, observaciones y selecciona si requiere validacion GPS (presencia fisica en el aliado).</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">La tarea aparece en el cronograma del empleado</p>
-                                <p class="text-sm text-gray-600 mt-1">El empleado ve la tarea en su agenda semanal, con indicacion de fecha limite, aliado asignado y nivel de prioridad.</p>
+                            <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">La tarea aparece en el cronograma del empleado</p>
+                                <p class="text-sm text-slate-400 mt-1">El empleado ve la tarea en su agenda semanal, con indicacion de fecha limite, aliado asignado y nivel de prioridad.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
-                            <div class="bg-green-50 rounded-lg p-4 flex-1 border border-green-200">
-                                <p class="font-semibold text-green-900">El lider monitorea el cumplimiento desde la Torre de Control</p>
+                            <div class="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+                            <div class="bg-green-500/10 rounded-lg p-4 flex-1 border border-green-500/30">
+                                <p class="font-semibold text-green-300">El lider monitorea el cumplimiento desde la Torre de Control</p>
                                 <p class="text-sm text-green-700 mt-1">La tarea cambia de estado conforme el empleado la ejecuta: pendiente, en progreso, completada (con o sin validacion GPS).</p>
                             </div>
                         </div>
@@ -922,37 +939,37 @@
                 </div>
 
                 <!-- Flujo 3: Tareas recurrentes -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
                     <div class="flex items-center gap-3 mb-6">
                         <span class="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center text-sm font-bold">C</span>
-                        <h3 class="text-xl font-bold text-gray-900">Generacion de Tareas Recurrentes</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Generacion de Tareas Recurrentes</h3>
                     </div>
                     <div class="space-y-4">
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">El lider crea una plantilla recurrente</p>
-                                <p class="text-sm text-gray-600 mt-1">Define nombre, empleado, aliado, prioridad y frecuencia: diaria (L-V), semanal (dia especifico) o mensual (dia del mes).</p>
+                            <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">El lider crea una plantilla recurrente</p>
+                                <p class="text-sm text-slate-400 mt-1">Define nombre, empleado, aliado, prioridad y frecuencia: diaria (L-V), semanal (dia especifico) o mensual (dia del mes).</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">El sistema ejecuta el job de generacion</p>
-                                <p class="text-sm text-gray-600 mt-1">Un proceso programado revisa las plantillas activas y genera automaticamente las tareas correspondientes al periodo actual.</p>
+                            <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">El sistema ejecuta el job de generacion</p>
+                                <p class="text-sm text-slate-400 mt-1">Un proceso programado revisa las plantillas activas y genera automaticamente las tareas correspondientes al periodo actual.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Se verifican duplicados</p>
-                                <p class="text-sm text-gray-600 mt-1">Antes de crear la tarea, el sistema valida que no exista una tarea identica ya generada para la misma fecha, evitando duplicacion.</p>
+                            <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Se verifican duplicados</p>
+                                <p class="text-sm text-slate-400 mt-1">Antes de crear la tarea, el sistema valida que no exista una tarea identica ya generada para la misma fecha, evitando duplicacion.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
-                            <div class="bg-green-50 rounded-lg p-4 flex-1 border border-green-200">
-                                <p class="font-semibold text-green-900">Las tareas aparecen automaticamente en la agenda del empleado</p>
+                            <div class="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+                            <div class="bg-green-500/10 rounded-lg p-4 flex-1 border border-green-500/30">
+                                <p class="font-semibold text-green-300">Las tareas aparecen automaticamente en la agenda del empleado</p>
                                 <p class="text-sm text-green-700 mt-1">Sin intervencion manual, las tareas generadas estan listas para ejecucion con todos los datos de la plantilla.</p>
                             </div>
                         </div>
@@ -960,37 +977,37 @@
                 </div>
 
                 <!-- Flujo 4: Validacion GPS -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
                     <div class="flex items-center gap-3 mb-6">
                         <span class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-sm font-bold">D</span>
-                        <h3 class="text-xl font-bold text-gray-900">Validacion de Tarea por GPS</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Validacion de Tarea por GPS</h3>
                     </div>
                     <div class="space-y-4">
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">El empleado intenta completar una tarea desde su cronograma</p>
-                                <p class="text-sm text-gray-600 mt-1">Selecciona la tarea y pulsa "Completar con validacion GPS".</p>
+                            <div class="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">El empleado intenta completar una tarea desde su cronograma</p>
+                                <p class="text-sm text-slate-400 mt-1">Selecciona la tarea y pulsa "Completar con validacion GPS".</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">El sistema obtiene la posicion GPS actual del empleado</p>
-                                <p class="text-sm text-gray-600 mt-1">Consulta la ultima posicion reportada por el dispositivo del empleado en Traccar.</p>
+                            <div class="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">El sistema obtiene la posicion GPS actual del empleado</p>
+                                <p class="text-sm text-slate-400 mt-1">Consulta la ultima posicion reportada por el dispositivo del empleado en Traccar.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Compara la posicion contra la geocerca del aliado</p>
-                                <p class="text-sm text-gray-600 mt-1">Calcula la distancia entre la ubicacion actual y las coordenadas del aliado asignado en la tarea.</p>
+                            <div class="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Compara la posicion contra la geocerca del aliado</p>
+                                <p class="text-sm text-slate-400 mt-1">Calcula la distancia entre la ubicacion actual y las coordenadas del aliado asignado en la tarea.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
-                            <div class="bg-green-50 rounded-lg p-4 flex-1 border border-green-200">
-                                <p class="font-semibold text-green-900">Resultado: Aprobada o Rechazada</p>
+                            <div class="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+                            <div class="bg-green-500/10 rounded-lg p-4 flex-1 border border-green-500/30">
+                                <p class="font-semibold text-green-300">Resultado: Aprobada o Rechazada</p>
                                 <p class="text-sm text-green-700 mt-1">Si esta dentro del radio, la tarea se marca como completada con validacion GPS exitosa. Si no, se notifica al empleado que debe estar en la ubicacion del aliado.</p>
                             </div>
                         </div>
@@ -998,37 +1015,37 @@
                 </div>
 
                 <!-- Flujo 5: Reporte diario -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
                     <div class="flex items-center gap-3 mb-6">
                         <span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-bold">E</span>
-                        <h3 class="text-xl font-bold text-gray-900">Envio de Reporte Diario</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Envio de Reporte Diario</h3>
                     </div>
                     <div class="space-y-4">
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Se activa el job programado al final de la jornada</p>
-                                <p class="text-sm text-gray-600 mt-1">Segun la hora configurada en el sistema (ej. 18:00), se ejecuta el proceso de consolidacion diaria.</p>
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Se activa el job programado al final de la jornada</p>
+                                <p class="text-sm text-slate-400 mt-1">Segun la hora configurada en el sistema (ej. 18:00), se ejecuta el proceso de consolidacion diaria.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Se recopilan datos del dia para cada empleado</p>
-                                <p class="text-sm text-gray-600 mt-1">Tareas completadas, visitas realizadas, distancia recorrida, alertas generadas y score de conduccion.</p>
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Se recopilan datos del dia para cada empleado</p>
+                                <p class="text-sm text-slate-400 mt-1">Tareas completadas, visitas realizadas, distancia recorrida, alertas generadas y score de conduccion.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Se genera el mensaje de reporte consolidado</p>
-                                <p class="text-sm text-gray-600 mt-1">Se formatea un resumen con metricas clave del equipo, ordenado por cumplimiento.</p>
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Se genera el mensaje de reporte consolidado</p>
+                                <p class="text-sm text-slate-400 mt-1">Se formatea un resumen con metricas clave del equipo, ordenado por cumplimiento.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
-                            <div class="bg-green-50 rounded-lg p-4 flex-1 border border-green-200">
-                                <p class="font-semibold text-green-900">Se envia el reporte por WhatsApp al lider</p>
+                            <div class="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+                            <div class="bg-green-500/10 rounded-lg p-4 flex-1 border border-green-500/30">
+                                <p class="font-semibold text-green-300">Se envia el reporte por WhatsApp al lider</p>
                                 <p class="text-sm text-green-700 mt-1">Usando la API de Ultramsg, se envia el resumen al numero de WhatsApp del lider de negocio configurado.</p>
                             </div>
                         </div>
@@ -1036,37 +1053,37 @@
                 </div>
 
                 <!-- Flujo 6: Alerta de emergencia -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8">
                     <div class="flex items-center gap-3 mb-6">
                         <span class="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center text-sm font-bold">F</span>
-                        <h3 class="text-xl font-bold text-gray-900">Alerta de Emergencia</h3>
+                        <h3 class="text-xl font-bold text-slate-100">Alerta de Emergencia</h3>
                     </div>
                     <div class="space-y-4">
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">El sistema detecta un evento critico en tiempo real</p>
-                                <p class="text-sm text-gray-600 mt-1">Exceso de velocidad extremo, frenado brusco severo, o inactividad prolongada fuera de horario normal.</p>
+                            <div class="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">El sistema detecta un evento critico en tiempo real</p>
+                                <p class="text-sm text-slate-400 mt-1">Exceso de velocidad extremo, frenado brusco severo, o inactividad prolongada fuera de horario normal.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Se evalua la severidad segun las reglas configuradas</p>
-                                <p class="text-sm text-gray-600 mt-1">El motor de reglas clasifica el evento y determina si amerita una alerta inmediata o solo un registro.</p>
+                            <div class="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Se evalua la severidad segun las reglas configuradas</p>
+                                <p class="text-sm text-slate-400 mt-1">El motor de reglas clasifica el evento y determina si amerita una alerta inmediata o solo un registro.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
-                            <div class="bg-gray-50 rounded-lg p-4 flex-1">
-                                <p class="font-semibold text-gray-900">Se genera y envia la alerta por WhatsApp</p>
-                                <p class="text-sm text-gray-600 mt-1">Mensaje de emergencia con tipo de evento, empleado, ubicacion (enlace a mapa) y hora exacta, enviado al lider y al administrador.</p>
+                            <div class="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+                            <div class="bg-slate-800 rounded-lg p-4 flex-1">
+                                <p class="font-semibold text-slate-100">Se genera y envia la alerta por WhatsApp</p>
+                                <p class="text-sm text-slate-400 mt-1">Mensaje de emergencia con tipo de evento, empleado, ubicacion (enlace a mapa) y hora exacta, enviado al lider y al administrador.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
-                            <div class="bg-red-50 rounded-lg p-4 flex-1 border border-red-200">
-                                <p class="font-semibold text-red-900">Se registra el incidente y se actualiza el scoring</p>
+                            <div class="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+                            <div class="bg-red-500/10 rounded-lg p-4 flex-1 border border-red-500/30">
+                                <p class="font-semibold text-red-300">Se registra el incidente y se actualiza el scoring</p>
                                 <p class="text-sm text-red-700 mt-1">La infraccion queda en el historial del empleado, se descuentan puntos del score de conduccion y el evento se refleja en analitica.</p>
                             </div>
                         </div>
@@ -1079,23 +1096,23 @@
             <!-- ============================================================ -->
             <section id="configuracion" class="pt-16 page-break">
                 <div class="flex items-center gap-3 mb-8">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-100 text-brand-700 font-bold text-lg">6</span>
-                    <h2 class="text-3xl font-bold text-gray-900">Configuracion del Sistema</h2>
+                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-lg">6</span>
+                    <h2 class="text-3xl font-bold text-slate-100">Configuracion del Sistema</h2>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
-                    <h3 class="text-xl font-bold text-gray-900 mb-6">Parametros Generales</h3>
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
+                    <h3 class="text-xl font-bold text-slate-100 mb-6">Parametros Generales</h3>
 
                     <div class="overflow-x-auto">
                         <table class="striped-table w-full text-sm">
                             <thead>
-                                <tr class="border-b-2 border-gray-200">
-                                    <th class="text-left py-3 px-4 font-semibold text-gray-900">Parametro</th>
-                                    <th class="text-left py-3 px-4 font-semibold text-gray-900">Descripcion</th>
-                                    <th class="text-left py-3 px-4 font-semibold text-gray-900">Ejemplo</th>
+                                <tr class="border-b-2 border-slate-700 bg-slate-800/50">
+                                    <th class="text-left py-3 px-4 font-semibold text-slate-100">Parametro</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-slate-100">Descripcion</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-slate-100">Ejemplo</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
+                            <tbody class="divide-y divide-slate-800">
                                 <tr>
                                     <td class="py-3 px-4 font-mono text-brand-700 text-sm">start_time</td>
                                     <td class="py-3 px-4 text-gray-600">Hora de inicio de la jornada laboral</td>
@@ -1131,12 +1148,12 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
-                    <h3 class="text-xl font-bold text-gray-900 mb-6">Integracion WhatsApp (Ultramsg)</h3>
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8 mb-6">
+                    <h3 class="text-xl font-bold text-slate-100 mb-6">Integracion WhatsApp (Ultramsg)</h3>
                     <div class="grid sm:grid-cols-2 gap-6">
                         <div class="bg-gray-50 rounded-xl p-5">
-                            <p class="font-semibold text-gray-900 mb-2">Credenciales requeridas</p>
-                            <ul class="space-y-2 text-sm text-gray-600">
+                            <p class="font-semibold text-slate-100 mb-2">Credenciales requeridas</p>
+                            <ul class="space-y-2 text-sm text-slate-400">
                                 <li class="flex items-center gap-2">
                                     <span class="w-1.5 h-1.5 bg-brand-500 rounded-full flex-shrink-0"></span>
                                     <span><strong>ULTRAMSG_INSTANCE_ID</strong> - Identificador de la instancia</span>
@@ -1152,8 +1169,8 @@
                             </ul>
                         </div>
                         <div class="bg-gray-50 rounded-xl p-5">
-                            <p class="font-semibold text-gray-900 mb-2">Tipos de mensajes</p>
-                            <ul class="space-y-2 text-sm text-gray-600">
+                            <p class="font-semibold text-slate-100 mb-2">Tipos de mensajes</p>
+                            <ul class="space-y-2 text-sm text-slate-400">
                                 <li class="flex items-center gap-2">
                                     <span class="w-1.5 h-1.5 bg-red-500 rounded-full flex-shrink-0"></span>
                                     <span>Alertas de emergencia (inmediatas)</span>
@@ -1171,9 +1188,9 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                    <h3 class="text-xl font-bold text-gray-900 mb-6">Alertas de Emergencia</h3>
-                    <p class="text-sm text-gray-600 mb-4">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8">
+                    <h3 class="text-xl font-bold text-slate-100 mb-6">Alertas de Emergencia</h3>
+                    <p class="text-sm text-slate-400 mb-4">
                         Las alertas de emergencia se activan cuando se detectan eventos criticos que requieren atencion inmediata.
                         Se configuran mediante reglas que definen umbrales y condiciones de activacion.
                     </p>
@@ -1199,85 +1216,85 @@
             <!-- ============================================================ -->
             <section id="integraciones" class="pt-16 page-break">
                 <div class="flex items-center gap-3 mb-8">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-100 text-brand-700 font-bold text-lg">7</span>
-                    <h2 class="text-3xl font-bold text-gray-900">Integraciones</h2>
+                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-lg">7</span>
+                    <h2 class="text-3xl font-bold text-slate-100">Integraciones</h2>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-6">
 
                     <!-- Traccar -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8">
                         <div class="flex items-center gap-4 mb-5">
                             <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
                                 T
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">Traccar GPS Server</h3>
-                                <p class="text-sm text-gray-500">Servidor de rastreo vehicular</p>
+                                <h3 class="text-lg font-bold text-slate-100">Traccar GPS Server</h3>
+                                <p class="text-sm text-slate-500">Servidor de rastreo vehicular</p>
                             </div>
                         </div>
-                        <div class="space-y-3 text-sm text-gray-600">
-                            <p><strong class="text-gray-900">Funcion:</strong> Recibe y almacena posiciones GPS de todos los dispositivos en campo.</p>
-                            <p><strong class="text-gray-900">Protocolo:</strong> OsmAnd (compatible con app Android/iOS del mismo nombre).</p>
-                            <p><strong class="text-gray-900">Comunicacion:</strong> GPS Comercial consulta la API REST de Traccar para obtener posiciones, dispositivos y eventos.</p>
-                            <p><strong class="text-gray-900">Datos:</strong> Latitud, longitud, velocidad, altitud, timestamp, atributos del dispositivo.</p>
+                        <div class="space-y-3 text-sm text-slate-400">
+                            <p><strong class="text-slate-100">Funcion:</strong> Recibe y almacena posiciones GPS de todos los dispositivos en campo.</p>
+                            <p><strong class="text-slate-100">Protocolo:</strong> OsmAnd (compatible con app Android/iOS del mismo nombre).</p>
+                            <p><strong class="text-slate-100">Comunicacion:</strong> GPS Comercial consulta la API REST de Traccar para obtener posiciones, dispositivos y eventos.</p>
+                            <p><strong class="text-slate-100">Datos:</strong> Latitud, longitud, velocidad, altitud, timestamp, atributos del dispositivo.</p>
                         </div>
                     </div>
 
                     <!-- Ultramsg -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8">
                         <div class="flex items-center gap-4 mb-5">
                             <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
                                 W
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">Ultramsg WhatsApp API</h3>
-                                <p class="text-sm text-gray-500">Mensajeria instantanea</p>
+                                <h3 class="text-lg font-bold text-slate-100">Ultramsg WhatsApp API</h3>
+                                <p class="text-sm text-slate-500">Mensajeria instantanea</p>
                             </div>
                         </div>
-                        <div class="space-y-3 text-sm text-gray-600">
-                            <p><strong class="text-gray-900">Funcion:</strong> Envio de mensajes WhatsApp automatizados a lideres y administradores.</p>
-                            <p><strong class="text-gray-900">Endpoint:</strong> API REST con autenticacion via Instance ID y Token.</p>
-                            <p><strong class="text-gray-900">Usos:</strong> Alertas de emergencia, reportes diarios consolidados, notificaciones de infracciones.</p>
-                            <p><strong class="text-gray-900">Formato:</strong> Numeros en formato internacional colombiano (57XXXXXXXXXX).</p>
+                        <div class="space-y-3 text-sm text-slate-400">
+                            <p><strong class="text-slate-100">Funcion:</strong> Envio de mensajes WhatsApp automatizados a lideres y administradores.</p>
+                            <p><strong class="text-slate-100">Endpoint:</strong> API REST con autenticacion via Instance ID y Token.</p>
+                            <p><strong class="text-slate-100">Usos:</strong> Alertas de emergencia, reportes diarios consolidados, notificaciones de infracciones.</p>
+                            <p><strong class="text-slate-100">Formato:</strong> Numeros en formato internacional colombiano (57XXXXXXXXXX).</p>
                         </div>
                     </div>
 
                     <!-- SendGrid -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8">
                         <div class="flex items-center gap-4 mb-5">
                             <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
                                 S
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">SendGrid Email</h3>
-                                <p class="text-sm text-gray-500">Correo electronico transaccional</p>
+                                <h3 class="text-lg font-bold text-slate-100">SendGrid Email</h3>
+                                <p class="text-sm text-slate-500">Correo electronico transaccional</p>
                             </div>
                         </div>
-                        <div class="space-y-3 text-sm text-gray-600">
-                            <p><strong class="text-gray-900">Funcion:</strong> Envio de correos electronicos del sistema (restablecimiento de contrasena, notificaciones).</p>
-                            <p><strong class="text-gray-900">Autenticacion:</strong> API Key de SendGrid configurada en variables de entorno.</p>
-                            <p><strong class="text-gray-900">Plantillas:</strong> Emails HTML con formato corporativo de Vanti.</p>
-                            <p><strong class="text-gray-900">Uso:</strong> Complementario a WhatsApp para comunicaciones formales.</p>
+                        <div class="space-y-3 text-sm text-slate-400">
+                            <p><strong class="text-slate-100">Funcion:</strong> Envio de correos electronicos del sistema (restablecimiento de contrasena, notificaciones).</p>
+                            <p><strong class="text-slate-100">Autenticacion:</strong> API Key de SendGrid configurada en variables de entorno.</p>
+                            <p><strong class="text-slate-100">Plantillas:</strong> Emails HTML con formato corporativo de Vanti.</p>
+                            <p><strong class="text-slate-100">Uso:</strong> Complementario a WhatsApp para comunicaciones formales.</p>
                         </div>
                     </div>
 
                     <!-- PostgreSQL -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                    <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8">
                         <div class="flex items-center gap-4 mb-5">
                             <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
                                 P
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">PostgreSQL Database</h3>
-                                <p class="text-sm text-gray-500">Base de datos relacional</p>
+                                <h3 class="text-lg font-bold text-slate-100">PostgreSQL Database</h3>
+                                <p class="text-sm text-slate-500">Base de datos relacional</p>
                             </div>
                         </div>
-                        <div class="space-y-3 text-sm text-gray-600">
-                            <p><strong class="text-gray-900">Funcion:</strong> Almacenamiento persistente de todos los datos del sistema.</p>
-                            <p><strong class="text-gray-900">ORM:</strong> SQLAlchemy con migraciones via Flask-Migrate.</p>
-                            <p><strong class="text-gray-900">Hosting:</strong> Servicio gestionado en la nube (compatible con Render, AWS RDS, etc.).</p>
-                            <p><strong class="text-gray-900">Tablas principales:</strong> users, allies, visits, tasks, templates, scoring_rules, settings.</p>
+                        <div class="space-y-3 text-sm text-slate-400">
+                            <p><strong class="text-slate-100">Funcion:</strong> Almacenamiento persistente de todos los datos del sistema.</p>
+                            <p><strong class="text-slate-100">ORM:</strong> SQLAlchemy con migraciones via Flask-Migrate.</p>
+                            <p><strong class="text-slate-100">Hosting:</strong> Servicio gestionado en la nube (compatible con Render, AWS RDS, etc.).</p>
+                            <p><strong class="text-slate-100">Tablas principales:</strong> users, allies, visits, tasks, templates, scoring_rules, settings.</p>
                         </div>
                     </div>
 
@@ -1289,71 +1306,71 @@
             <!-- ============================================================ -->
             <section id="glosario" class="pt-16 pb-8 page-break">
                 <div class="flex items-center gap-3 mb-8">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-100 text-brand-700 font-bold text-lg">8</span>
-                    <h2 class="text-3xl font-bold text-gray-900">Glosario de Terminos</h2>
+                    <span class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-lg">8</span>
+                    <h2 class="text-3xl font-bold text-slate-100">Glosario de Terminos</h2>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                <div class="bg-slate-900 rounded-2xl shadow-sm border border-slate-800/50 p-8">
                     <div class="grid sm:grid-cols-2 gap-x-8 gap-y-6">
 
                         <div class="border-l-4 border-brand-500 pl-4">
-                            <p class="font-bold text-gray-900">Geocerca</p>
-                            <p class="text-sm text-gray-600">Perimetro virtual circular definido por coordenadas GPS y un radio en metros. Se utiliza para detectar automaticamente cuando un empleado entra o sale de la zona de un aliado comercial.</p>
+                            <p class="font-bold text-slate-100">Geocerca</p>
+                            <p class="text-sm text-slate-400">Perimetro virtual circular definido por coordenadas GPS y un radio en metros. Se utiliza para detectar automaticamente cuando un empleado entra o sale de la zona de un aliado comercial.</p>
                         </div>
 
                         <div class="border-l-4 border-purple-500 pl-4">
-                            <p class="font-bold text-gray-900">Aliado Comercial</p>
-                            <p class="text-sm text-gray-600">Punto de atencion o establecimiento comercial asociado a Vanti. Cada aliado tiene una ubicacion GPS, direccion y radio de geocerca para la deteccion de visitas.</p>
+                            <p class="font-bold text-slate-100">Aliado Comercial</p>
+                            <p class="text-sm text-slate-400">Punto de atencion o establecimiento comercial asociado a Vanti. Cada aliado tiene una ubicacion GPS, direccion y radio de geocerca para la deteccion de visitas.</p>
                         </div>
 
                         <div class="border-l-4 border-green-500 pl-4">
-                            <p class="font-bold text-gray-900">Visita Automatica</p>
-                            <p class="text-sm text-gray-600">Registro de visita generado automaticamente por el sistema cuando la geocerca detecta que el empleado ingreso al radio del aliado, sin intervencion manual.</p>
+                            <p class="font-bold text-slate-100">Visita Automatica</p>
+                            <p class="text-sm text-slate-400">Registro de visita generado automaticamente por el sistema cuando la geocerca detecta que el empleado ingreso al radio del aliado, sin intervencion manual.</p>
                         </div>
 
                         <div class="border-l-4 border-teal-500 pl-4">
-                            <p class="font-bold text-gray-900">Validacion GPS</p>
-                            <p class="text-sm text-gray-600">Proceso de verificacion que confirma la presencia fisica del empleado en la ubicacion del aliado al momento de completar una tarea, usando las coordenadas GPS en tiempo real.</p>
+                            <p class="font-bold text-slate-100">Validacion GPS</p>
+                            <p class="text-sm text-slate-400">Proceso de verificacion que confirma la presencia fisica del empleado en la ubicacion del aliado al momento de completar una tarea, usando las coordenadas GPS en tiempo real.</p>
                         </div>
 
                         <div class="border-l-4 border-amber-500 pl-4">
-                            <p class="font-bold text-gray-900">Plantilla Recurrente</p>
-                            <p class="text-sm text-gray-600">Configuracion que define una tarea con frecuencia automatica (diaria, semanal, mensual). El sistema genera las tareas correspondientes sin intervencion del lider.</p>
+                            <p class="font-bold text-slate-100">Plantilla Recurrente</p>
+                            <p class="text-sm text-slate-400">Configuracion que define una tarea con frecuencia automatica (diaria, semanal, mensual). El sistema genera las tareas correspondientes sin intervencion del lider.</p>
                         </div>
 
                         <div class="border-l-4 border-red-500 pl-4">
-                            <p class="font-bold text-gray-900">Score de Conduccion</p>
-                            <p class="text-sm text-gray-600">Calificacion numerica (0 a 100) que refleja la calidad de conduccion del empleado. Se calcula restando puntos por infracciones detectadas (velocidad, frenado, aceleracion).</p>
+                            <p class="font-bold text-slate-100">Score de Conduccion</p>
+                            <p class="text-sm text-slate-400">Calificacion numerica (0 a 100) que refleja la calidad de conduccion del empleado. Se calcula restando puntos por infracciones detectadas (velocidad, frenado, aceleracion).</p>
                         </div>
 
                         <div class="border-l-4 border-indigo-500 pl-4">
-                            <p class="font-bold text-gray-900">Torre de Control</p>
-                            <p class="text-sm text-gray-600">Panel centralizado del lider de negocio que permite monitorear en tiempo real el estado de cumplimiento de todas las tareas asignadas a su equipo.</p>
+                            <p class="font-bold text-slate-100">Torre de Control</p>
+                            <p class="text-sm text-slate-400">Panel centralizado del lider de negocio que permite monitorear en tiempo real el estado de cumplimiento de todas las tareas asignadas a su equipo.</p>
                         </div>
 
                         <div class="border-l-4 border-pink-500 pl-4">
-                            <p class="font-bold text-gray-900">OsmAnd</p>
-                            <p class="text-sm text-gray-600">Aplicacion movil de navegacion y rastreo GPS. Utilizada como cliente en los dispositivos de los empleados para enviar posiciones al servidor Traccar.</p>
+                            <p class="font-bold text-slate-100">OsmAnd</p>
+                            <p class="text-sm text-slate-400">Aplicacion movil de navegacion y rastreo GPS. Utilizada como cliente en los dispositivos de los empleados para enviar posiciones al servidor Traccar.</p>
                         </div>
 
                         <div class="border-l-4 border-orange-500 pl-4">
-                            <p class="font-bold text-gray-900">Traccar</p>
-                            <p class="text-sm text-gray-600">Plataforma de codigo abierto para rastreo GPS. GPS Comercial lo utiliza como servidor de posiciones, consultando su API REST para obtener ubicaciones en tiempo real.</p>
+                            <p class="font-bold text-slate-100">Traccar</p>
+                            <p class="text-sm text-slate-400">Plataforma de codigo abierto para rastreo GPS. GPS Comercial lo utiliza como servidor de posiciones, consultando su API REST para obtener ubicaciones en tiempo real.</p>
                         </div>
 
                         <div class="border-l-4 border-cyan-500 pl-4">
-                            <p class="font-bold text-gray-900">Ultramsg</p>
-                            <p class="text-sm text-gray-600">Proveedor de API para WhatsApp Business. Permite enviar mensajes programaticos de texto a numeros de WhatsApp desde el backend del sistema.</p>
+                            <p class="font-bold text-slate-100">Ultramsg</p>
+                            <p class="text-sm text-slate-400">Proveedor de API para WhatsApp Business. Permite enviar mensajes programaticos de texto a numeros de WhatsApp desde el backend del sistema.</p>
                         </div>
 
                         <div class="border-l-4 border-violet-500 pl-4">
-                            <p class="font-bold text-gray-900">Jornada Laboral</p>
-                            <p class="text-sm text-gray-600">Periodo de tiempo configurado (start_time a end_time) durante el cual el sistema monitorea activamente a los empleados y registra actividades.</p>
+                            <p class="font-bold text-slate-100">Jornada Laboral</p>
+                            <p class="text-sm text-slate-400">Periodo de tiempo configurado (start_time a end_time) durante el cual el sistema monitorea activamente a los empleados y registra actividades.</p>
                         </div>
 
                         <div class="border-l-4 border-emerald-500 pl-4">
-                            <p class="font-bold text-gray-900">API Key</p>
-                            <p class="text-sm text-gray-600">Token de autenticacion que permite a sistemas externos acceder a los datos de GPS Comercial de forma programatica y segura.</p>
+                            <p class="font-bold text-slate-100">API Key</p>
+                            <p class="text-sm text-slate-400">Token de autenticacion que permite a sistemas externos acceder a los datos de GPS Comercial de forma programatica y segura.</p>
                         </div>
 
                     </div>

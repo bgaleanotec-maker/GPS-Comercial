@@ -3,26 +3,28 @@
 {% block head %}
 <style>
     .kpi-card {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 50%, rgba(167, 139, 250, 0.15) 100%);
+        border: 1px solid rgba(99, 102, 241, 0.25);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .kpi-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
     }
     .kpi-card-alt {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.2) 0%, rgba(124, 58, 237, 0.2) 100%);
+        border: 1px solid rgba(79, 70, 229, 0.25);
     }
     .period-card {
-        background: white;
-        border: 1px solid #e5e7eb;
+        background: #0f172a;
+        border: 1px solid rgba(30, 41, 59, 0.5);
         transition: box-shadow 0.2s ease;
     }
     .period-card:hover {
-        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.12);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     }
     .progress-bar-bg {
-        background: #e5e7eb;
+        background: #1e293b;
         border-radius: 9999px;
         overflow: hidden;
     }
@@ -31,7 +33,7 @@
         transition: width 0.6s ease;
     }
     .ranking-row:hover {
-        background: #f5f3ff;
+        background: rgba(99, 102, 241, 0.05);
     }
 </style>
 {% endblock %}
@@ -42,26 +44,26 @@
     {# ── Header ────────────────────────────────────────────────── #}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
-            <p class="text-sm text-gray-500">{{ today.strftime('%A %d de %B, %Y') }}</p>
+            <h1 class="text-2xl font-bold text-slate-100">{{ title }}</h1>
+            <p class="text-sm text-slate-400">{{ today.strftime('%A %d de %B, %Y') }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2 mt-3 sm:mt-0">
             <a href="{{ url_for('schedule.assign_task') }}"
-               class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition touch-target shadow-sm">
+               class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-500 transition touch-target shadow-sm">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                 </svg>
                 Asignar Tarea
             </a>
             <a href="{{ url_for('schedule.create_template') }}"
-               class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-xl hover:bg-purple-700 transition touch-target shadow-sm">
+               class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-xl hover:bg-purple-500 transition touch-target shadow-sm">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
                 Nueva Plantilla
             </a>
             <a href="{{ url_for('schedule.control_tower') }}"
-               class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gray-700 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition touch-target shadow-sm">
+               class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-slate-800 border border-slate-700 text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-700 transition touch-target shadow-sm">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                 </svg>
@@ -72,18 +74,18 @@
 
     {# ── Admin Category Filter ─────────────────────────────────── #}
     {% if categorias is defined and categorias %}
-    <div class="mb-6 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+    <div class="mb-6 bg-slate-900 rounded-2xl border border-slate-800/50 p-4 shadow-lg shadow-black/10">
         <form method="get" class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Filtrar por categoria:</label>
+            <label class="text-sm font-medium text-slate-300 whitespace-nowrap">Filtrar por categoria:</label>
             <select name="cat" onchange="this.form.submit()"
-                    class="flex-1 max-w-xs px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
+                    class="flex-1 max-w-xs px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 touch-target">
                 <option value="">-- Todas las categorias --</option>
                 {% for cat in categorias %}
                 <option value="{{ cat }}" {% if cat_filter == cat %}selected{% endif %}>{{ cat }}</option>
                 {% endfor %}
             </select>
             {% if cat_filter %}
-            <a href="?" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">Limpiar filtro</a>
+            <a href="?" class="text-sm text-indigo-400 hover:text-indigo-300 font-medium">Limpiar filtro</a>
             {% endif %}
         </form>
     </div>
@@ -92,53 +94,53 @@
     {# ── KPI Cards Row ─────────────────────────────────────────── #}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {# Cumplimiento Hoy #}
-        <div class="kpi-card rounded-2xl p-5 text-white shadow-lg">
+        <div class="kpi-card rounded-2xl p-5 text-white shadow-lg shadow-black/10">
             <div class="flex items-center justify-between mb-3">
-                <span class="text-sm font-medium text-indigo-100">Cumplimiento Hoy</span>
-                <svg class="w-5 h-5 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <span class="text-sm font-medium text-indigo-300">Cumplimiento Hoy</span>
+                <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
-            <p class="text-3xl font-bold">{{ "%.0f"|format(stats_today.cumplimiento) }}%</p>
-            <div class="mt-2 progress-bar-bg h-1.5 bg-indigo-300 bg-opacity-40">
-                <div class="progress-bar-fill h-full bg-white" style="width: {{ stats_today.cumplimiento|min(100) }}%"></div>
+            <p class="text-3xl font-bold text-slate-100">{{ "%.0f"|format(stats_today.cumplimiento) }}%</p>
+            <div class="mt-2 progress-bar-bg h-1.5">
+                <div class="progress-bar-fill h-full bg-indigo-400" style="width: {{ stats_today.cumplimiento|min(100) }}%"></div>
             </div>
         </div>
 
         {# Tareas Pendientes #}
-        <div class="kpi-card kpi-card-alt rounded-2xl p-5 text-white shadow-lg">
+        <div class="kpi-card kpi-card-alt rounded-2xl p-5 text-white shadow-lg shadow-black/10">
             <div class="flex items-center justify-between mb-3">
-                <span class="text-sm font-medium text-indigo-100">Pendientes Hoy</span>
-                <svg class="w-5 h-5 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <span class="text-sm font-medium text-indigo-300">Pendientes Hoy</span>
+                <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
-            <p class="text-3xl font-bold">{{ stats_today.pendientes }}</p>
-            <p class="text-xs text-indigo-200 mt-1">de {{ stats_today.total }} tareas totales</p>
+            <p class="text-3xl font-bold text-slate-100">{{ stats_today.pendientes }}</p>
+            <p class="text-xs text-indigo-300/70 mt-1">de {{ stats_today.total }} tareas totales</p>
         </div>
 
         {# Equipo Activo #}
-        <div class="kpi-card rounded-2xl p-5 text-white shadow-lg">
+        <div class="kpi-card rounded-2xl p-5 text-white shadow-lg shadow-black/10">
             <div class="flex items-center justify-between mb-3">
-                <span class="text-sm font-medium text-indigo-100">Equipo Activo</span>
-                <svg class="w-5 h-5 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <span class="text-sm font-medium text-indigo-300">Equipo Activo</span>
+                <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
             </div>
-            <p class="text-3xl font-bold">{{ active_team }}</p>
-            <p class="text-xs text-indigo-200 mt-1">de {{ total_team }} miembros</p>
+            <p class="text-3xl font-bold text-slate-100">{{ active_team }}</p>
+            <p class="text-xs text-indigo-300/70 mt-1">de {{ total_team }} miembros</p>
         </div>
 
         {# Plantillas Activas #}
-        <div class="kpi-card kpi-card-alt rounded-2xl p-5 text-white shadow-lg">
+        <div class="kpi-card kpi-card-alt rounded-2xl p-5 text-white shadow-lg shadow-black/10">
             <div class="flex items-center justify-between mb-3">
-                <span class="text-sm font-medium text-indigo-100">Plantillas Activas</span>
-                <svg class="w-5 h-5 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <span class="text-sm font-medium text-indigo-300">Plantillas Activas</span>
+                <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
             </div>
-            <p class="text-3xl font-bold">{{ active_templates }}</p>
-            <p class="text-xs text-indigo-200 mt-1">tareas recurrentes</p>
+            <p class="text-3xl font-bold text-slate-100">{{ active_templates }}</p>
+            <p class="text-xs text-indigo-300/70 mt-1">tareas recurrentes</p>
         </div>
     </div>
 
@@ -150,10 +152,10 @@
             ('Este Mes', stats_month, 'bg-violet-500')
         ] %}
         {% for label, stats, bar_color in periods %}
-        <div class="period-card rounded-2xl p-5 shadow-sm">
+        <div class="period-card rounded-2xl p-5 shadow-lg shadow-black/10">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">{{ label }}</h3>
-                <span class="text-2xl font-bold {% if stats.cumplimiento >= 80 %}text-green-600{% elif stats.cumplimiento >= 50 %}text-amber-600{% else %}text-red-600{% endif %}">
+                <h3 class="text-lg font-semibold text-slate-100">{{ label }}</h3>
+                <span class="text-2xl font-bold {% if stats.cumplimiento >= 80 %}text-emerald-400{% elif stats.cumplimiento >= 50 %}text-amber-400{% else %}text-red-400{% endif %}">
                     {{ "%.0f"|format(stats.cumplimiento) }}%
                 </span>
             </div>
@@ -161,21 +163,21 @@
                 <div class="progress-bar-fill h-full {{ bar_color }}" style="width: {{ stats.cumplimiento|min(100) }}%"></div>
             </div>
             <div class="grid grid-cols-2 gap-3">
-                <div class="text-center p-2 bg-gray-50 rounded-lg">
-                    <p class="text-xs text-gray-500">Total</p>
-                    <p class="text-lg font-bold text-gray-900">{{ stats.total }}</p>
+                <div class="text-center p-2 bg-slate-800 rounded-lg">
+                    <p class="text-xs text-slate-500">Total</p>
+                    <p class="text-lg font-bold text-slate-100">{{ stats.total }}</p>
                 </div>
-                <div class="text-center p-2 bg-green-50 rounded-lg">
-                    <p class="text-xs text-green-600">Cumplidas</p>
-                    <p class="text-lg font-bold text-green-700">{{ stats.cumplidas }}</p>
+                <div class="text-center p-2 bg-emerald-500/10 rounded-lg">
+                    <p class="text-xs text-emerald-400">Cumplidas</p>
+                    <p class="text-lg font-bold text-emerald-400">{{ stats.cumplidas }}</p>
                 </div>
-                <div class="text-center p-2 bg-amber-50 rounded-lg">
-                    <p class="text-xs text-amber-600">Pendientes</p>
-                    <p class="text-lg font-bold text-amber-700">{{ stats.pendientes }}</p>
+                <div class="text-center p-2 bg-amber-500/10 rounded-lg">
+                    <p class="text-xs text-amber-400">Pendientes</p>
+                    <p class="text-lg font-bold text-amber-400">{{ stats.pendientes }}</p>
                 </div>
-                <div class="text-center p-2 bg-red-50 rounded-lg">
-                    <p class="text-xs text-red-600">Vencidas</p>
-                    <p class="text-lg font-bold text-red-700">{{ stats.vencidas }}</p>
+                <div class="text-center p-2 bg-red-500/10 rounded-lg">
+                    <p class="text-xs text-red-400">Vencidas</p>
+                    <p class="text-lg font-bold text-red-400">{{ stats.vencidas }}</p>
                 </div>
             </div>
         </div>
@@ -183,78 +185,78 @@
     </div>
 
     {# ── Employee Ranking Table ────────────────────────────────── #}
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900">Ranking de Colaboradores</h3>
-            <span class="text-sm text-gray-500">{{ employee_data|length }} colaboradores</span>
+    <div class="bg-slate-900 rounded-2xl shadow-lg shadow-black/10 border border-slate-800/50 overflow-hidden mb-6">
+        <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-slate-100">Ranking de Colaboradores</h3>
+            <span class="text-sm text-slate-500">{{ employee_data|length }} colaboradores</span>
         </div>
 
         {# Desktop Table #}
         <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="bg-gray-50 text-left">
-                        <th class="px-5 py-3 font-semibold text-gray-600">#</th>
-                        <th class="px-5 py-3 font-semibold text-gray-600">Colaborador</th>
-                        <th class="px-5 py-3 font-semibold text-gray-600 text-center">Total</th>
-                        <th class="px-5 py-3 font-semibold text-gray-600 text-center">Cumplidas</th>
-                        <th class="px-5 py-3 font-semibold text-gray-600 text-center">Pendientes</th>
-                        <th class="px-5 py-3 font-semibold text-gray-600 text-center">Vencidas</th>
-                        <th class="px-5 py-3 font-semibold text-gray-600 w-48">Cumplimiento</th>
+                    <tr class="bg-slate-800/50 text-left">
+                        <th class="px-5 py-3 font-semibold text-slate-400">#</th>
+                        <th class="px-5 py-3 font-semibold text-slate-400">Colaborador</th>
+                        <th class="px-5 py-3 font-semibold text-slate-400 text-center">Total</th>
+                        <th class="px-5 py-3 font-semibold text-slate-400 text-center">Cumplidas</th>
+                        <th class="px-5 py-3 font-semibold text-slate-400 text-center">Pendientes</th>
+                        <th class="px-5 py-3 font-semibold text-slate-400 text-center">Vencidas</th>
+                        <th class="px-5 py-3 font-semibold text-slate-400 w-48">Cumplimiento</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody class="divide-y divide-slate-800/50">
                     {% for emp in employee_data|sort(attribute='cumplimiento', reverse=true) %}
                     <tr class="ranking-row transition-colors">
                         <td class="px-5 py-3">
                             {% if loop.index == 1 %}
-                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-100 text-yellow-700 font-bold text-xs">1</span>
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 font-bold text-xs">1</span>
                             {% elif loop.index == 2 %}
-                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold text-xs">2</span>
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-500/15 text-slate-300 border border-slate-500/20 font-bold text-xs">2</span>
                             {% elif loop.index == 3 %}
-                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-orange-100 text-orange-700 font-bold text-xs">3</span>
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20 font-bold text-xs">3</span>
                             {% else %}
-                            <span class="text-gray-400 font-medium pl-2">{{ loop.index }}</span>
+                            <span class="text-slate-500 font-medium pl-2">{{ loop.index }}</span>
                             {% endif %}
                         </td>
                         <td class="px-5 py-3">
                             <div>
-                                <p class="font-medium text-gray-900">{{ emp.user.full_name }}</p>
-                                <p class="text-xs text-gray-500">@{{ emp.user.username }}
+                                <p class="font-medium text-slate-100">{{ emp.user.full_name }}</p>
+                                <p class="text-xs text-slate-500">@{{ emp.user.username }}
                                     {% if emp.user.employee_status %}
                                     <span class="ml-1 inline-block px-1.5 py-0.5 rounded text-xs
-                                        {% if emp.user.employee_status == 'activo' %}bg-green-100 text-green-700
-                                        {% elif emp.user.employee_status == 'inactivo' %}bg-red-100 text-red-700
-                                        {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                        {% if emp.user.employee_status == 'activo' %}bg-emerald-500/15 text-emerald-400 border border-emerald-500/20
+                                        {% elif emp.user.employee_status == 'inactivo' %}bg-red-500/15 text-red-400 border border-red-500/20
+                                        {% else %}bg-slate-500/15 text-slate-400 border border-slate-500/20{% endif %}">
                                         {{ emp.user.employee_status }}
                                     </span>
                                     {% endif %}
                                 </p>
                             </div>
                         </td>
-                        <td class="px-5 py-3 text-center font-medium text-gray-900">{{ emp.total }}</td>
+                        <td class="px-5 py-3 text-center font-medium text-slate-100">{{ emp.total }}</td>
                         <td class="px-5 py-3 text-center">
-                            <span class="inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium text-xs">{{ emp.cumplidas }}</span>
+                            <span class="inline-block px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium text-xs">{{ emp.cumplidas }}</span>
                         </td>
                         <td class="px-5 py-3 text-center">
-                            <span class="inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium text-xs">{{ emp.pendientes }}</span>
+                            <span class="inline-block px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 font-medium text-xs">{{ emp.pendientes }}</span>
                         </td>
                         <td class="px-5 py-3 text-center">
-                            <span class="inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium text-xs">{{ emp.vencidas }}</span>
+                            <span class="inline-block px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 font-medium text-xs">{{ emp.vencidas }}</span>
                         </td>
                         <td class="px-5 py-3">
                             <div class="flex items-center gap-2">
                                 <div class="flex-1 progress-bar-bg h-2.5">
                                     <div class="progress-bar-fill h-full
-                                        {% if emp.cumplimiento >= 80 %}bg-green-500
+                                        {% if emp.cumplimiento >= 80 %}bg-emerald-500
                                         {% elif emp.cumplimiento >= 50 %}bg-amber-500
                                         {% else %}bg-red-500{% endif %}"
                                         style="width: {{ emp.cumplimiento|min(100) }}%"></div>
                                 </div>
                                 <span class="text-sm font-semibold w-12 text-right
-                                    {% if emp.cumplimiento >= 80 %}text-green-600
-                                    {% elif emp.cumplimiento >= 50 %}text-amber-600
-                                    {% else %}text-red-600{% endif %}">
+                                    {% if emp.cumplimiento >= 80 %}text-emerald-400
+                                    {% elif emp.cumplimiento >= 50 %}text-amber-400
+                                    {% else %}text-red-400{% endif %}">
                                     {{ "%.0f"|format(emp.cumplimiento) }}%
                                 </span>
                             </div>
@@ -266,55 +268,55 @@
         </div>
 
         {# Mobile Cards #}
-        <div class="md:hidden divide-y divide-gray-100">
+        <div class="md:hidden divide-y divide-slate-800/50">
             {% for emp in employee_data|sort(attribute='cumplimiento', reverse=true) %}
             <div class="p-4 ranking-row transition-colors">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-2">
                         {% if loop.index <= 3 %}
                         <span class="inline-flex items-center justify-center w-6 h-6 rounded-full
-                            {% if loop.index == 1 %}bg-yellow-100 text-yellow-700
-                            {% elif loop.index == 2 %}bg-gray-100 text-gray-600
-                            {% else %}bg-orange-100 text-orange-700{% endif %}
+                            {% if loop.index == 1 %}bg-yellow-500/15 text-yellow-400 border border-yellow-500/20
+                            {% elif loop.index == 2 %}bg-slate-500/15 text-slate-300 border border-slate-500/20
+                            {% else %}bg-orange-500/15 text-orange-400 border border-orange-500/20{% endif %}
                             font-bold text-xs">{{ loop.index }}</span>
                         {% else %}
-                        <span class="text-gray-400 font-medium text-sm w-6 text-center">{{ loop.index }}</span>
+                        <span class="text-slate-500 font-medium text-sm w-6 text-center">{{ loop.index }}</span>
                         {% endif %}
                         <div>
-                            <p class="font-medium text-gray-900 text-sm">{{ emp.user.full_name }}</p>
-                            <p class="text-xs text-gray-500">@{{ emp.user.username }}</p>
+                            <p class="font-medium text-slate-100 text-sm">{{ emp.user.full_name }}</p>
+                            <p class="text-xs text-slate-500">@{{ emp.user.username }}</p>
                         </div>
                     </div>
                     <span class="text-lg font-bold
-                        {% if emp.cumplimiento >= 80 %}text-green-600
-                        {% elif emp.cumplimiento >= 50 %}text-amber-600
-                        {% else %}text-red-600{% endif %}">
+                        {% if emp.cumplimiento >= 80 %}text-emerald-400
+                        {% elif emp.cumplimiento >= 50 %}text-amber-400
+                        {% else %}text-red-400{% endif %}">
                         {{ "%.0f"|format(emp.cumplimiento) }}%
                     </span>
                 </div>
                 <div class="progress-bar-bg h-2 mb-2">
                     <div class="progress-bar-fill h-full
-                        {% if emp.cumplimiento >= 80 %}bg-green-500
+                        {% if emp.cumplimiento >= 80 %}bg-emerald-500
                         {% elif emp.cumplimiento >= 50 %}bg-amber-500
                         {% else %}bg-red-500{% endif %}"
                         style="width: {{ emp.cumplimiento|min(100) }}%"></div>
                 </div>
                 <div class="flex items-center gap-3 text-xs">
-                    <span class="text-gray-500">Total: <span class="font-medium text-gray-700">{{ emp.total }}</span></span>
-                    <span class="text-green-600">Cumplidas: <span class="font-medium">{{ emp.cumplidas }}</span></span>
-                    <span class="text-amber-600">Pend: <span class="font-medium">{{ emp.pendientes }}</span></span>
-                    <span class="text-red-600">Venc: <span class="font-medium">{{ emp.vencidas }}</span></span>
+                    <span class="text-slate-500">Total: <span class="font-medium text-slate-300">{{ emp.total }}</span></span>
+                    <span class="text-emerald-400">Cumplidas: <span class="font-medium">{{ emp.cumplidas }}</span></span>
+                    <span class="text-amber-400">Pend: <span class="font-medium">{{ emp.pendientes }}</span></span>
+                    <span class="text-red-400">Venc: <span class="font-medium">{{ emp.vencidas }}</span></span>
                 </div>
             </div>
             {% endfor %}
         </div>
 
         {% if not employee_data %}
-        <div class="p-8 text-center text-gray-500">
-            <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <div class="p-8 text-center text-slate-500">
+            <svg class="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
-            <p class="font-medium">Sin datos de colaboradores</p>
+            <p class="font-medium text-slate-400">Sin datos de colaboradores</p>
             <p class="text-sm mt-1">Asigna tareas a tu equipo para ver su rendimiento aqui.</p>
         </div>
         {% endif %}

@@ -68,6 +68,12 @@ def docs():
     return render_template('docs.html', title='Documentacion BPM')
 
 
+@bp.route('/traccar-setup')
+def traccar_setup():
+    """Guia de configuracion de Traccar Client - accesible sin login."""
+    return render_template('traccar_setup.html', title='Configurar GPS')
+
+
 @bp.route('/offline')
 def offline():
     return render_template('offline.html', title='Sin Conexion')

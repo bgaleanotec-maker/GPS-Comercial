@@ -199,13 +199,14 @@ class TaskTemplate(db.Model):
 
     # Recurrencia
     recurrence_type = db.Column(db.String(20), default='none')  # none, daily, weekly, monthly
-    recurrence_days = db.Column(db.String(50))  # "1,3,5" = Lun, Mie, Vie (para weekly)
+    recurrence_days = db.Column(db.String(50))  # "0,1,2..." = Lun,Mar,Mie (para weekly); "1,15" para monthly
     recurrence_end_date = db.Column(db.Date)  # Fecha fin de recurrencia (null = indefinida)
+    scheduled_time = db.Column(db.String(5))  # Hora programada "HH:MM" ej: "23:00"
 
     # Configuracion
     ally_id = db.Column(db.Integer, db.ForeignKey('ally.id', name='fk_template_ally'), nullable=True)
     min_time_on_site = db.Column(db.Integer, default=30)
-    assign_to_all = db.Column(db.Boolean, default=False)  # True = todos del mercado
+    assign_to_all = db.Column(db.Boolean, default=True)  # Default True = todos del mercado/gerencia
 
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
