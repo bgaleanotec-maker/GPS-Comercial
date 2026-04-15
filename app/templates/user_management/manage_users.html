@@ -2,11 +2,26 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto py-4 px-3 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Gestionar Usuarios</h1>
-        <span class="text-sm text-gray-400">{{ users|length }} usuarios</span>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+            <p class="text-sm text-gray-500">{{ stats.active }} activos de {{ stats.total }} total</p>
+        </div>
+        {% if current_user.role in ('admin', 'lider') %}
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 text-xs">
+                {% for role_name, count in stats.by_role.items() %}
+                <span class="px-2 py-1 rounded-lg
+                    {% if role_name == 'admin' %}bg-indigo-100 text-indigo-700
+                    {% elif role_name == 'lider' %}bg-amber-100 text-amber-700
+                    {% else %}bg-gray-100 text-gray-600{% endif %}">{{ count }} {{ role_name }}{% if count != 1 %}s{% endif %}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 
+    {% if current_user.role == 'admin' %}
     <!-- Crear Usuario -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-1">Crear Nuevo Usuario</h2>
@@ -63,8 +78,9 @@
             </div>
         </form>
     </div>
+    {% endif %}
 
-    <!-- Lista de Usuarios - Cards en mobile, tabla en desktop -->
+    <!-- Lista de Usuarios -->
     <div class="space-y-3">
         {% for user in users %}
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
@@ -120,9 +136,28 @@
                     <!-- Actions -->
                     <div class="flex items-center gap-1.5 flex-shrink-0">
                         <a href="{{ url_for('user_management.edit_user', user_id=user.id) }}" class="px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-medium hover:bg-indigo-100 transition touch-target">Editar</a>
+                        {% if current_user.role == 'admin' %}
                         <button onclick="openAssociateModal({{ user.id }}, '{{ user.username }}')" class="px-3 py-2 bg-green-50 text-green-700 rounded-xl text-xs font-medium hover:bg-green-100 transition touch-target">GPS</button>
-                        {% if user.id != current_user.id %}
+                        {% endif %}
+                        <!-- Quick status change for leader -->
+                        {% if current_user.role in ('admin', 'lider') and user.id != current_user.id %}
+                        <div class="relative" x-data="{ statusOpen: false }">
+                            <button @click="statusOpen = !statusOpen" class="px-3 py-2 bg-amber-50 text-amber-700 rounded-xl text-xs font-medium hover:bg-amber-100 transition touch-target">Estado</button>
+                            <div x-show="statusOpen" x-cloak @click.away="statusOpen = false" class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border z-50 py-1">
+                                {% for st in ['activo', 'vacaciones', 'incapacidad', 'licencia', 'retirado'] %}
+                                <form method="post" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                                    <input type="hidden" name="new_status" value="{{ st }}">
+                                    <button type="submit" name="change_status" class="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 {% if user.employee_status == st %}font-bold text-indigo-600{% else %}text-gray-600{% endif %}">{{ st|capitalize }}</button>
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if current_user.role == 'admin' and user.id != current_user.id %}
                         <form action="" method="post" class="inline" onsubmit="return confirm('Eliminar usuario {{ user.username }}?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="user_id_to_delete" value="{{ user.id }}">
                             <button type="submit" name="delete_user" class="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-medium hover:bg-red-100 transition touch-target">X</button>
                         </form>

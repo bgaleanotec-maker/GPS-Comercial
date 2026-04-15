@@ -181,10 +181,63 @@ class ApiKey(db.Model):
 
 
 # ============================================================
+# MODELO TASK TEMPLATE - Plantillas de tareas recurrentes
+# ============================================================
+class TaskTemplate(db.Model):
+    """Plantilla para generar tareas recurrentes. Creadas por lideres o admin."""
+    __tablename__ = 'task_template'
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_template_creator'), nullable=False)
+    categoria = db.Column(db.String(50), index=True)  # Mercado/negocio al que aplica
+
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    task_type = db.Column(db.String(30), default='visita')
+    priority = db.Column(db.String(20), default='media')  # alta, media, baja
+    validation_type = db.Column(db.String(20), default='gps')  # gps, manual
+
+    # Recurrencia
+    recurrence_type = db.Column(db.String(20), default='none')  # none, daily, weekly, monthly
+    recurrence_days = db.Column(db.String(50))  # "1,3,5" = Lun, Mie, Vie (para weekly)
+    recurrence_end_date = db.Column(db.Date)  # Fecha fin de recurrencia (null = indefinida)
+
+    # Configuracion
+    ally_id = db.Column(db.Integer, db.ForeignKey('ally.id', name='fk_template_ally'), nullable=True)
+    min_time_on_site = db.Column(db.Integer, default=30)
+    assign_to_all = db.Column(db.Boolean, default=False)  # True = todos del mercado
+
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
+                           onupdate=lambda: datetime.now(timezone.utc))
+    last_generated = db.Column(db.Date)  # Ultima fecha que se generaron tareas
+
+    creator = db.relationship('User', backref='created_templates', foreign_keys=[created_by])
+    ally = db.relationship('Ally', backref='task_templates')
+
+
+# ============================================================
+# MODELO TASK ASSIGNMENT - Asignacion de templates a usuarios
+# ============================================================
+class TaskAssignment(db.Model):
+    """Asignacion de un template a un usuario especifico."""
+    __tablename__ = 'task_assignment'
+
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('task_template.id', name='fk_assign_template'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_assign_user'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+
+    template = db.relationship('TaskTemplate', backref='assignments')
+    user = db.relationship('User', backref='task_assignments')
+
+
+# ============================================================
 # MODELO SCHEDULED TASK - Cronograma de actividades
 # ============================================================
 class ScheduledTask(db.Model):
-    """Tarea agendada por un empleado (ej: visitar aliado X el lunes)."""
+    """Tarea agendada por un empleado o asignada por un lider."""
     __tablename__ = 'scheduled_task'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -195,7 +248,12 @@ class ScheduledTask(db.Model):
     scheduled_date = db.Column(db.Date, nullable=False, index=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    task_type = db.Column(db.String(30), default='visita')  # visita, reunion, gestion, otro
+    task_type = db.Column(db.String(30), default='visita')  # visita, reunion, gestion, checklist, otro
+
+    # Prioridad y asignacion
+    priority = db.Column(db.String(20), default='media')  # alta, media, baja
+    assigned_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_task_assigned_by'), nullable=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('task_template.id', name='fk_task_template'), nullable=True)
 
     # Tiempo minimo en sitio para marcar como cumplida (minutos)
     min_time_on_site = db.Column(db.Integer, default=30)
@@ -218,8 +276,10 @@ class ScheduledTask(db.Model):
     notes = db.Column(db.Text)  # Notas del empleado al completar
 
     # Relaciones
-    user = db.relationship('User', backref='scheduled_tasks')
+    user = db.relationship('User', backref='scheduled_tasks', foreign_keys=[user_id])
+    assigner = db.relationship('User', backref='assigned_tasks', foreign_keys=[assigned_by])
     ally = db.relationship('Ally', backref='scheduled_tasks')
+    template = db.relationship('TaskTemplate', backref='generated_tasks')
 
     @property
     def is_overdue(self):
@@ -241,6 +301,14 @@ class ScheduledTask(db.Model):
             'no_cumplida': 'No Cumplida',
             'cancelada': 'Cancelada',
         }.get(self.status, self.status)
+
+    @property
+    def priority_color(self):
+        return {'alta': 'red', 'media': 'amber', 'baja': 'green'}.get(self.priority, 'gray')
+
+    @property
+    def is_assigned(self):
+        return self.assigned_by is not None
 
 
 @login.user_loader

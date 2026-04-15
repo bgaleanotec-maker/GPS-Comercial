@@ -3,18 +3,28 @@
 {% block content %}
 <div class="max-w-7xl mx-auto py-4 px-3 sm:px-6 lg:px-8">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Torre de Control</h1>
             <p class="text-sm text-gray-500">Monitoreo de actividades del equipo en tiempo real</p>
         </div>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('schedule.assign_task') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition shadow-sm">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                Asignar Tarea
+            </a>
+            <a href="{{ url_for('schedule.leader_dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 border border-indigo-200 rounded-xl text-sm font-medium hover:bg-indigo-50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75z"/></svg>
+                Dashboard
+            </a>
+        </div>
     </div>
 
     <!-- KPIs -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
             <div class="text-2xl font-bold text-gray-900">{{ stats.total }}</div>
-            <div class="text-xs text-gray-500 mt-1">Total Tareas</div>
+            <div class="text-xs text-gray-500 mt-1">Total</div>
         </div>
         <div class="bg-emerald-50 rounded-2xl border border-emerald-200 p-4 text-center">
             <div class="text-2xl font-bold text-emerald-700">{{ stats.cumplidas }}</div>
@@ -30,7 +40,11 @@
         </div>
         <div class="bg-blue-50 rounded-2xl border border-blue-200 p-4 text-center">
             <div class="text-2xl font-bold text-blue-700">{{ stats.auto_validadas }}</div>
-            <div class="text-xs text-blue-600 mt-1">Validadas GPS</div>
+            <div class="text-xs text-blue-600 mt-1">GPS</div>
+        </div>
+        <div class="bg-orange-50 rounded-2xl border border-orange-200 p-4 text-center">
+            <div class="text-2xl font-bold text-orange-700">{{ stats.alta_prioridad }}</div>
+            <div class="text-xs text-orange-600 mt-1">Alta Prior.</div>
         </div>
         <div class="rounded-2xl p-4 text-center {% if stats.cumplimiento >= 80 %}bg-emerald-600{% elif stats.cumplimiento >= 50 %}bg-amber-500{% else %}bg-red-500{% endif %}">
             <div class="text-2xl font-bold text-white">{{ "%.0f"|format(stats.cumplimiento) }}%</div>
@@ -40,16 +54,16 @@
 
     <!-- Filtros -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
-        <form method="get" class="flex flex-col sm:flex-row gap-3 items-end">
-            <div class="flex-1">
+        <form method="get" class="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
+            <div class="flex-1 min-w-[140px]">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Desde</label>
                 <input type="date" name="date_from" value="{{ date_from }}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
             </div>
-            <div class="flex-1">
+            <div class="flex-1 min-w-[140px]">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
                 <input type="date" name="date_to" value="{{ date_to }}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
             </div>
-            <div class="flex-1">
+            <div class="flex-1 min-w-[140px]">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Empleado</label>
                 <select name="employee_id" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
                     <option value="">Todos</option>
@@ -58,14 +72,24 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="flex-1">
+            <div class="flex-1 min-w-[120px]">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Estado</label>
                 <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
                     <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Todos</option>
                     <option value="cumplida" {% if status_filter == 'cumplida' %}selected{% endif %}>Cumplidas</option>
                     <option value="pendiente" {% if status_filter == 'pendiente' %}selected{% endif %}>Pendientes</option>
                     <option value="vencida" {% if status_filter == 'vencida' %}selected{% endif %}>Vencidas</option>
+                    <option value="en_progreso" {% if status_filter == 'en_progreso' %}selected{% endif %}>En Progreso</option>
                     <option value="cancelada" {% if status_filter == 'cancelada' %}selected{% endif %}>Canceladas</option>
+                </select>
+            </div>
+            <div class="flex-1 min-w-[120px]">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Prioridad</label>
+                <select name="priority" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm touch-target">
+                    <option value="all" {% if priority_filter == 'all' %}selected{% endif %}>Todas</option>
+                    <option value="alta" {% if priority_filter == 'alta' %}selected{% endif %}>Alta</option>
+                    <option value="media" {% if priority_filter == 'media' %}selected{% endif %}>Media</option>
+                    <option value="baja" {% if priority_filter == 'baja' %}selected{% endif %}>Baja</option>
                 </select>
             </div>
             <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition touch-target">Filtrar</button>
@@ -79,7 +103,7 @@
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
                     <h2 class="text-sm font-semibold text-gray-700">Resumen por Empleado</h2>
                 </div>
-                <div class="divide-y divide-gray-50">
+                <div class="divide-y divide-gray-50 max-h-[500px] overflow-y-auto">
                     {% for uid, data in employee_summary.items() %}
                     <div class="px-4 py-3">
                         <div class="flex items-center justify-between mb-2">
@@ -95,9 +119,8 @@
                             {% set pct = (data.cumplidas / data.total * 100) if data.total > 0 else 0 %}
                             <span class="text-sm font-bold {% if pct >= 80 %}text-emerald-600{% elif pct >= 50 %}text-amber-600{% else %}text-red-600{% endif %}">{{ "%.0f"|format(pct) }}%</span>
                         </div>
-                        <!-- Progress bar -->
                         <div class="w-full bg-gray-100 rounded-full h-2">
-                            <div class="h-2 rounded-full {% if pct >= 80 %}bg-emerald-500{% elif pct >= 50 %}bg-amber-500{% else %}bg-red-500{% endif %}" style="width: {{ pct }}%"></div>
+                            <div class="h-2 rounded-full transition-all {% if pct >= 80 %}bg-emerald-500{% elif pct >= 50 %}bg-amber-500{% else %}bg-red-500{% endif %}" style="width: {{ pct }}%"></div>
                         </div>
                         <div class="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
                             <span class="text-emerald-600">{{ data.cumplidas }} ok</span>
@@ -122,54 +145,103 @@
                 </div>
                 <div class="divide-y divide-gray-50 max-h-[600px] overflow-y-auto">
                     {% for task in tasks %}
-                    <div class="px-4 py-3 flex items-center gap-3 {% if task.is_overdue %}bg-red-50/50{% endif %}">
-                        <!-- Status indicator -->
-                        {% if task.status == 'cumplida' and task.auto_validated %}
-                        <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                        </div>
-                        {% elif task.status == 'cumplida' %}
-                        <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                        </div>
-                        {% elif task.is_overdue %}
-                        <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-                        </div>
-                        {% elif task.status == 'en_progreso' %}
-                        <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </div>
-                        {% else %}
-                        <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                            <div class="w-4 h-4 rounded-full border-2 border-gray-300"></div>
-                        </div>
-                        {% endif %}
+                    <div class="px-4 py-3 hover:bg-gray-50/50 transition {% if task.is_overdue %}bg-red-50/30{% endif %}" x-data="{ expanded: false }">
+                        <div class="flex items-center gap-3 cursor-pointer" @click="expanded = !expanded">
+                            <!-- Priority indicator -->
+                            <div class="w-1.5 h-10 rounded-full flex-shrink-0
+                                {% if task.priority == 'alta' %}bg-red-500
+                                {% elif task.priority == 'baja' %}bg-green-400
+                                {% else %}bg-amber-400{% endif %}"></div>
 
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-medium text-gray-900 truncate">{{ task.title }}</span>
-                                {% if task.auto_validated %}
-                                <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded">GPS</span>
+                            <!-- Status icon -->
+                            {% if task.status == 'cumplida' and task.auto_validated %}
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                            </div>
+                            {% elif task.status == 'cumplida' %}
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                            </div>
+                            {% elif task.is_overdue %}
+                            <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                            </div>
+                            {% elif task.status == 'en_progreso' %}
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            {% else %}
+                            <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                <div class="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                            </div>
+                            {% endif %}
+
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-sm font-medium text-gray-900 truncate">{{ task.title }}</span>
+                                    {% if task.auto_validated %}
+                                    <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded">GPS</span>
+                                    {% endif %}
+                                    {% if task.priority == 'alta' %}
+                                    <span class="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded">ALTA</span>
+                                    {% endif %}
+                                    {% if task.assigned_by %}
+                                    <span class="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded">ASIGNADA</span>
+                                    {% endif %}
+                                </div>
+                                <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+                                    <span class="font-medium text-gray-600">{{ task.user.full_name or task.user.username }}</span>
+                                    <span>{{ task.scheduled_date.strftime('%d/%m') }}</span>
+                                    {% if task.ally %}<span class="text-indigo-500">{{ task.ally.name }}</span>{% endif %}
+                                    {% if task.time_on_site_minutes > 0 %}<span>{{ "%.0f"|format(task.time_on_site_minutes) }} min</span>{% endif %}
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <span class="px-2.5 py-1 rounded-lg text-xs font-medium
+                                    {% if task.status == 'cumplida' %}bg-emerald-100 text-emerald-700
+                                    {% elif task.is_overdue %}bg-red-100 text-red-700
+                                    {% elif task.status == 'en_progreso' %}bg-amber-100 text-amber-700
+                                    {% elif task.status == 'cancelada' %}bg-gray-100 text-gray-500
+                                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                    {{ task.status_display }}
+                                </span>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{'rotate-180': expanded}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Expanded details -->
+                        <div x-show="expanded" x-cloak x-transition class="mt-3 ml-14 pl-2 border-l-2 border-gray-100">
+                            {% if task.description %}
+                            <p class="text-xs text-gray-500 mb-2">{{ task.description }}</p>
+                            {% endif %}
+                            <div class="flex items-center gap-4 text-xs text-gray-400 mb-2">
+                                <span>Tipo: {{ task.task_type }}</span>
+                                <span>Validacion: {{ task.validation_type }}</span>
+                                {% if task.assigner %}<span>Asignada por: {{ task.assigner.full_name }}</span>{% endif %}
+                                {% if task.notes %}<span>Nota: {{ task.notes }}</span>{% endif %}
+                            </div>
+                            <!-- Actions -->
+                            <div class="flex items-center gap-2 mt-2">
+                                {% if task.status in ('pendiente', 'en_progreso') %}
+                                <form method="post" action="{{ url_for('schedule.complete_task', task_id=task.id) }}" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="next" value="{{ request.url }}">
+                                    <button type="submit" class="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 transition">Completar</button>
+                                </form>
+                                <form method="post" action="{{ url_for('schedule.cancel_task', task_id=task.id) }}" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="next" value="{{ request.url }}">
+                                    <button type="submit" class="px-3 py-1.5 bg-gray-200 text-gray-600 text-xs rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+                                </form>
+                                {% elif task.status in ('cancelada', 'no_cumplida') %}
+                                <form method="post" action="{{ url_for('schedule.reopen_task', task_id=task.id) }}" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="next" value="{{ request.url }}">
+                                    <button type="submit" class="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition">Reabrir</button>
+                                </form>
                                 {% endif %}
                             </div>
-                            <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
-                                <span class="font-medium text-gray-600">{{ task.user.full_name or task.user.username }}</span>
-                                <span>{{ task.scheduled_date.strftime('%d/%m') }}</span>
-                                {% if task.ally %}<span class="text-indigo-500">{{ task.ally.name }}</span>{% endif %}
-                                {% if task.time_on_site_minutes > 0 %}<span>{{ "%.0f"|format(task.time_on_site_minutes) }} min en sitio</span>{% endif %}
-                            </div>
-                        </div>
-
-                        <div class="flex-shrink-0">
-                            <span class="px-2.5 py-1 rounded-lg text-xs font-medium
-                                {% if task.status == 'cumplida' %}bg-emerald-100 text-emerald-700
-                                {% elif task.is_overdue %}bg-red-100 text-red-700
-                                {% elif task.status == 'en_progreso' %}bg-amber-100 text-amber-700
-                                {% elif task.status == 'cancelada' %}bg-gray-100 text-gray-500
-                                {% else %}bg-gray-100 text-gray-600{% endif %}">
-                                {{ task.status_display }}
-                            </span>
                         </div>
                     </div>
                     {% endfor %}

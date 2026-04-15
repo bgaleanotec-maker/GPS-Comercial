@@ -268,6 +268,12 @@ def _background_loop(app):
                     mark_overdue_tasks()
                 except Exception as ve:
                     logger.debug("Validacion de tareas: %s", ve)
+                # Generar tareas recurrentes desde plantillas
+                try:
+                    from app.schedule.routes import generate_recurring_tasks
+                    generate_recurring_tasks()
+                except Exception as ge:
+                    logger.debug("Generacion tareas recurrentes: %s", ge)
         except Exception as e:
             logger.error("Error en el hilo de fondo: %s", e)
         time.sleep(60)
