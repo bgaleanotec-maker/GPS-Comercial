@@ -26,7 +26,8 @@ def manage_allies():
             latitude=form.latitude.data,
             longitude=form.longitude.data,
             category=form.category.data,
-            radius=form.radius.data  # <-- LÍNEA CLAVE
+            filial=form.filial.data,
+            radius=form.radius.data,
         )
         db.session.add(ally)
         db.session.commit()

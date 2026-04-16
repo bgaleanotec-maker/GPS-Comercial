@@ -52,17 +52,18 @@ def check_for_visits(app, device, all_allies):
         )
 
         if distance <= ally.radius:
-            settings = {s.key: s.value for s in Setting.query.all()}
-            visit_interval_minutes = int(settings.get('visit_interval', 60))
+            # Solo 1 visita por dia por aliado por dispositivo
+            colombia_tz = pytz.timezone('America/Bogota')
+            today_start = datetime.now(colombia_tz).replace(hour=0, minute=0, second=0).astimezone(pytz.utc)
 
-            last_visit = Visit.query.filter_by(
-                device_id=device_id, ally_id=ally.id
-            ).order_by(Visit.timestamp.desc()).first()
+            existing_today = Visit.query.filter(
+                Visit.device_id == device_id,
+                Visit.ally_id == ally.id,
+                Visit.timestamp >= today_start,
+            ).first()
 
-            if last_visit:
-                last_ts = last_visit.timestamp.replace(tzinfo=pytz.utc) if last_visit.timestamp.tzinfo is None else last_visit.timestamp
-                if (fix_time_utc - last_ts) < timedelta(minutes=visit_interval_minutes):
-                    continue
+            if existing_today:
+                continue
 
             user = User.query.filter_by(traccar_device_id=device_id).first()
             # Verificar estado del usuario (vacaciones, incapacidad, etc.)

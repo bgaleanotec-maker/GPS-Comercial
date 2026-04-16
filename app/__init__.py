@@ -84,8 +84,46 @@ def _init_database(app):
                     logger.info("Setting '%s' actualizado: %s", key, value[:20] if len(value) > 20 else value)
 
             db.session.commit()
+
+            # Seed contratistas si no existen
+            _seed_contractors(app)
     except Exception as e:
         logger.warning("Error inicializando BD (puede ser normal en build): %s", e)
+
+
+def _seed_contractors(app):
+    """Crea los contratistas/aliados iniciales si no existen."""
+    from app.models import Ally
+    contractors = [
+        # Bogota (filial Vanti)
+        {'name': 'Multintegral Bogota', 'address': 'Calle 19a # 69 11, Montevideo, Bogota',
+         'latitude': 4.6351, 'longitude': -74.1108, 'category': 'Contratista', 'filial': 'Vanti', 'radius': 100},
+        {'name': 'Connect', 'address': 'Cra 14 # 97 63, Bogota',
+         'latitude': 4.6912, 'longitude': -74.0484, 'category': 'Contratista', 'filial': 'Vanti', 'radius': 100},
+        {'name': 'Aprogas', 'address': 'Cra 68h # 78 64, Bogota',
+         'latitude': 4.6984, 'longitude': -74.0937, 'category': 'Contratista', 'filial': 'Vanti', 'radius': 100},
+        {'name': 'Romegas', 'address': 'Diagonal 52a Sur # 54b 02, Bogota',
+         'latitude': 4.5874, 'longitude': -74.1437, 'category': 'Contratista', 'filial': 'Vanti', 'radius': 100},
+        # Cundinamarca / Boyaca (filial Cundi)
+        {'name': 'Romegas Chia', 'address': 'Calle 29 # 6 126, Chia',
+         'latitude': 4.8636, 'longitude': -74.0540, 'category': 'Contratista', 'filial': 'Cundi', 'radius': 100},
+        {'name': 'Connect Funza', 'address': 'Cra 23 # 12c 39, Funza',
+         'latitude': 4.7174, 'longitude': -74.2112, 'category': 'Contratista', 'filial': 'Cundi', 'radius': 100},
+        {'name': 'Multintegral Boyaca', 'address': 'Cra 9 # 24 64, Tunja',
+         'latitude': 5.5353, 'longitude': -73.3622, 'category': 'Contratista', 'filial': 'Cundi', 'radius': 150},
+        {'name': 'Aprogas Boyaca', 'address': 'Cra 16 # 12 10, Duitama',
+         'latitude': 5.8264, 'longitude': -73.0331, 'category': 'Contratista', 'filial': 'Cundi', 'radius': 150},
+    ]
+    added = 0
+    for c in contractors:
+        existing = Ally.query.filter_by(name=c['name']).first()
+        if not existing:
+            ally = Ally(**c)
+            db.session.add(ally)
+            added += 1
+    if added:
+        db.session.commit()
+        logger.info("Contratistas seed: %d nuevos creados.", added)
 
 
 def create_app(config_class=Config):

@@ -24,6 +24,17 @@ def visit_report():
     form.ally_id.choices = [(ally.id, ally.name) for ally in allies]
     
     if form.validate_on_submit() and current_user.role == 'empleado':
+        # Verificar limite: 1 visita por dia por aliado
+        today_start = datetime.now(pytz.timezone('America/Bogota')).replace(hour=0, minute=0, second=0).astimezone(pytz.utc)
+        existing_visit = Visit.query.filter(
+            Visit.user_id == current_user.id,
+            Visit.ally_id == form.ally_id.data,
+            Visit.timestamp >= today_start,
+        ).first()
+        if existing_visit:
+            flash('Ya registraste una visita a este aliado hoy. Solo se permite 1 visita por dia por aliado.', 'warning')
+            return redirect(url_for('analytics.visit_report'))
+
         # Manejo de evidencia
         evidence_filename = None
         if form.evidence.data:

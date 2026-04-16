@@ -82,6 +82,7 @@ class Ally(db.Model):
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50), index=True)
+    filial = db.Column(db.String(50), index=True, default='Vanti')  # Vanti, Cundi, etc.
     radius = db.Column(db.Integer, default=50)
 
 

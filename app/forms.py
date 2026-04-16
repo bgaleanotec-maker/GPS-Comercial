@@ -52,23 +52,40 @@ class SettingsForm(FlaskForm):
 # --- Formularios Comerciales y de Visitas ---
 class AllyForm(FlaskForm):
     name = StringField('Nombre del Aliado', validators=[DataRequired()])
-    address = StringField('Dirección')
+    address = StringField('Direccion')
     latitude = FloatField('Latitud', validators=[DataRequired()])
     longitude = FloatField('Longitud', validators=[DataRequired()])
-    category = StringField('Categoría', description='Ej: Carnes, Eléctricos, Retail')
+    category = SelectField('Categoria', choices=[
+        ('Contratista', 'Contratista'),
+        ('Cliente', 'Cliente'),
+        ('Oficina', 'Oficina'),
+        ('Punto de Venta', 'Punto de Venta'),
+        ('Otro', 'Otro'),
+    ])
+    filial = SelectField('Filial', choices=[
+        ('Vanti', 'Vanti'), ('Cundi', 'Cundi'), ('GOR', 'GOR'), ('Nacer', 'Nacer'),
+    ])
     radius = IntegerField('Radio de Geozona (metros)', default=50, validators=[DataRequired()])
     submit = SubmitField('Guardar Aliado')
 
+ACTIVITY_TYPES = [
+    ('Visita Cliente', 'Visita Cliente'),
+    ('Visita Prolongue', 'Visita Prolongue'),
+    ('Visita Contratista', 'Visita Contratista'),
+    ('Zonas de Avance', 'Zonas de Avance'),
+    ('Imposibilidades', 'Imposibilidades'),
+    ('Reunion citada Vanti', 'Reunion citada Vanti'),
+    ('Evento especial', 'Evento especial'),
+    ('Trabajo administrativo', 'Trabajo administrativo'),
+    ('Vacaciones - Permiso especial', 'Vacaciones - Permiso especial'),
+    ('Incapacidad', 'Incapacidad'),
+]
+
 class VisitForm(FlaskForm):
     ally_id = SelectField('Aliado Visitado', coerce=int, validators=[DataRequired()])
-    category = SelectField('Categoría de la Visita', choices=[
-        ('Mantenimiento', 'Mantenimiento'),
-        ('Formación', 'Formación'),
-        ('Plan de Ventas', 'Plan de Ventas'),
-        ('Otro', 'Otro')
-    ], validators=[DataRequired()])
+    category = SelectField('Tipo de Actividad', choices=ACTIVITY_TYPES, validators=[DataRequired()])
     observations = TextAreaField('Observaciones')
-    evidence = FileField('Cargar Evidencia (Imagen o PDF)', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'pdf'], '¡Solo se permiten imágenes y PDF!')])
+    evidence = FileField('Cargar Evidencia (Imagen o PDF)', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'pdf'], 'Solo se permiten imagenes y PDF!')])
     submit = SubmitField('Registrar Visita')
 
 # --- Formulario de Edicion de Usuario ---
@@ -142,20 +159,10 @@ class UserCreationForm(FlaskForm):
 
 
 
-class VisitForm(FlaskForm):
+class VisitFormDuplicate(FlaskForm):
+    """Formulario de visita duplicado (legacy, usar VisitForm principal)."""
     ally_id = SelectField('Aliado Visitado', coerce=int, validators=[DataRequired()])
-    category = SelectField('Categoría de la Visita', choices=[
-        ('Visita Cliente', 'Visita Cliente'),
-        ('Visita Prolongue', 'Visita Prolongue'),
-        ('Visita Contratista', 'Visita Contratista'),
-        ('Zonas de Avance', 'Zonas de Avance'),
-        ('Imposibilidades', 'Imposibilidades'),
-        ('Reunión citada Vanti', 'Reunión citada Vanti'),
-        ('Evento especial', 'Evento especial'),
-        ('Trabajo administrativo', 'Trabajo administrativo'),
-        ('Vacaciones – Permiso especial', 'Vacaciones – Permiso especial'),
-        ('Incapacidad', 'Incapacidad')
-    ], validators=[DataRequired()])
+    category = SelectField('Tipo de Actividad', choices=ACTIVITY_TYPES, validators=[DataRequired()])
     observations = TextAreaField('Observaciones')
     evidence = FileField('Cargar Evidencia (Imagen o PDF)', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'pdf'], '¡Solo se permiten imágenes y PDF!')])
     submit = SubmitField('Registrar Visita')
