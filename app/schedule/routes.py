@@ -173,6 +173,43 @@ def edit_task(task_id):
     return redirect(next_url)
 
 
+@bp.route('/task/<int:task_id>/delete', methods=['POST'])
+@login_required
+def delete_task(task_id):
+    """Eliminar definitivamente una tarea programada (limpieza). Solo admin/lider.
+
+    Permite registrar una observacion con el motivo de la eliminacion, que queda
+    en el log del servidor para trazabilidad.
+    """
+    if current_user.role not in ('admin', 'lider'):
+        abort(403)
+    task = ScheduledTask.query.get_or_404(task_id)
+
+    # El lider solo puede eliminar tareas de su propio equipo
+    if current_user.role == 'lider':
+        team_ids = get_team_ids(current_user)
+        if task.user_id not in team_ids:
+            abort(403)
+
+    observacion = request.form.get('observacion', '').strip()
+    logger.info(
+        "Tarea programada #%d ('%s', usuario_id=%s) eliminada por %s (id=%s). Observacion: %s",
+        task.id, task.title, task.user_id, current_user.username, current_user.id,
+        observacion or '(sin observacion)'
+    )
+
+    db.session.delete(task)
+    db.session.commit()
+
+    msg = 'Tarea programada eliminada.'
+    if observacion:
+        msg += f' Observacion: {observacion}'
+    flash(msg, 'info')
+
+    next_url = request.form.get('next') or url_for('schedule.control_tower')
+    return redirect(next_url)
+
+
 @bp.route('/task/<int:task_id>/reopen', methods=['POST'])
 @login_required
 def reopen_task(task_id):
