@@ -54,7 +54,9 @@ def visit_report():
             is_manual=True,
             category=form.category.data,
             observations=form.observations.data,
-            evidence_path=evidence_filename
+            evidence_path=evidence_filename,
+            start_time=(form.start_time.data or '').strip() or None,
+            end_time=(form.end_time.data or '').strip() or None,
         )
         db.session.add(new_visit)
         db.session.commit()

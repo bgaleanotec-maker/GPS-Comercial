@@ -215,12 +215,27 @@
                             {% if task.description %}
                             <p class="text-xs text-slate-400 mb-2">{{ task.description }}</p>
                             {% endif %}
-                            <div class="flex items-center gap-4 text-xs text-slate-500 mb-2">
+                            <div class="flex items-center gap-4 text-xs text-slate-500 mb-2 flex-wrap">
                                 <span>Tipo: {{ task.task_type }}</span>
                                 <span>Validacion: {{ task.validation_type }}</span>
+                                {% if task.time_range_display %}<span class="text-slate-300">Horario: {{ task.time_range_display }}</span>{% endif %}
                                 {% if task.assigner %}<span>Asignada por: {{ task.assigner.full_name }}</span>{% endif %}
                                 {% if task.notes %}<span>Nota: {{ task.notes }}</span>{% endif %}
                             </div>
+                            {% if task.non_compliance_reason %}
+                            <div class="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
+                                <span class="font-semibold text-red-400">No cumplida — motivo:</span>
+                                <span class="text-red-300">{{ task.non_compliance_reason }}</span>
+                            </div>
+                            {% endif %}
+                            {% if task.reschedule_count and task.reschedule_count > 0 %}
+                            <div class="mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
+                                <span class="font-semibold text-blue-400">Reprogramada {{ task.reschedule_count }} vez(ces):</span>
+                                {% for line in (task.reschedule_log or '').split('\n') %}
+                                {% if line.strip() %}<p class="text-blue-300/90 leading-snug">{{ line }}</p>{% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                             <!-- Actions -->
                             <div class="flex items-center gap-2 mt-2">
                                 {% if task.status in ('pendiente', 'en_progreso') %}

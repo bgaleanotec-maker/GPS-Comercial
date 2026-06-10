@@ -76,7 +76,7 @@
             <div class="flex-1 divide-y divide-slate-800/50">
                 {% if day_info.tasks %}
                     {% for task in day_info.tasks %}
-                    <div x-data="{ open: false }" class="relative">
+                    <div x-data="{ editOpen: false, ncOpen: false, reschedOpen: false }" class="relative">
                         {# Task Card #}
                         <div class="px-3 py-2.5 border-l-4 cursor-pointer hover:bg-slate-800/50 transition
                             {% if task.priority == 'alta' %}border-l-red-400
@@ -86,6 +86,14 @@
 
                             {# Title #}
                             <p class="text-sm font-medium text-slate-100 truncate">{{ task.title }}</p>
+
+                            {# Time range #}
+                            {% if task.time_range_display %}
+                            <p class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                {{ task.time_range_display }}
+                            </p>
+                            {% endif %}
 
                             {# Badges row #}
                             <div class="flex flex-wrap items-center gap-1 mt-1">
@@ -152,8 +160,26 @@
                             <p class="text-slate-500 italic">{{ task.notes }}</p>
                             {% endif %}
 
+                            {# Motivo de no cumplimiento #}
+                            {% if task.non_compliance_reason %}
+                            <div class="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                                <p class="text-[11px] font-semibold text-red-400">No cumplida — motivo:</p>
+                                <p class="text-[11px] text-red-300">{{ task.non_compliance_reason }}</p>
+                            </div>
+                            {% endif %}
+
+                            {# Rastro de reprogramaciones #}
+                            {% if task.reschedule_count and task.reschedule_count > 0 %}
+                            <div class="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                                <p class="text-[11px] font-semibold text-blue-400">Reprogramada {{ task.reschedule_count }} vez(ces):</p>
+                                {% for line in (task.reschedule_log or '').split('\n') %}
+                                {% if line.strip() %}<p class="text-[10px] text-blue-300/90 leading-snug">{{ line }}</p>{% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
                             {# Action buttons #}
-                            <div class="flex items-center gap-2 pt-1">
+                            <div class="flex flex-wrap items-center gap-2 pt-1">
                                 {% if task.status in ('pendiente', 'en_progreso') %}
                                 <form method="post" action="{{ url_for('schedule.complete_task', task_id=task.id) }}" class="inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -162,6 +188,21 @@
                                         Cumplir
                                     </button>
                                 </form>
+                                {# No cumplida: abre observacion #}
+                                <button type="button" @click="ncOpen = !ncOpen; editOpen = false; reschedOpen = false"
+                                        class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-xs font-medium hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/20 transition touch-target">
+                                    No cumplida
+                                </button>
+                                {# Reprogramar #}
+                                <button type="button" @click="reschedOpen = !reschedOpen; editOpen = false; ncOpen = false"
+                                        class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-xs font-medium hover:bg-blue-500/15 hover:text-blue-400 hover:border-blue-500/20 transition touch-target">
+                                    Reprogramar
+                                </button>
+                                {# Editar (PC y movil) #}
+                                <button type="button" @click="editOpen = !editOpen; ncOpen = false; reschedOpen = false"
+                                        class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-xs font-medium hover:bg-slate-700 transition touch-target">
+                                    Editar
+                                </button>
                                 <form method="post" action="{{ url_for('schedule.cancel_task', task_id=task.id) }}"
                                       class="inline"
                                       x-data
@@ -172,23 +213,156 @@
                                         Cancelar
                                     </button>
                                 </form>
-                                <a href="{{ url_for('schedule.edit_task', task_id=task.id) }}"
-                                   class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-xs font-medium hover:bg-slate-700 transition touch-target">
-                                    Editar
-                                </a>
                                 {% elif task.status == 'cumplida' %}
                                 <span class="text-emerald-400 font-medium">Tarea cumplida</span>
                                 {% elif task.status == 'cancelada' %}
                                 <span class="text-slate-500">Cancelada</span>
                                 {% elif task.status == 'no_cumplida' %}
                                 <span class="text-red-400 font-medium">No cumplida</span>
+                                {# Permitir reprogramar una tarea no cumplida #}
+                                <button type="button" @click="reschedOpen = !reschedOpen"
+                                        class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-500/15 transition touch-target">
+                                    Reprogramar
+                                </button>
                                 {% endif %}
+                            </div>
+
+                            {# Inline: No cumplida con observacion #}
+                            <div x-show="ncOpen" x-cloak class="pt-2">
+                                <form method="post" action="{{ url_for('schedule.mark_not_completed', task_id=task.id) }}" class="space-y-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="next" value="{{ request.url }}">
+                                    <label class="block text-[11px] font-medium text-red-400">Observacion (por que no se cumplio) *</label>
+                                    <textarea name="reason" rows="2" required
+                                              placeholder="Motivo del no cumplimiento..."
+                                              class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:ring-2 focus:ring-red-500 focus:border-red-500"></textarea>
+                                    <div class="flex gap-2">
+                                        <button type="submit" class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-500 transition">Registrar no cumplida</button>
+                                        <button type="button" @click="ncOpen = false" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 rounded-lg text-xs hover:bg-slate-700 transition">Cerrar</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            {# Inline: Reprogramar #}
+                            <div x-show="reschedOpen" x-cloak class="pt-2">
+                                <form method="post" action="{{ url_for('schedule.reschedule_task', task_id=task.id) }}" class="space-y-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="next" value="{{ request.url }}">
+                                    <label class="block text-[11px] font-medium text-blue-400">Nueva fecha *</label>
+                                    <input type="date" name="new_date" required value="{{ task.scheduled_date }}"
+                                           class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="time" name="start_time" value="{{ task.start_time or '' }}"
+                                               class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">
+                                        <input type="time" name="end_time" value="{{ task.end_time or '' }}"
+                                               class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">
+                                    </div>
+                                    <textarea name="reason" rows="2" placeholder="Motivo de la reprogramacion (queda en el rastro)..."
+                                              class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                    <div class="flex gap-2">
+                                        <button type="submit" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-500 transition">Reprogramar</button>
+                                        <button type="button" @click="reschedOpen = false" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 rounded-lg text-xs hover:bg-slate-700 transition">Cerrar</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            {# Inline: Editar (funciona en PC y movil) #}
+                            <div x-show="editOpen" x-cloak class="pt-2">
+                                <form method="post" action="{{ url_for('schedule.edit_task', task_id=task.id) }}" class="space-y-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="next" value="{{ request.url }}">
+                                    <label class="block text-[11px] font-medium text-slate-400">Titulo</label>
+                                    <input type="text" name="title" value="{{ task.title }}" required
+                                           class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-slate-400">Fecha</label>
+                                            <input type="date" name="scheduled_date" value="{{ task.scheduled_date }}"
+                                                   class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-slate-400">Prioridad</label>
+                                            <select name="priority" class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">
+                                                <option value="media" {% if task.priority == 'media' %}selected{% endif %}>Media</option>
+                                                <option value="alta" {% if task.priority == 'alta' %}selected{% endif %}>Alta</option>
+                                                <option value="baja" {% if task.priority == 'baja' %}selected{% endif %}>Baja</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-slate-400">Hora inicio</label>
+                                            <input type="time" name="start_time" value="{{ task.start_time or '' }}"
+                                                   class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-slate-400">Hora fin</label>
+                                            <input type="time" name="end_time" value="{{ task.end_time or '' }}"
+                                                   class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-slate-400">Aliado/Contratista</label>
+                                        <select name="ally_id" class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">
+                                            <option value="">-- Sin aliado --</option>
+                                            {% for ally in allies %}
+                                            <option value="{{ ally.id }}" {% if task.ally_id == ally.id %}selected{% endif %}>{{ ally.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-slate-400">Tipo</label>
+                                        <select name="task_type" class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">
+                                            {% for opt in ['Visita Cliente','Visita Prolongue','Visita Contratista','Zonas de Avance','Imposibilidades','Reunion citada Vanti','Evento especial','Trabajo administrativo'] %}
+                                            <option value="{{ opt }}" {% if task.task_type == opt %}selected{% endif %}>{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-slate-400">Descripcion</label>
+                                        <textarea name="description" rows="2"
+                                                  class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200">{{ task.description or '' }}</textarea>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button type="submit" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-500 transition">Guardar cambios</button>
+                                        <button type="button" @click="editOpen = false" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 rounded-lg text-xs hover:bg-slate-700 transition">Cerrar</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
-                {% else %}
-                    <div class="px-3 py-6 text-center text-xs text-slate-500">Sin tareas</div>
+                {% endif %}
+
+                {# Visitas realizadas (consolidadas en la agenda del dia) #}
+                {% for visit in day_info.visits %}
+                    <div x-data="{ vopen: false }" class="relative">
+                        <div class="px-3 py-2.5 border-l-4 border-l-blue-400 cursor-pointer hover:bg-slate-800/50 transition" @click="vopen = !vopen">
+                            <p class="text-sm font-medium text-slate-100 truncate flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                                Visita{% if visit.ally %}: {{ visit.ally.name }}{% endif %}
+                            </p>
+                            <div class="flex flex-wrap items-center gap-1 mt-1">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                                    {{ 'Manual' if visit.is_manual else 'GPS' }}
+                                </span>
+                                {% if visit.category %}
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-slate-500/15 text-slate-400 border border-slate-500/20">{{ visit.category }}</span>
+                                {% endif %}
+                                {% if visit.start_time %}
+                                <span class="text-[10px] text-slate-400">{{ visit.start_time }}{% if visit.end_time %} - {{ visit.end_time }}{% endif %}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div x-show="vopen" x-cloak class="px-3 py-2 bg-slate-800/50 border-t border-slate-800 text-xs space-y-1">
+                            {% if visit.observations %}<p class="text-slate-400">{{ visit.observations }}</p>{% endif %}
+                            <p class="text-slate-500">Registro: {{ visit.timestamp.strftime('%H:%M') }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                {% if not day_info.tasks and not day_info.visits %}
+                    <div class="px-3 py-6 text-center text-xs text-slate-500">Sin actividades</div>
                 {% endif %}
             </div>
         </div>
@@ -248,6 +422,19 @@
                     <input type="date" name="scheduled_date" required
                            x-model="modalDate"
                            class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Hora inicio</label>
+                        <input type="time" name="start_time"
+                               class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Hora fin</label>
+                        <input type="time" name="end_time"
+                               class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
                 </div>
 
                 <div>

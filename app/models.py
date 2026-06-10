@@ -97,6 +97,10 @@ class Visit(db.Model):
     observations = db.Column(db.Text)
     evidence_path = db.Column(db.String(200))
 
+    # Horario de la actividad (HH:MM) - para distribuir el tiempo en la agenda
+    start_time = db.Column(db.String(5))  # Hora inicio "HH:MM"
+    end_time = db.Column(db.String(5))    # Hora fin "HH:MM"
+
     # Clasificacion de movimiento
     movement_type = db.Column(db.String(20), default='vehicle')  # 'vehicle', 'walking', 'manual'
     avg_speed = db.Column(db.Float, default=0.0)
@@ -260,6 +264,10 @@ class ScheduledTask(db.Model):
     assigned_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_task_assigned_by'), nullable=True)
     template_id = db.Column(db.Integer, db.ForeignKey('task_template.id', name='fk_task_template'), nullable=True)
 
+    # Horario de la actividad (HH:MM) - para distribuir el tiempo en la agenda del dia
+    start_time = db.Column(db.String(5))  # Hora inicio "HH:MM"
+    end_time = db.Column(db.String(5))    # Hora fin "HH:MM"
+
     # Tiempo minimo en sitio para marcar como cumplida (minutos)
     min_time_on_site = db.Column(db.Integer, default=30)
 
@@ -279,6 +287,13 @@ class ScheduledTask(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at = db.Column(db.DateTime)
     notes = db.Column(db.Text)  # Notas del empleado al completar
+
+    # Motivo cuando la tarea se marca como NO cumplida
+    non_compliance_reason = db.Column(db.Text)
+
+    # Rastro de reprogramaciones para seguimiento (append-only)
+    reschedule_count = db.Column(db.Integer, default=0)
+    reschedule_log = db.Column(db.Text)
 
     # Relaciones
     user = db.relationship('User', backref='scheduled_tasks', foreign_keys=[user_id])
@@ -314,6 +329,20 @@ class ScheduledTask(db.Model):
     @property
     def is_assigned(self):
         return self.assigned_by is not None
+
+    @property
+    def time_range_display(self):
+        """Devuelve 'HH:MM - HH:MM', solo inicio, o '' si no hay horario."""
+        if self.start_time and self.end_time:
+            return f'{self.start_time} - {self.end_time}'
+        if self.start_time:
+            return self.start_time
+        return ''
+
+    @property
+    def is_editable(self):
+        """Una tarea solo es editable mientras no este cumplida/no cumplida/cancelada."""
+        return self.status not in ('cumplida', 'no_cumplida', 'cancelada')
 
 
 @login.user_loader

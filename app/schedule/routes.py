@@ -33,6 +33,8 @@ def my_schedule():
         description = request.form.get('description', '').strip()
         task_type = request.form.get('task_type', 'visita')
         priority = request.form.get('priority', 'media')
+        start_time = (request.form.get('start_time') or '').strip()
+        end_time = (request.form.get('end_time') or '').strip()
 
         if not title or not scheduled_date_str:
             flash('Titulo y fecha son requeridos.', 'danger')
@@ -55,6 +57,8 @@ def my_schedule():
             task_type=task_type,
             priority=priority,
             validation_type=validation_type,
+            start_time=start_time or None,
+            end_time=end_time or None,
         )
         db.session.add(task)
         db.session.commit()
@@ -77,15 +81,32 @@ def my_schedule():
 
     allies = Ally.query.order_by(Ally.name).all()
 
+    # Visitas realizadas en la semana (para consolidarlas dentro de la misma agenda)
+    week_start_dt = COLOMBIA_TZ.localize(datetime.combine(week_start, datetime.min.time())).astimezone(pytz.utc)
+    week_end_dt = COLOMBIA_TZ.localize(datetime.combine(week_end + timedelta(days=1), datetime.min.time())).astimezone(pytz.utc)
+    visits = Visit.query.filter(
+        Visit.user_id == current_user.id,
+        Visit.timestamp >= week_start_dt,
+        Visit.timestamp < week_end_dt,
+    ).order_by(Visit.timestamp).all()
+
     # Agrupar por dia
     days = {}
     day_names = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
     for i in range(7):
         d = week_start + timedelta(days=i)
-        days[d] = {'name': day_names[d.weekday()], 'date': d, 'tasks': []}
+        days[d] = {'name': day_names[d.weekday()], 'date': d, 'tasks': [], 'visits': []}
     for task in tasks:
         if task.scheduled_date in days:
             days[task.scheduled_date]['tasks'].append(task)
+    for visit in visits:
+        # timestamp esta en UTC; convertir a fecha local de Colombia
+        local_dt = visit.timestamp
+        if local_dt.tzinfo is None:
+            local_dt = pytz.utc.localize(local_dt)
+        visit_date = local_dt.astimezone(COLOMBIA_TZ).date()
+        if visit_date in days:
+            days[visit_date]['visits'].append(visit)
 
     # Stats de la semana
     total_week = len(tasks)
@@ -140,6 +161,93 @@ def cancel_task(task_id):
     return redirect(next_url)
 
 
+@bp.route('/task/<int:task_id>/not-completed', methods=['POST'])
+@login_required
+def mark_not_completed(task_id):
+    """Marcar tarea como NO cumplida, registrando la observacion del motivo."""
+    task = ScheduledTask.query.get_or_404(task_id)
+    if task.user_id != current_user.id and current_user.role not in ('admin', 'lider'):
+        abort(403)
+
+    reason = (request.form.get('reason') or '').strip()
+    if not reason:
+        flash('Debes registrar una observacion indicando por que no se cumplio.', 'danger')
+        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        return redirect(next_url)
+
+    task.status = 'no_cumplida'
+    task.non_compliance_reason = reason
+    task.completed_at = datetime.now(pytz.utc)
+    db.session.commit()
+    flash('Tarea marcada como NO cumplida. Observacion registrada.', 'info')
+
+    next_url = request.form.get('next') or url_for('schedule.my_schedule')
+    return redirect(next_url)
+
+
+@bp.route('/task/<int:task_id>/reschedule', methods=['POST'])
+@login_required
+def reschedule_task(task_id):
+    """Reprogramar una tarea a otra fecha/hora dejando rastro del cambio."""
+    task = ScheduledTask.query.get_or_404(task_id)
+    if task.user_id != current_user.id and current_user.role not in ('admin', 'lider'):
+        abort(403)
+    if task.status in ('cumplida', 'cancelada'):
+        flash('No se puede reprogramar una tarea cumplida o cancelada.', 'warning')
+        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        return redirect(next_url)
+
+    new_date_str = request.form.get('new_date')
+    reason = (request.form.get('reason') or '').strip()
+    new_start = (request.form.get('start_time') or '').strip()
+    new_end = (request.form.get('end_time') or '').strip()
+
+    if not new_date_str:
+        flash('Debes indicar la nueva fecha.', 'danger')
+        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        return redirect(next_url)
+    try:
+        new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('Formato de fecha invalido.', 'danger')
+        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        return redirect(next_url)
+
+    old_date = task.scheduled_date
+    old_time = task.time_range_display or 's/h'
+
+    # Construir entrada de rastro (append-only)
+    stamp = datetime.now(COLOMBIA_TZ).strftime('%d/%m/%Y %H:%M')
+    new_time = ''
+    if new_start and new_end:
+        new_time = f' {new_start}-{new_end}'
+    elif new_start:
+        new_time = f' {new_start}'
+    entry = (f'[{stamp}] {current_user.full_name or current_user.username}: '
+             f'{old_date.strftime("%d/%m/%Y")} ({old_time}) -> '
+             f'{new_date.strftime("%d/%m/%Y")}{new_time}'
+             f'{" | Motivo: " + reason if reason else ""}')
+    task.reschedule_log = (task.reschedule_log + '\n' + entry) if task.reschedule_log else entry
+    task.reschedule_count = (task.reschedule_count or 0) + 1
+
+    # Aplicar nueva programacion
+    task.scheduled_date = new_date
+    if new_start:
+        task.start_time = new_start
+    if new_end:
+        task.end_time = new_end
+    # Reactivar para seguimiento si estaba vencida/no cumplida
+    if task.status in ('no_cumplida',):
+        task.status = 'pendiente'
+        task.non_compliance_reason = None
+        task.completed_at = None
+
+    db.session.commit()
+    flash(f'Tarea reprogramada para {new_date.strftime("%d/%m/%Y")}. Cambio registrado.', 'success')
+    next_url = request.form.get('next') or url_for('schedule.my_schedule')
+    return redirect(next_url)
+
+
 @bp.route('/task/<int:task_id>/edit', methods=['POST'])
 @login_required
 def edit_task(task_id):
@@ -147,14 +255,17 @@ def edit_task(task_id):
     task = ScheduledTask.query.get_or_404(task_id)
     if task.user_id != current_user.id and current_user.role not in ('admin', 'lider'):
         abort(403)
-    if task.status in ('cumplida', 'cancelada'):
-        flash('No se puede editar una tarea cumplida o cancelada.', 'warning')
-        return redirect(url_for('schedule.my_schedule'))
+    if not task.is_editable:
+        flash('No se puede editar una tarea cumplida, no cumplida o cancelada.', 'warning')
+        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        return redirect(next_url)
 
     task.title = request.form.get('title', task.title).strip()
     task.description = request.form.get('description', '').strip()
     task.task_type = request.form.get('task_type', task.task_type)
     task.priority = request.form.get('priority', task.priority)
+    task.start_time = (request.form.get('start_time') or '').strip() or None
+    task.end_time = (request.form.get('end_time') or '').strip() or None
 
     new_date = request.form.get('scheduled_date')
     if new_date:
@@ -350,6 +461,8 @@ def assign_task():
         task_type = request.form.get('task_type', 'visita')
         priority = request.form.get('priority', 'media')
         ally_id = request.form.get('ally_id', type=int)
+        start_time = (request.form.get('start_time') or '').strip()
+        end_time = (request.form.get('end_time') or '').strip()
 
         if not title or not scheduled_date_str or not user_ids:
             flash('Titulo, fecha y al menos un empleado son requeridos.', 'danger')
@@ -375,6 +488,8 @@ def assign_task():
                 priority=priority,
                 validation_type=validation_type,
                 assigned_by=current_user.id,
+                start_time=start_time or None,
+                end_time=end_time or None,
             )
             db.session.add(task)
             count += 1

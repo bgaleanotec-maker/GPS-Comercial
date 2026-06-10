@@ -84,6 +84,8 @@ ACTIVITY_TYPES = [
 class VisitForm(FlaskForm):
     ally_id = SelectField('Aliado Visitado', coerce=int, validators=[DataRequired()])
     category = SelectField('Tipo de Actividad', choices=ACTIVITY_TYPES, validators=[DataRequired()])
+    start_time = StringField('Hora Inicio')  # "HH:MM" (input type=time)
+    end_time = StringField('Hora Fin')        # "HH:MM" (input type=time)
     observations = TextAreaField('Observaciones')
     evidence = FileField('Cargar Evidencia (Imagen o PDF)', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'pdf'], 'Solo se permiten imagenes y PDF!')])
     submit = SubmitField('Registrar Visita')
