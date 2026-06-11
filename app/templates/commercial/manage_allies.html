@@ -41,10 +41,19 @@
                             {{ form.category(class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-sm touch-target", placeholder="Comercial") }}
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Radio (metros)</label>
-                            {{ form.radius(class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-sm touch-target") }}
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Filial</label>
+                            {{ form.filial(class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-sm touch-target") }}
                         </div>
                     </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Radio (metros)</label>
+                        {{ form.radius(class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-sm touch-target") }}
+                    </div>
+                    {% if form.errors %}
+                    <div class="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-300">
+                        {% for field, errs in form.errors.items() %}{% for e in errs %}<p>{{ field }}: {{ e }}</p>{% endfor %}{% endfor %}
+                    </div>
+                    {% endif %}
                     <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-500 transition touch-target">Crear Aliado</button>
                 </form>
             </div>
