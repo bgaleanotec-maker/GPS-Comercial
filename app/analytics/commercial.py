@@ -435,6 +435,11 @@ def commercial_executive_detail(user_id):
     min_dwell = request.args.get('min_dwell', DEFAULT_MIN_DWELL, type=int)
     anomaly_km = request.args.get('anomaly_km', DEFAULT_ANOMALY_KM, type=int)
     map_date_str = request.args.get('map_date', '')
+    # Filtros que vienen de la vista general (se respetan y se conservan al volver)
+    include_distance = request.args.get('include_distance', '1') == '1'
+    selected_ids = request.args.getlist('employee_ids', type=int)
+    selected_allies = request.args.getlist('ally_ids', type=int)
+    ally_filter = set(selected_allies) if selected_allies else None
 
     try:
         start_d = datetime.strptime(start_str, '%Y-%m-%d').date()
@@ -465,6 +470,9 @@ def commercial_executive_detail(user_id):
     active_dates = set()
 
     for v in visits:
+        # Respetar el filtro de aliados si viene de la vista general
+        if ally_filter and v.ally_id not in ally_filter:
+            continue
         local = _fmt_dt_local(v.timestamp)
         wd = local.weekday()
         per_weekday[wd] += 1
@@ -545,9 +553,13 @@ def commercial_executive_detail(user_id):
                     map_route.append({'latitude': lat, 'longitude': lon,
                                       'speed': round((p.get('speed') or 0) * 1.852, 0)})
 
-    # Aliados del dia del mapa (para pintar marcadores)
-    map_allies = [{'name': a.name, 'lat': a.latitude, 'lon': a.longitude, 'radius': a.radius}
-                  for a in allies_map.values()]
+    # Aliados VISITADOS por este ejecutivo (marcadores fijos en el mapa)
+    map_allies = []
+    for aid in per_ally.keys():
+        a = allies_map.get(aid)
+        if a and a.latitude is not None and a.longitude is not None:
+            map_allies.append({'name': a.name, 'lat': a.latitude, 'lon': a.longitude,
+                               'radius': a.radius or 50, 'visits': per_ally[aid]['count']})
 
     stats = {
         'total': weekday_total, 'gps': gps_auto, 'manual': manual, 'pending': pending,
@@ -569,7 +581,9 @@ def commercial_executive_detail(user_id):
         timeline=timeline,
         map_route=map_route, map_allies=map_allies,
         map_date=map_date.strftime('%Y-%m-%d') if map_date else '',
-        min_dwell=min_dwell, anomaly_km=anomaly_km,
+        min_dwell=min_dwell, anomaly_km=anomaly_km, include_distance=include_distance,
+        selected_ids=selected_ids, selected_allies=selected_allies,
+        all_allies_list=sorted(allies_map.values(), key=lambda a: a.name),
         start_date=start_str, end_date=end_str,
         default_start=default_start.strftime('%Y-%m-%d'), today=today.strftime('%Y-%m-%d'),
         month_start=today.replace(day=1).strftime('%Y-%m-%d'),
