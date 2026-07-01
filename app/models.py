@@ -101,6 +101,11 @@ class Visit(db.Model):
     start_time = db.Column(db.String(5))  # Hora inicio "HH:MM"
     end_time = db.Column(db.String(5))    # Hora fin "HH:MM"
 
+    # Permanencia real en el radio del aliado (minutos), calculada desde el GPS.
+    # NULL = aun no calculada (pendiente de backfill). Permite filtrar visitas
+    # reales (>=30 min) vs pasadas rapidas.
+    dwell_minutes = db.Column(db.Float)
+
     # Clasificacion de movimiento
     movement_type = db.Column(db.String(20), default='vehicle')  # 'vehicle', 'walking', 'manual'
     avg_speed = db.Column(db.Float, default=0.0)

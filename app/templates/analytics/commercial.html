@@ -1,23 +1,45 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto py-4 px-3 sm:px-6 lg:px-8" x-data="{ execPicker: false }">
+<div class="max-w-7xl mx-auto py-4 px-3 sm:px-6 lg:px-8" x-data="{ execPicker: false, allyPicker: false }">
 
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
         <div>
             <h1 class="text-2xl font-bold text-slate-100">Analitica Comercial</h1>
-            <p class="text-sm text-slate-400">Visitas en radio de aliados y recorrido de ejecutivos — solo dias laborales (Lun a Vie)</p>
+            <p class="text-sm text-slate-400">Visitas en radio de aliados y recorrido — solo dias laborales (Lun a Vie)</p>
         </div>
         <div class="text-xs text-slate-500 text-right">
-            <div>Rango: {{ start_date }} → {{ end_date }}</div>
+            <div>{{ start_date }} → {{ end_date }}</div>
             <div>{{ kpis.working_days }} dias laborales · {{ kpis.months }} mes(es)</div>
         </div>
     </div>
 
+    <!-- Progreso backfill permanencia -->
+    {% if dwell_pending > 0 %}
+    <div class="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3" x-data="{ p: {{ dwell_pending }}, t: {{ dwell_total }}, run() { fetch('{{ url_for('analytics.commercial_backfill_dwell') }}', {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token() }}'}}).then(r=>r.json()).then(d=>{ this.p=d.pending; this.t=d.total; if(d.pending>0) setTimeout(()=>this.run(),800); else location.reload(); }); } }">
+        <div class="text-xs text-amber-300">
+            Calculando permanencia (min. en sitio) de visitas historicas:
+            <span x-text="(t - p)"></span> / <span x-text="t"></span> listas.
+            El filtro de ≥30 min sera exacto al terminar.
+        </div>
+        <button type="button" @click="run()" class="px-3 py-1.5 bg-amber-600 text-white text-xs rounded-lg hover:bg-amber-500 transition whitespace-nowrap">Acelerar ahora</button>
+    </div>
+    {% endif %}
+
+    <!-- Filtros rapidos -->
+    <div class="flex flex-wrap gap-2 mb-3">
+        <a href="{{ url_for('analytics.commercial_analytics', start_date=month_start, end_date=today, include_distance='1' if include_distance else '0', min_dwell=min_dwell, employee_ids=selected_ids, ally_ids=selected_allies) }}"
+           class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == month_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Mes actual</a>
+        <a href="{{ url_for('analytics.commercial_analytics', start_date=two_months_start, end_date=today, include_distance='1' if include_distance else '0', min_dwell=min_dwell, employee_ids=selected_ids, ally_ids=selected_allies) }}"
+           class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == two_months_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Ultimos 2 meses</a>
+        <a href="{{ url_for('analytics.commercial_analytics', start_date=default_start, end_date=today, include_distance='1' if include_distance else '0', min_dwell=min_dwell, employee_ids=selected_ids, ally_ids=selected_allies) }}"
+           class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == default_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Total historico</a>
+    </div>
+
     <!-- Filtros -->
     <form method="get" class="bg-slate-900 rounded-2xl border border-slate-800/50 p-4 mb-6 space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
             <div>
                 <label class="block text-xs font-medium text-slate-400 mb-1">Desde</label>
                 <input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500">
@@ -27,35 +49,61 @@
                 <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
-                <label class="block text-xs font-medium text-slate-400 mb-1">Recorrido (Traccar)</label>
-                <select name="include_distance" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500">
-                    <option value="1" {% if include_distance %}selected{% endif %}>Incluir recorrido</option>
-                    <option value="0" {% if not include_distance %}selected{% endif %}>Solo visitas (mas rapido)</option>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Permanencia min.</label>
+                <select name="min_dwell" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500">
+                    <option value="0" {% if min_dwell == 0 %}selected{% endif %}>Todas</option>
+                    <option value="30" {% if min_dwell == 30 %}selected{% endif %}>Solo ≥30 min</option>
+                    <option value="15" {% if min_dwell == 15 %}selected{% endif %}>Solo ≥15 min</option>
+                    <option value="60" {% if min_dwell == 60 %}selected{% endif %}>Solo ≥60 min</option>
                 </select>
             </div>
-            <div class="flex gap-2">
-                <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-500 transition">Aplicar</button>
-                <a href="{{ url_for('analytics.commercial_analytics') }}" class="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-sm hover:bg-slate-700 transition">Reset</a>
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Km/dia anomalo ></label>
+                <input type="number" name="anomaly_km" value="{{ anomaly_km }}" min="50" step="50" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Recorrido</label>
+                <select name="include_distance" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500">
+                    <option value="1" {% if include_distance %}selected{% endif %}>Incluir km</option>
+                    <option value="0" {% if not include_distance %}selected{% endif %}>Solo visitas</option>
+                </select>
             </div>
         </div>
 
-        <!-- Selector de ejecutivos -->
-        <div>
-            <button type="button" @click="execPicker = !execPicker" class="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
-                <svg class="w-4 h-4 transition-transform" :class="{'rotate-180': execPicker}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-                Seleccionar ejecutivos
-                {% if selected_ids %}<span class="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded text-[10px]">{{ selected_ids|length }} seleccionados</span>{% else %}<span class="text-slate-500">(todos)</span>{% endif %}
-            </button>
-            <div x-show="execPicker" x-cloak class="mt-3 p-3 bg-slate-800/50 border border-slate-700 rounded-xl">
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-56 overflow-y-auto">
+        <div class="flex flex-wrap gap-4">
+            <!-- Selector ejecutivos -->
+            <div class="flex-1 min-w-[220px]">
+                <button type="button" @click="execPicker = !execPicker" class="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                    <svg class="w-4 h-4 transition-transform" :class="{'rotate-180': execPicker}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                    Ejecutivos {% if selected_ids %}<span class="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded text-[10px]">{{ selected_ids|length }}</span>{% else %}<span class="text-slate-500">(todos)</span>{% endif %}
+                </button>
+                <div x-show="execPicker" x-cloak class="mt-2 p-3 bg-slate-800/50 border border-slate-700 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-52 overflow-y-auto">
                     {% for e in all_execs %}
-                    <label class="flex items-center gap-2 text-xs text-slate-300 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-pointer">
+                    <label class="flex items-center gap-2 text-xs text-slate-300 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
                         <input type="checkbox" name="employee_ids" value="{{ e.id }}" {% if e.id in selected_ids %}checked{% endif %} class="rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-500">
                         <span class="truncate">{{ e.full_name or e.username }}</span>
                     </label>
                     {% endfor %}
                 </div>
-                <p class="text-[11px] text-slate-500 mt-2">Sin selección = todos los ejecutivos. Aplica los filtros tras seleccionar.</p>
+            </div>
+            <!-- Selector aliados -->
+            <div class="flex-1 min-w-[220px]">
+                <button type="button" @click="allyPicker = !allyPicker" class="text-xs font-medium text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                    <svg class="w-4 h-4 transition-transform" :class="{'rotate-180': allyPicker}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                    Aliados {% if selected_allies %}<span class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-[10px]">{{ selected_allies|length }}</span>{% else %}<span class="text-slate-500">(todos)</span>{% endif %}
+                </button>
+                <div x-show="allyPicker" x-cloak class="mt-2 p-3 bg-slate-800/50 border border-slate-700 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-52 overflow-y-auto">
+                    {% for a in all_allies_list %}
+                    <label class="flex items-center gap-2 text-xs text-slate-300 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
+                        <input type="checkbox" name="ally_ids" value="{{ a.id }}" {% if a.id in selected_allies %}checked{% endif %} class="rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500">
+                        <span class="truncate">{{ a.name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="flex items-end gap-2">
+                <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-500 transition">Aplicar</button>
+                <a href="{{ url_for('analytics.commercial_analytics') }}" class="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-sm hover:bg-slate-700 transition">Reset</a>
             </div>
         </div>
     </form>
@@ -64,15 +112,15 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         <div class="bg-slate-900 rounded-2xl border border-indigo-500/20 p-4 text-center">
             <div class="text-2xl font-bold text-indigo-400">{{ kpis.total_visitas }}</div>
-            <div class="text-[11px] text-slate-500 mt-1">Visitas en radio (L-V)</div>
+            <div class="text-[11px] text-slate-500 mt-1">Visitas{% if min_dwell %} (≥{{ min_dwell }}min){% endif %}</div>
         </div>
         <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-4 text-center">
             <div class="text-2xl font-bold text-emerald-400">{{ kpis.avg_dia }}</div>
-            <div class="text-[11px] text-slate-500 mt-1">Promedio / dia laboral</div>
+            <div class="text-[11px] text-slate-500 mt-1">Prom / dia laboral</div>
         </div>
         <div class="bg-slate-900 rounded-2xl border border-amber-500/20 p-4 text-center">
             <div class="text-2xl font-bold text-amber-400">{{ kpis.avg_mes }}</div>
-            <div class="text-[11px] text-slate-500 mt-1">Promedio / mes</div>
+            <div class="text-[11px] text-slate-500 mt-1">Prom / mes</div>
         </div>
         <div class="bg-slate-900 rounded-2xl border border-blue-500/20 p-4 text-center">
             <div class="text-2xl font-bold text-blue-400">{{ kpis.gps_auto }}</div>
@@ -88,21 +136,25 @@
         </div>
     </div>
 
+    {% if min_dwell and kpis.pending %}
+    <p class="text-[11px] text-amber-400 mb-4">Nota: {{ kpis.pending }} visita(s) en el rango aun sin permanencia calculada (no incluidas en el conteo ≥{{ min_dwell }}min).</p>
+    {% endif %}
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- Ranking por visitas -->
         <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
             <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
-                <h2 class="text-sm font-semibold text-slate-300">Ejecutivos · Visitas en radio (L-V)</h2>
+                <h2 class="text-sm font-semibold text-slate-300">Ejecutivos · Visitas en radio</h2>
                 <span class="text-xs text-slate-500">{{ kpis.activos }}/{{ kpis.ejecutivos }} activos</span>
             </div>
-            <div class="divide-y divide-slate-800/50 max-h-[480px] overflow-y-auto">
+            <div class="divide-y divide-slate-800/50 max-h-[460px] overflow-y-auto">
                 {% for r in ranking_visitas %}
-                <a href="{{ url_for('analytics.commercial_executive_detail', user_id=r.id, start_date=start_date, end_date=end_date) }}"
+                <a href="{{ url_for('analytics.commercial_executive_detail', user_id=r.id, start_date=start_date, end_date=end_date, min_dwell=min_dwell, anomaly_km=anomaly_km) }}"
                    class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/40 transition">
-                    <div class="w-7 text-center text-sm font-bold {% if loop.index <= 3 %}text-amber-400{% else %}text-slate-500{% endif %}">{{ loop.index }}</div>
+                    <div class="w-6 text-center text-sm font-bold {% if loop.index <= 3 %}text-amber-400{% else %}text-slate-500{% endif %}">{{ loop.index }}</div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-slate-100 truncate">{{ r.name }}</p>
-                        <p class="text-[11px] text-slate-500">{{ r.categoria }} · {{ r.allies }} aliados · prom {{ r.avg_day }}/dia</p>
+                        <p class="text-[11px] text-slate-500">{{ r.allies }} aliados distintos · prom {{ r.avg_day }}/dia</p>
                     </div>
                     <div class="text-right">
                         <div class="text-sm font-bold text-indigo-400">{{ r.total }}</div>
@@ -111,7 +163,7 @@
                     <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
                 </a>
                 {% else %}
-                <div class="px-4 py-8 text-center text-sm text-slate-500">Sin datos en el rango</div>
+                <div class="px-4 py-8 text-center text-sm text-slate-500">Sin datos</div>
                 {% endfor %}
             </div>
         </div>
@@ -120,54 +172,52 @@
         <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
             <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
                 <h2 class="text-sm font-semibold text-slate-300">Ejecutivos · Recorrido (km)</h2>
-                <span class="text-xs text-slate-500">Traccar</span>
+                <span class="text-xs text-slate-500">excl. dias > {{ anomaly_km }}km</span>
             </div>
-            <div class="divide-y divide-slate-800/50 max-h-[480px] overflow-y-auto">
+            <div class="divide-y divide-slate-800/50 max-h-[460px] overflow-y-auto">
                 {% if not include_distance %}
-                <div class="px-4 py-8 text-center text-sm text-slate-500">Recorrido desactivado. Actívalo en el filtro para ver km.</div>
+                <div class="px-4 py-8 text-center text-sm text-slate-500">Recorrido desactivado.</div>
                 {% else %}
                 {% for r in ranking_recorrido %}
-                <a href="{{ url_for('analytics.commercial_executive_detail', user_id=r.id, start_date=start_date, end_date=end_date) }}"
+                <a href="{{ url_for('analytics.commercial_executive_detail', user_id=r.id, start_date=start_date, end_date=end_date, min_dwell=min_dwell, anomaly_km=anomaly_km) }}"
                    class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/40 transition">
-                    <div class="w-7 text-center text-sm font-bold {% if loop.index <= 3 %}text-emerald-400{% else %}text-slate-500{% endif %}">{{ loop.index }}</div>
+                    <div class="w-6 text-center text-sm font-bold {% if loop.index <= 3 %}text-emerald-400{% else %}text-slate-500{% endif %}">{{ loop.index }}</div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-slate-100 truncate">{{ r.name }}</p>
-                        <p class="text-[11px] text-slate-500">dia {{ r.km_day }} · sem {{ r.km_week }} · mes {{ r.km_month }} km</p>
+                        <p class="text-[11px] text-slate-500">med/dia {{ r.km_med_day }} · {{ r.active_days }} dias activos</p>
                     </div>
                     <div class="text-right">
                         <div class="text-sm font-bold text-emerald-400">{{ r.km_total }}<span class="text-[10px] text-slate-500"> km</span></div>
+                        <div class="text-[10px] text-slate-500">{{ r.km_day }}/dia</div>
                     </div>
                     <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
                 </a>
                 {% else %}
-                <div class="px-4 py-8 text-center text-sm text-slate-500">Sin datos de recorrido (dispositivos no asignados o Traccar sin respuesta)</div>
+                <div class="px-4 py-8 text-center text-sm text-slate-500">Sin datos de recorrido</div>
                 {% endfor %}
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Tabla completa por ejecutivo -->
+    <!-- Tabla completa -->
     <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden mb-6">
-        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800">
-            <h2 class="text-sm font-semibold text-slate-300">Detalle por ejecutivo</h2>
-        </div>
+        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800"><h2 class="text-sm font-semibold text-slate-300">Resumen por ejecutivo</h2></div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-[11px] uppercase text-slate-500 border-b border-slate-800">
                         <th class="text-left px-4 py-2 font-medium">Ejecutivo</th>
-                        <th class="text-right px-3 py-2 font-medium">Visitas</th>
-                        <th class="text-right px-3 py-2 font-medium">GPS</th>
-                        <th class="text-right px-3 py-2 font-medium">Manual</th>
-                        <th class="text-right px-3 py-2 font-medium">Aliados</th>
-                        <th class="text-right px-3 py-2 font-medium">Prom/dia</th>
-                        <th class="text-right px-3 py-2 font-medium">Prom/mes</th>
-                        <th class="text-right px-3 py-2 font-medium">Km total</th>
-                        <th class="text-right px-3 py-2 font-medium">Km/dia</th>
-                        <th class="text-right px-3 py-2 font-medium">Km/sem</th>
-                        <th class="text-right px-3 py-2 font-medium">Km/mes</th>
-                        <th class="text-left px-3 py-2 font-medium">Ult. visita</th>
+                        <th class="text-right px-2 py-2 font-medium">Visitas</th>
+                        <th class="text-right px-2 py-2 font-medium">Aliados</th>
+                        <th class="text-right px-2 py-2 font-medium" title="% de visitas concentradas en su aliado mas visitado">Concentr.</th>
+                        <th class="text-right px-2 py-2 font-medium">Prom/dia</th>
+                        <th class="text-right px-2 py-2 font-medium">Km total</th>
+                        <th class="text-right px-2 py-2 font-medium">Km/dia</th>
+                        <th class="text-right px-2 py-2 font-medium">Mediana km/dia</th>
+                        <th class="text-right px-2 py-2 font-medium">Km/mes</th>
+                        <th class="text-right px-2 py-2 font-medium">Dias act/inact</th>
+                        <th class="text-left px-3 py-2 font-medium">Ult.</th>
                         <th class="px-2 py-2"></th>
                     </tr>
                 </thead>
@@ -178,34 +228,29 @@
                             <div class="font-medium text-slate-100">{{ r.name }}</div>
                             <div class="text-[11px] text-slate-500">{{ r.categoria }}{% if r.device %} · {{ r.device }}{% endif %}</div>
                         </td>
-                        <td class="text-right px-3 py-2.5 font-bold text-indigo-400">{{ r.total }}</td>
-                        <td class="text-right px-3 py-2.5 text-slate-300">{{ r.gps }}</td>
-                        <td class="text-right px-3 py-2.5 text-slate-300">{{ r.manual }}</td>
-                        <td class="text-right px-3 py-2.5 text-slate-300">{{ r.allies }}</td>
-                        <td class="text-right px-3 py-2.5 text-slate-300">{{ r.avg_day }}</td>
-                        <td class="text-right px-3 py-2.5 text-slate-300">{{ r.avg_month }}</td>
-                        <td class="text-right px-3 py-2.5 font-medium text-emerald-400">{{ r.km_total if r.km_total is not none else '—' }}</td>
-                        <td class="text-right px-3 py-2.5 text-slate-400">{{ r.km_day if r.km_day is not none else '—' }}</td>
-                        <td class="text-right px-3 py-2.5 text-slate-400">{{ r.km_week if r.km_week is not none else '—' }}</td>
-                        <td class="text-right px-3 py-2.5 text-slate-400">{{ r.km_month if r.km_month is not none else '—' }}</td>
+                        <td class="text-right px-2 py-2.5 font-bold text-indigo-400">{{ r.total }}</td>
+                        <td class="text-right px-2 py-2.5 text-slate-300">{{ r.allies }}</td>
+                        <td class="text-right px-2 py-2.5 text-slate-400">{% if r.top_ally_share %}{{ r.top_ally_share|int }}%{% else %}—{% endif %}</td>
+                        <td class="text-right px-2 py-2.5 text-slate-300">{{ r.avg_day }}</td>
+                        <td class="text-right px-2 py-2.5 font-medium text-emerald-400">{{ r.km_total if r.km_total is not none else '—' }}</td>
+                        <td class="text-right px-2 py-2.5 text-slate-400">{{ r.km_day if r.km_day is not none else '—' }}</td>
+                        <td class="text-right px-2 py-2.5 text-slate-400">{{ r.km_med_day if r.km_med_day is not none else '—' }}</td>
+                        <td class="text-right px-2 py-2.5 text-slate-400">{{ r.km_month if r.km_month is not none else '—' }}</td>
+                        <td class="text-right px-2 py-2.5 text-slate-400">{% if r.active_days is not none %}<span class="text-emerald-400">{{ r.active_days }}</span>/<span class="text-red-400">{{ r.inactive_days }}</span>{% else %}—{% endif %}</td>
                         <td class="px-3 py-2.5 text-slate-400 text-xs">{{ r.last }}</td>
-                        <td class="px-2 py-2.5 text-right">
-                            <a href="{{ url_for('analytics.commercial_executive_detail', user_id=r.id, start_date=start_date, end_date=end_date) }}" class="text-indigo-400 hover:text-indigo-300 text-xs font-medium">Zoom →</a>
-                        </td>
+                        <td class="px-2 py-2.5 text-right"><a href="{{ url_for('analytics.commercial_executive_detail', user_id=r.id, start_date=start_date, end_date=end_date, min_dwell=min_dwell, anomaly_km=anomaly_km) }}" class="text-indigo-400 hover:text-indigo-300 text-xs font-medium">Zoom →</a></td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="13" class="px-4 py-8 text-center text-sm text-slate-500">Sin datos</td></tr>
+                    <tr><td colspan="12" class="px-4 py-8 text-center text-sm text-slate-500">Sin datos</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Aliados mas visitados -->
+    <!-- Aliados -->
     <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
-        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800">
-            <h2 class="text-sm font-semibold text-slate-300">Aliados mas visitados (L-V)</h2>
-        </div>
+        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800"><h2 class="text-sm font-semibold text-slate-300">Aliados mas visitados</h2></div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
@@ -214,6 +259,7 @@
                         <th class="text-left px-3 py-2 font-medium">Categoria</th>
                         <th class="text-left px-3 py-2 font-medium">Filial</th>
                         <th class="text-right px-3 py-2 font-medium">Visitas</th>
+                        <th class="text-right px-3 py-2 font-medium">Ejecutivos</th>
                         <th class="text-right px-3 py-2 font-medium">Prom/dia</th>
                         <th class="text-right px-4 py-2 font-medium">Prom/mes</th>
                     </tr>
@@ -225,11 +271,12 @@
                         <td class="px-3 py-2.5 text-slate-400">{{ a.category }}</td>
                         <td class="px-3 py-2.5 text-slate-400">{{ a.filial }}</td>
                         <td class="text-right px-3 py-2.5 font-bold text-indigo-400">{{ a.visits }}</td>
+                        <td class="text-right px-3 py-2.5 text-slate-300">{{ a.execs }}</td>
                         <td class="text-right px-3 py-2.5 text-slate-300">{{ a.avg_day }}</td>
                         <td class="text-right px-4 py-2.5 text-slate-300">{{ a.avg_month }}</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">Sin visitas en el rango</td></tr>
+                    <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-500">Sin visitas</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

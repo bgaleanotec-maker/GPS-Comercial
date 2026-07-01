@@ -160,6 +160,35 @@ def get_device_summary(device_id, from_time, to_time):
         return None
 
 
+def get_device_summary_daily(device_id, from_time, to_time):
+    """Obtiene el resumen de Traccar agrupado POR DIA (daily=true).
+    Devuelve una lista con una fila por dia (distance en metros, maxSpeed, etc.).
+    Clave para medianas, dias activos/inactivos y filtrado de dias anomalos.
+    """
+    base_url = current_app.config['TRACCAR_URL']
+    session = _get_traccar_session()
+    params = {
+        'deviceId': [device_id],
+        'from': from_time.astimezone(pytz.utc).isoformat(),
+        'to': to_time.astimezone(pytz.utc).isoformat(),
+        'daily': 'true',
+    }
+    try:
+        response = session.get(
+            f"{base_url}/api/reports/summary",
+            params=params,
+            timeout=30
+        )
+        response.raise_for_status()
+        if response.text:
+            data = response.json()
+            return data if isinstance(data, list) else []
+        return []
+    except requests.exceptions.RequestException as e:
+        logger.error("Error al obtener resumen diario de Traccar para %s: %s", device_id, e)
+        return None
+
+
 def get_device_route(device_id, from_time, to_time):
     """Obtiene el reporte de ruta (lista de puntos) para un dispositivo."""
     base_url = current_app.config['TRACCAR_URL']
