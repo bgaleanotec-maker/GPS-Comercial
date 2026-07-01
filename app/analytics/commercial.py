@@ -22,7 +22,9 @@ from app.models import Visit, Ally, User
 from app.traccar import get_devices, get_device_summary_daily, get_device_route
 
 DEFAULT_ANOMALY_KM = 600
-DEFAULT_MIN_DWELL = 0
+# Definicion estandar de VISITA VALIDA en toda la analitica:
+# el ejecutivo estuvo dentro del radio del aliado mas de 15 minutos.
+DEFAULT_MIN_DWELL = 15
 
 
 def _fmt_dt_local(dt):
@@ -553,13 +555,20 @@ def commercial_executive_detail(user_id):
                     map_route.append({'latitude': lat, 'longitude': lon,
                                       'speed': round((p.get('speed') or 0) * 1.852, 0)})
 
-    # Aliados VISITADOS por este ejecutivo (marcadores fijos en el mapa)
+    # TODOS los aliados en el mapa (fijos). El numero grande = veces que el ejecutivo
+    # estuvo en ese radio mas del umbral de permanencia (>15 min por defecto).
+    # Si hay filtro de aliados activo, se muestran solo esos.
     map_allies = []
-    for aid in per_ally.keys():
-        a = allies_map.get(aid)
-        if a and a.latitude is not None and a.longitude is not None:
-            map_allies.append({'name': a.name, 'lat': a.latitude, 'lon': a.longitude,
-                               'radius': a.radius or 50, 'visits': per_ally[aid]['count']})
+    for aid, a in allies_map.items():
+        if a.latitude is None or a.longitude is None:
+            continue
+        if ally_filter and aid not in ally_filter:
+            continue
+        cnt = per_ally[aid]['count'] if aid in per_ally else 0
+        map_allies.append({'name': a.name, 'lat': a.latitude, 'lon': a.longitude,
+                           'radius': a.radius or 50, 'visits': cnt})
+    # Ordenar para que los mas visitados queden encima
+    map_allies.sort(key=lambda m: m['visits'])
 
     stats = {
         'total': weekday_total, 'gps': gps_auto, 'manual': manual, 'pending': pending,
