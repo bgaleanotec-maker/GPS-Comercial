@@ -10,6 +10,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
                                 TableStyle, PageBreak)
+from reportlab.graphics.shapes import Drawing, PolyLine, Circle, Rect, String
+from reportlab.graphics.charts.barcharts import HorizontalBarChart
 
 COLOMBIA_TZ = pytz.timezone('America/Bogota')
 
@@ -91,7 +93,78 @@ def _nivel_color(n):
     return {'Alto': EMERALD, 'Medio': AMBER, 'Bajo': RED}.get(n, SLATE)
 
 
-def build_commercial_pdf(ctx):
+def _score_bar_chart(ranking):
+    """Grafico de barras horizontales del score de productividad."""
+    r = list(reversed(ranking))  # mejor arriba
+    names = [x['name'] for x in r]
+    scores = [x['score'] for x in r]
+    n = len(names)
+    h = max(90, 16 * n + 40)
+    d = Drawing(760, h)
+    bc = HorizontalBarChart()
+    bc.x = 150
+    bc.y = 15
+    bc.height = h - 30
+    bc.width = 570
+    bc.data = [scores]
+    bc.strokeColor = colors.white
+    bc.valueAxis.valueMin = 0
+    bc.valueAxis.valueMax = 100
+    bc.valueAxis.valueStep = 20
+    bc.valueAxis.labels.fontSize = 7
+    bc.categoryAxis.categoryNames = names
+    bc.categoryAxis.labels.fontSize = 7
+    bc.categoryAxis.labels.dx = -2
+    bc.bars[0].fillColor = INDIGO
+    bc.bars[0].strokeColor = colors.white
+    bc.barLabels.fontSize = 7
+    bc.barLabelFormat = '%d'
+    bc.barLabels.dx = 6
+    d.add(bc)
+    return d
+
+
+def _sample(points, maxn=400):
+    if len(points) <= maxn:
+        return points
+    step = len(points) / maxn
+    return [points[int(i * step)] for i in range(maxn)]
+
+
+def _route_plot(points, name, day, w=175, h=135):
+    """Dibuja la silueta del recorrido (sin tiles) normalizada a un recuadro."""
+    points = _sample(points)
+    d = Drawing(w, h)
+    d.add(Rect(0, 0, w, h, fillColor=colors.HexColor('#f8fafc'), strokeColor=colors.HexColor('#e2e8f0')))
+    lats = [p[0] for p in points]
+    lons = [p[1] for p in points]
+    minlat, maxlat = min(lats), max(lats)
+    minlon, maxlon = min(lons), max(lons)
+    span_lat = (maxlat - minlat) or 1e-6
+    span_lon = (maxlon - minlon) or 1e-6
+    pad = 10
+    top = 16  # espacio para el titulo
+    s = min((w - 2 * pad) / span_lon, (h - pad - top) / span_lat)
+    off_x = ((w - 2 * pad) - span_lon * s) / 2
+    off_y = ((h - pad - top) - span_lat * s) / 2
+
+    def tx(lon):
+        return pad + off_x + (lon - minlon) * s
+
+    def ty(lat):
+        return pad + off_y + (lat - minlat) * s
+
+    coords = []
+    for la, lo in points:
+        coords.extend([tx(lo), ty(la)])
+    d.add(PolyLine(coords, strokeColor=INDIGO, strokeWidth=1.1))
+    d.add(Circle(tx(points[0][1]), ty(points[0][0]), 2.4, fillColor=EMERALD, strokeColor=EMERALD))
+    d.add(Circle(tx(points[-1][1]), ty(points[-1][0]), 2.4, fillColor=RED, strokeColor=RED))
+    d.add(String(6, h - 11, f'{name[:26]}  ({day})', fontSize=7, fillColor=INK))
+    return d
+
+
+def build_commercial_pdf(ctx, routes=None):
     """Construye el PDF y devuelve un BytesIO listo para enviar."""
     buf = BytesIO()
     ss = _styles()
@@ -132,6 +205,11 @@ def build_commercial_pdf(ctx):
             st.append(('FONTNAME', (3, i), (3, i), 'Helvetica-Bold'))
         t.setStyle(TableStyle(st))
         story.append(t)
+        story.append(Spacer(1, 10))
+
+        # Grafico de barras del score
+        story.append(Paragraph('Ranking de productividad (score 0-100)', ss['H2x']))
+        story.append(_score_bar_chart(comp['ranking']))
         story.append(Spacer(1, 8))
 
         # Grupos: los que se parecen
@@ -177,6 +255,30 @@ def build_commercial_pdf(ctx):
                       str(a['execs']), _num(a['avg_day']), _num(a['avg_month'])])
     story.append(_table(adata, [7.0 * cm, 3.5 * cm, 2.5 * cm, 2.0 * cm, 2.3 * cm, 2.0 * cm, 2.0 * cm],
                         header_bg=EMERALD, align_right_from=3))
+
+    # --- Recorridos (mapa de ruta por ejecutivo, dia representativo) ---
+    if routes:
+        story.append(PageBreak())
+        story.append(Paragraph('Recorridos por ejecutivo', ss['H2x']))
+        story.append(Paragraph('Silueta del recorrido GPS del ultimo dia con visita de cada ejecutivo '
+                               '(verde = inicio, rojo = fin).', ss['Smallx']))
+        story.append(Spacer(1, 6))
+        plots = [_route_plot(r['points'], r['name'], r['date']) for r in routes]
+        per_row = 4
+        grid = []
+        for i in range(0, len(plots), per_row):
+            row = plots[i:i + per_row]
+            while len(row) < per_row:
+                row.append('')
+            grid.append(row)
+        gt = Table(grid, colWidths=[6.4 * cm] * per_row)
+        gt.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(gt)
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     buf.seek(0)

@@ -314,6 +314,8 @@ def _commercial_context():
             'inactive_days': dstats['inactive_days'] if dstats else None,
             'avg_dwell': round(d['dwell_sum'] / d['dwell_n'], 0) if (d and d['dwell_n']) else None,
             'last': _fmt_dt_local(d['last']).strftime('%d/%m/%Y') if (d and d['last']) else '—',
+            'device_id': u.traccar_device_id,
+            'last_local': _fmt_dt_local(d['last']).strftime('%Y-%m-%d') if (d and d['last']) else None,
         })
 
     ranking_visitas = sorted(rows, key=lambda r: r['total'], reverse=True)
@@ -390,7 +392,27 @@ def commercial_pdf():
     from flask import send_file
     from app.analytics.pdf_report import build_commercial_pdf
     ctx = _commercial_context()
-    buf = build_commercial_pdf(ctx)
+
+    # Recorridos para el PDF: 1 dia representativo (ultimo dia con visita) por ejecutivo.
+    # Limitado a los ejecutivos con actividad para no sobrecargar Traccar en la peticion.
+    routes = []
+    MAX_MAPS = 12
+    candidates = [r for r in ctx['rows'] if r.get('device_id') and r.get('last_local') and r['total'] > 0]
+    candidates = sorted(candidates, key=lambda r: r['total'], reverse=True)[:MAX_MAPS]
+    for r in candidates:
+        try:
+            day = datetime.strptime(r['last_local'], '%Y-%m-%d').date()
+            m_start = COLOMBIA_TZ.localize(datetime.combine(day, datetime.min.time()))
+            m_end = m_start + timedelta(days=1)
+            route = get_device_route(r['device_id'], m_start, m_end)
+            pts = [(p.get('latitude'), p.get('longitude')) for p in (route or [])
+                   if p.get('latitude') is not None and p.get('longitude') is not None]
+            if len(pts) >= 2:
+                routes.append({'name': r['name'], 'date': r['last'], 'points': pts})
+        except Exception:
+            continue
+
+    buf = build_commercial_pdf(ctx, routes=routes)
     fname = f"Analitica_Comercial_{ctx['start_date']}_a_{ctx['end_date']}.pdf"
     return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=fname)
 
