@@ -22,6 +22,7 @@ _last_report_sent_day = None
 _last_task_summary_sent_day = None
 _last_task_overdue_check_hour = -1
 _dwell_today_cycle = 0
+_prox_today_cycle = 0
 
 
 def check_for_visits(app, device, all_allies):
@@ -278,20 +279,19 @@ def _background_loop(app):
                     generate_recurring_tasks()
                 except Exception as ge:
                     logger.debug("Generacion tareas recurrentes: %s", ge)
-                # Backfill incremental de permanencia (dwell) de visitas historicas
+                # Reproceso incremental de visitas por PROXIMIDAD (trayectoria vs aliados)
                 try:
-                    from app.analytics.dwell import backfill_dwell_batch, refresh_today_dwell
-                    done = backfill_dwell_batch(app, batch_size=60)
-                    if done:
-                        logger.info("Dwell backfill: %d visitas procesadas", done)
-                    # Recalcular dwell de hoy cada ~15 min (siguen acumulando durante el dia)
-                    global _dwell_today_cycle
-                    _dwell_today_cycle += 1
-                    if _dwell_today_cycle >= 15:
-                        _dwell_today_cycle = 0
-                        refresh_today_dwell(app)
-                except Exception as de:
-                    logger.debug("Dwell backfill: %s", de)
+                    from app.analytics.proximity import backfill_proximity_step, refresh_proximity_today
+                    step = backfill_proximity_step(app, max_days=2)
+                    if step and step > 0:
+                        logger.info("Proximity backfill: %d dia(s) procesados", step)
+                    global _prox_today_cycle
+                    _prox_today_cycle += 1
+                    if _prox_today_cycle >= 10:   # reprocesar hoy cada ~10 min
+                        _prox_today_cycle = 0
+                        refresh_proximity_today(app)
+                except Exception as pe:
+                    logger.debug("Proximity backfill: %s", pe)
                 # WhatsApp: alertas de tareas vencidas (cada hora en horario laboral)
                 try:
                     global _last_task_overdue_check_hour

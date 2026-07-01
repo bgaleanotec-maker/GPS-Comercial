@@ -18,7 +18,7 @@ from flask_login import login_required, current_user
 
 from app.analytics import bp
 from app.analytics.routes import _count_working_days, _count_months, COLOMBIA_TZ
-from app.models import Visit, Ally, User
+from app.models import Visit, Ally, User, ProximityVisit
 from app.traccar import get_devices, get_device_summary_daily, get_device_route, get_device_positions
 
 DEFAULT_ANOMALY_KM = 600
@@ -243,9 +243,11 @@ def _commercial_context():
     devices = get_devices() if include_distance else None
     device_map = {d['id']: d['name'] for d in devices} if devices else {}
 
-    visits = Visit.query.filter(
-        Visit.timestamp >= start_utc,
-        Visit.timestamp < end_utc,
+    # Visitas por PROXIMIDAD (trayectoria a <=1000m del aliado), reprocesadas en la
+    # tabla proximity_visit. Ya vienen deduplicadas: 1 por (usuario, aliado, dia).
+    pvisits = ProximityVisit.query.filter(
+        ProximityVisit.visit_date >= start_d,
+        ProximityVisit.visit_date <= end_d,
     ).all()
 
     per_exec = defaultdict(lambda: {'total': 0, 'gps': 0, 'manual': 0, 'allies': defaultdict(int),
@@ -253,44 +255,21 @@ def _commercial_context():
     ally_counter = defaultdict(int)
     total_weekday_visits = 0
     total_pending = 0
-    seen_day_ally = set()   # (user, ally, dia) -> maximo 1 visita por dia por aliado
 
-    for v in visits:
-        # Una visita valida requiere estar en el radio de un aliado registrado
-        if not v.ally_id:
-            continue
-        local = _fmt_dt_local(v.timestamp)
-        if local.weekday() >= 5:
+    for v in pvisits:
+        if v.visit_date.weekday() >= 5:   # solo L-V
             continue
         if v.user_id not in target_ids:
             continue
         if ally_filter and v.ally_id not in ally_filter:
             continue
-        # Solo 1 visita por dia por aliado (evita ruido de multiples registros)
-        _k = (v.user_id, v.ally_id, local.date())
-        if _k in seen_day_ally:
-            continue
-        seen_day_ally.add(_k)
-        ok, pending = _visit_passes(v, min_dwell)
-        if pending:
-            per_exec[v.user_id]['pending'] += 1
-            total_pending += 1
-        if not ok:
-            continue
         e = per_exec[v.user_id]
         e['total'] += 1
-        if v.is_manual:
-            e['manual'] += 1
-        else:
-            e['gps'] += 1
-        if v.ally_id:
-            e['allies'][v.ally_id] += 1
-            ally_counter[v.ally_id] += 1
-        if v.dwell_minutes is not None:
-            e['dwell_sum'] += v.dwell_minutes
-            e['dwell_n'] += 1
-        if e['last'] is None or v.timestamp > e['last']:
-            e['last'] = v.timestamp
+        e['gps'] += 1
+        e['allies'][v.ally_id] += 1
+        ally_counter[v.ally_id] += 1
+        if e['last'] is None or v.visit_date > e['last']:
+            e['last'] = v.visit_date
         total_weekday_visits += 1
 
     rows = []
@@ -326,9 +305,9 @@ def _commercial_context():
             'active_days': dstats['active_days'] if dstats else None,
             'inactive_days': dstats['inactive_days'] if dstats else None,
             'avg_dwell': round(d['dwell_sum'] / d['dwell_n'], 0) if (d and d['dwell_n']) else None,
-            'last': _fmt_dt_local(d['last']).strftime('%d/%m/%Y') if (d and d['last']) else '—',
+            'last': d['last'].strftime('%d/%m/%Y') if (d and d['last']) else '—',
             'device_id': u.traccar_device_id,
-            'last_local': _fmt_dt_local(d['last']).strftime('%Y-%m-%d') if (d and d['last']) else None,
+            'last_local': d['last'].strftime('%Y-%m-%d') if (d and d['last']) else None,
         })
 
     ranking_visitas = sorted(rows, key=lambda r: r['total'], reverse=True)
@@ -369,9 +348,11 @@ def _commercial_context():
     # Comparativo entre ejecutivos (productividad, perfiles, similitud)
     comparison = _build_comparison(rows)
 
-    # Progreso del backfill de permanencia
-    from app.analytics.dwell import dwell_progress
-    pend_all, total_all = dwell_progress()
+    # Progreso del reproceso por proximidad (dias historicos procesados)
+    from app.analytics.proximity import proximity_progress
+    prox_done, prox_total = proximity_progress()
+    pend_all = max(0, prox_total - prox_done)
+    total_all = prox_total
 
     return dict(
         kpis=kpis, rows=rows, comparison=comparison,
@@ -630,12 +611,14 @@ def commercial_executive_detail(user_id):
 @bp.route('/commercial/backfill-dwell', methods=['POST'])
 @login_required
 def commercial_backfill_dwell():
-    """Dispara un lote de calculo de permanencia y devuelve el progreso. Solo admin."""
+    """Dispara un lote de reproceso por proximidad y devuelve el progreso. Solo admin."""
     if current_user.role != 'admin':
         abort(403)
     from flask import current_app
-    from app.analytics.dwell import backfill_dwell_batch, dwell_progress
-    processed = backfill_dwell_batch(current_app._get_current_object(), batch_size=120)
-    pending, total = dwell_progress()
-    return jsonify({'processed': processed, 'pending': pending, 'total': total,
-                    'done': total - pending})
+    from app.analytics.proximity import backfill_proximity_step, proximity_progress
+    app_obj = current_app._get_current_object()
+    # Procesar unos dias por click (cada dia = 1 llamada Traccar por ejecutivo)
+    backfill_proximity_step(app_obj, max_days=3)
+    done, total = proximity_progress()
+    pending = max(0, total - done)
+    return jsonify({'processed': done, 'pending': pending, 'total': total, 'done': done})

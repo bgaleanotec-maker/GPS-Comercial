@@ -26,9 +26,9 @@
     {% if dwell_pending > 0 %}
     <div class="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3" x-data="{ p: {{ dwell_pending }}, t: {{ dwell_total }}, run() { fetch('{{ url_for('analytics.commercial_backfill_dwell') }}', {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token() }}'}}).then(r=>r.json()).then(d=>{ this.p=d.pending; this.t=d.total; if(d.pending>0) setTimeout(()=>this.run(),800); else location.reload(); }); } }">
         <div class="text-xs text-amber-300">
-            (Opcional) Calculando permanencia en sitio de visitas historicas:
-            <span x-text="(t - p)"></span> / <span x-text="t"></span> listas.
-            Solo necesario si usas el filtro "≥N min en sitio". El conteo de visitas por radio no depende de esto.
+            Reprocesando visitas por proximidad (trayectoria a 1000 m del aliado):
+            <span x-text="(t - p)"></span> / <span x-text="t"></span> dias listos.
+            Los numeros de esta vista se completan a medida que avanza.
         </div>
         <button type="button" @click="run()" class="px-3 py-1.5 bg-amber-600 text-white text-xs rounded-lg hover:bg-amber-500 transition whitespace-nowrap">Acelerar ahora</button>
     </div>
@@ -56,13 +56,10 @@
                 <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
-                <label class="block text-xs font-medium text-slate-400 mb-1">Permanencia min.</label>
-                <select name="min_dwell" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500">
-                    <option value="0" {% if min_dwell == 0 %}selected{% endif %}>Paso por el radio (estandar)</option>
-                    <option value="15" {% if min_dwell == 15 %}selected{% endif %}>Solo ≥15 min en sitio</option>
-                    <option value="30" {% if min_dwell == 30 %}selected{% endif %}>Solo ≥30 min en sitio</option>
-                    <option value="60" {% if min_dwell == 60 %}selected{% endif %}>Solo ≥60 min en sitio</option>
-                </select>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Definicion de visita</label>
+                <div class="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-xl text-xs text-slate-400">
+                    Visita = trayectoria a <span class="text-slate-200 font-medium">1000 m</span> del aliado (1/dia)
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-medium text-slate-400 mb-1">Km/dia anomalo ></label>
@@ -127,7 +124,7 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         <div class="bg-slate-900 rounded-2xl border border-indigo-500/20 p-4 text-center">
             <div class="text-2xl font-bold text-indigo-400">{{ kpis.total_visitas }}</div>
-            <div class="text-[11px] text-slate-500 mt-1">Visitas{% if min_dwell %} (≥{{ min_dwell }}min){% endif %}</div>
+            <div class="text-[11px] text-slate-500 mt-1">Visitas (radio 1000m)</div>
         </div>
         <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-4 text-center">
             <div class="text-2xl font-bold text-emerald-400">{{ kpis.avg_dia }}</div>

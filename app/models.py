@@ -350,6 +350,28 @@ class ScheduledTask(db.Model):
         return self.status not in ('cumplida', 'no_cumplida', 'cancelada')
 
 
+# ============================================================
+# MODELO PROXIMITY VISIT - Visitas por proximidad de trayectoria
+# ============================================================
+class ProximityVisit(db.Model):
+    """Visita detectada porque la trayectoria GPS del ejecutivo paso a <= radius_m de
+    la ubicacion del aliado ese dia. Maximo 1 por (usuario, aliado, dia). Reprocesada
+    en segundo plano desde el historial de Traccar para la analitica comercial."""
+    __tablename__ = 'proximity_visit'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_pv_user'), nullable=False, index=True)
+    ally_id = db.Column(db.Integer, db.ForeignKey('ally.id', name='fk_pv_ally'), nullable=False, index=True)
+    visit_date = db.Column(db.Date, nullable=False, index=True)
+    first_time = db.Column(db.DateTime)  # UTC, primer momento dentro del radio ese dia
+    radius_m = db.Column(db.Integer, default=1000)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'ally_id', 'visit_date', name='uq_pv_user_ally_date'),
+    )
+
+
 @login.user_loader
 def load_user(id):
     return db.session.get(User, int(id))
