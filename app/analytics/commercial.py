@@ -117,11 +117,16 @@ def _norm(val, lo, hi):
     return max(0.0, min(1.0, (val - lo) / (hi - lo)))
 
 
+# Pesos del score de productividad (deben sumar 1.0). El recorrido (km) NO entra al
+# score: es esfuerzo/costo, no resultado. Se documentan en la ficha tecnica del PDF.
+SCORE_WEIGHTS = {'v': 0.50, 'a': 0.30, 'd': 0.20}
+
+
 def _build_comparison(rows):
     """Compara ejecutivos: score de productividad, nivel, perfil y pares similares.
 
-    Productividad comercial = visitas efectivas + consistencia + cobertura + permanencia.
-    El recorrido (km) es esfuerzo/costo, no resultado: mucho km con pocas visitas NO es productivo.
+    Productividad comercial = actividad (visitas/dia) + consistencia (dias activos) +
+    cobertura (aliados distintos). El recorrido (km) es contexto de esfuerzo, no suma.
     """
     execs = [r for r in rows if r['total'] > 0 or (r['km_total'] or 0) > 0]
     if len(execs) < 1:
@@ -133,37 +138,35 @@ def _build_comparison(rows):
         ratio = active / (active + inactive) if (active + inactive) else 0.0
         return {
             'v': r['avg_day'] or 0,                 # visitas por dia laboral
-            'k': r['km_day'] or 0,                  # km por dia
+            'k': r['km_day'] or 0,                  # km por dia (contexto)
             'a': ratio,                             # consistencia (dias activos)
             'd': r['allies'] or 0,                  # cobertura (aliados distintos)
-            'p': (r['avg_dwell'] or 0),             # permanencia media (min)
         }
 
     feats = {r['id']: feat(r) for r in execs}
-    keys = ['v', 'k', 'a', 'd', 'p']
+    keys = ['v', 'k', 'a', 'd']
     lo = {k: min(f[k] for f in feats.values()) for k in keys}
     hi = {k: max(f[k] for f in feats.values()) for k in keys}
     norm = {rid: {k: _norm(f[k], lo[k], hi[k]) for k in keys} for rid, f in feats.items()}
 
     # Score de productividad 0-100 (km NO suma; sirve como contexto de esfuerzo)
     def score(n):
-        s = 0.40 * n['v'] + 0.25 * n['p'] + 0.20 * n['a'] + 0.15 * n['d']
+        s = SCORE_WEIGHTS['v'] * n['v'] + SCORE_WEIGHTS['a'] * n['a'] + SCORE_WEIGHTS['d'] * n['d']
         return round(s * 100, 0)
 
-    id_name = {r['id']: r['name'] for r in execs}
     result = {}
     for r in execs:
         n = norm[r['id']]
         sc = score(n)
-        # Perfil segun patron
-        if n['v'] >= 0.55 and n['p'] >= 0.5:
-            perfil = 'Productivo (visitas efectivas)'
+        # Perfil segun patron de comportamiento
+        if n['v'] >= 0.55 and n['a'] >= 0.5:
+            perfil = 'Productivo (activo y constante)'
         elif n['k'] >= 0.6 and n['v'] < 0.4:
             perfil = 'Mucho desplazamiento, pocas visitas'
-        elif n['v'] >= 0.55 and n['p'] < 0.35:
-            perfil = 'Muchas visitas rapidas'
         elif n['a'] < 0.35:
-            perfil = 'Baja consistencia'
+            perfil = 'Baja consistencia (pocos dias activos)'
+        elif n['d'] >= 0.6 and n['v'] >= 0.45:
+            perfil = 'Buena cobertura de aliados'
         else:
             perfil = 'Estandar'
         result[r['id']] = {'id': r['id'], 'name': r['name'], 'score': sc, 'perfil': perfil,

@@ -280,9 +280,84 @@ def build_commercial_pdf(ctx, routes=None):
         ]))
         story.append(gt)
 
+    # --- Ficha tecnica / metodologia ---
+    _append_ficha(story, ss)
+
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     buf.seek(0)
     return buf
+
+
+def _append_ficha(story, ss):
+    """Explica como se calculan Score, Nivel, Perfil y las definiciones usadas."""
+    try:
+        from app.analytics.commercial import SCORE_WEIGHTS as W
+    except Exception:
+        W = {'v': 0.50, 'a': 0.30, 'd': 0.20}
+
+    story.append(PageBreak())
+    story.append(Paragraph('Ficha tecnica — como se calcula', ss['H1x']))
+    story.append(Paragraph('Metodologia de la analitica comercial. Todos los calculos consideran '
+                           'solo dias laborales (Lunes a Viernes).', ss['Subx']))
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph('1. Que cuenta como VISITA', ss['H2x']))
+    story.append(Paragraph(
+        'Una visita se cuenta cuando la trayectoria GPS del ejecutivo pasa a menos de '
+        '<b>1000 metros</b> de la ubicacion (latitud/longitud) registrada del aliado ese dia. '
+        'Se cuenta <b>maximo 1 visita por dia por aliado</b> (aunque pase varias veces), para no '
+        'generar ruido. No exige permanencia minima: basta con pasar por el radio.', ss['Cellx']))
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph('2. Score de productividad (0 a 100)', ss['H2x']))
+    story.append(Paragraph(
+        'Se calcula con 3 componentes. Cada componente se <b>normaliza de 0 a 1</b> comparando a '
+        'cada ejecutivo contra el resto del grupo (min-max: el mayor del grupo = 1, el menor = 0). '
+        'Luego se ponderan y se multiplica por 100:', ss['Cellx']))
+    story.append(Spacer(1, 4))
+    wtbl = [['Componente', 'Que mide', 'Peso'],
+            ['Actividad', 'Visitas por dia laboral (avg/dia)', f"{int(W['v']*100)}%"],
+            ['Consistencia', 'Proporcion de dias activos (con recorrido) vs dias laborales', f"{int(W['a']*100)}%"],
+            ['Cobertura', 'Cantidad de aliados distintos visitados', f"{int(W['d']*100)}%"]]
+    story.append(_table(wtbl, [4.5 * cm, 13.0 * cm, 2.5 * cm], align_right_from=2))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(
+        'Formula: <b>Score = (' + f"{W['v']:.2f}" + '·Actividad + ' + f"{W['a']:.2f}" +
+        '·Consistencia + ' + f"{W['d']:.2f}" + '·Cobertura) × 100</b>, con cada factor entre 0 y 1. '
+        'El <b>recorrido en km NO entra al score</b>: es esfuerzo/costo, no resultado (mucho km con '
+        'pocas visitas no es productivo). El km se muestra aparte como contexto.', ss['Smallx']))
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph('3. Nivel (Alto / Medio / Bajo)', ss['H2x']))
+    story.append(Paragraph(
+        'Es <b>relativo al grupo analizado</b>, por tercios segun el score: el tercio superior es '
+        '<b>Alto</b>, el del medio <b>Medio</b> y el inferior <b>Bajo</b>. Al cambiar el rango de '
+        'fechas o la seleccion de ejecutivos, los niveles se recalculan sobre ese grupo.', ss['Cellx']))
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph('4. Perfil (patron de comportamiento)', ss['H2x']))
+    ptbl = [['Perfil', 'Condicion'],
+            ['Productivo (activo y constante)', 'Actividad alta y buena consistencia de dias activos'],
+            ['Mucho desplazamiento, pocas visitas', 'Km/dia alto pero pocas visitas (se mueve pero no visita)'],
+            ['Baja consistencia (pocos dias activos)', 'Trabaja pocos dias dentro del periodo'],
+            ['Buena cobertura de aliados', 'Visita muchos aliados distintos con actividad razonable'],
+            ['Estandar', 'No cae en ninguno de los patrones anteriores']]
+    story.append(_table(ptbl, [6.5 * cm, 13.5 * cm], header_bg=SLATE, align_right_from=99))
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph('5. "Se parece a" y grupos similares', ss['H2x']))
+    story.append(Paragraph(
+        'Para cada ejecutivo se busca al mas parecido midiendo la <b>distancia</b> entre sus '
+        'indicadores normalizados (visitas/dia, km/dia, consistencia y cobertura). Los "grupos que '
+        'se parecen" agrupan a quienes comparten el mismo Nivel y Perfil.', ss['Cellx']))
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph('6. Recorrido (km)', ss['H2x']))
+    story.append(Paragraph(
+        'Se toma de Traccar por dia. Para el analisis de productividad se <b>excluyen los dias '
+        'anomalos</b> (recorrido mayor al umbral configurado, por defecto 600 km/dia, ej. viajes '
+        'largos fuera de lo normal). Se reportan total, media y mediana por dia/semana/mes, y los '
+        'dias activos vs inactivos.', ss['Cellx']))
 
 
 def _footer(canvas, doc):
