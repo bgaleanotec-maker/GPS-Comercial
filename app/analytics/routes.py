@@ -1,18 +1,41 @@
 # Ruta: SST/app/analytics/routes.py
-from flask import render_template, flash, redirect, url_for, request, send_file
+from flask import render_template, flash, redirect, url_for, request, send_file, abort
 from app.analytics import bp
 from flask_login import login_required, current_user
 from app.models import Visit, Ally, User, Infraction
 from app.forms import VisitForm
 from app import db
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from collections import defaultdict
 import pytz
 from werkzeug.utils import secure_filename
 import os
 from flask import current_app
 from app.main.routes import get_device_positions_view, calculate_distance_from_points
-from app.traccar import get_devices
+from app.traccar import get_devices, get_device_summary
 from app.analytics.export_utils import generate_dashboard_excel
+
+COLOMBIA_TZ = pytz.timezone('America/Bogota')
+
+
+def _count_working_days(start_d, end_d):
+    """Cuenta dias laborales (Lun-Vie) entre dos fechas, inclusive."""
+    if end_d < start_d:
+        return 0
+    total = 0
+    d = start_d
+    while d <= end_d:
+        if d.weekday() < 5:  # 0=Lun .. 4=Vie
+            total += 1
+        d += timedelta(days=1)
+    return total
+
+
+def _count_months(start_d, end_d):
+    """Cuenta meses calendario distintos abarcados por el rango (min 1)."""
+    if end_d < start_d:
+        return 1
+    return max(1, (end_d.year - start_d.year) * 12 + (end_d.month - start_d.month) + 1)
 
 @bp.route('/visit-report', methods=['GET', 'POST'])
 @login_required
