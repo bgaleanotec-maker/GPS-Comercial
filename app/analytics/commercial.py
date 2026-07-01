@@ -22,9 +22,11 @@ from app.models import Visit, Ally, User
 from app.traccar import get_devices, get_device_summary_daily, get_device_route
 
 DEFAULT_ANOMALY_KM = 600
-# Definicion estandar de VISITA VALIDA en toda la analitica:
-# el ejecutivo estuvo dentro del radio del aliado mas de 15 minutos.
-DEFAULT_MIN_DWELL = 15
+# Definicion estandar de VISITA en toda la analitica:
+# el GPS paso por el radio (lat/long registrada) del aliado ese dia.
+# SIN filtro de permanencia por defecto. Se cuenta MAXIMO 1 visita por dia por aliado
+# (aunque haya varios registros el mismo dia) para no generar ruido.
+DEFAULT_MIN_DWELL = 0
 
 
 def _fmt_dt_local(dt):
@@ -251,8 +253,12 @@ def _commercial_context():
     ally_counter = defaultdict(int)
     total_weekday_visits = 0
     total_pending = 0
+    seen_day_ally = set()   # (user, ally, dia) -> maximo 1 visita por dia por aliado
 
     for v in visits:
+        # Una visita valida requiere estar en el radio de un aliado registrado
+        if not v.ally_id:
+            continue
         local = _fmt_dt_local(v.timestamp)
         if local.weekday() >= 5:
             continue
@@ -260,6 +266,11 @@ def _commercial_context():
             continue
         if ally_filter and v.ally_id not in ally_filter:
             continue
+        # Solo 1 visita por dia por aliado (evita ruido de multiples registros)
+        _k = (v.user_id, v.ally_id, local.date())
+        if _k in seen_day_ally:
+            continue
+        seen_day_ally.add(_k)
         ok, pending = _visit_passes(v, min_dwell)
         if pending:
             per_exec[v.user_id]['pending'] += 1
@@ -470,12 +481,21 @@ def commercial_executive_detail(user_id):
     timeline = []
     weekday_total = gps_auto = manual = pending = 0
     active_dates = set()
+    seen_day_ally = set()   # (aliado, dia) -> maximo 1 visita por dia por aliado
 
     for v in visits:
+        # Una visita valida requiere estar en el radio de un aliado registrado
+        if not v.ally_id:
+            continue
         # Respetar el filtro de aliados si viene de la vista general
         if ally_filter and v.ally_id not in ally_filter:
             continue
         local = _fmt_dt_local(v.timestamp)
+        # Solo 1 visita por dia por aliado
+        _k = (v.ally_id, local.date())
+        if _k in seen_day_ally:
+            continue
+        seen_day_ally.add(_k)
         wd = local.weekday()
         per_weekday[wd] += 1
         ok, is_pending = _visit_passes(v, min_dwell)

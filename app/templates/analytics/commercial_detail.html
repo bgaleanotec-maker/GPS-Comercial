@@ -35,10 +35,10 @@
             <div>
                 <label class="block text-xs font-medium text-slate-400 mb-1">Permanencia min.</label>
                 <select name="min_dwell" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
-                    <option value="15" {% if min_dwell == 15 %}selected{% endif %}>Solo ≥15 min (estandar)</option>
-                    <option value="30" {% if min_dwell == 30 %}selected{% endif %}>Solo ≥30 min</option>
-                    <option value="60" {% if min_dwell == 60 %}selected{% endif %}>Solo ≥60 min</option>
-                    <option value="0" {% if min_dwell == 0 %}selected{% endif %}>Todas (sin filtro)</option>
+                    <option value="0" {% if min_dwell == 0 %}selected{% endif %}>Paso por el radio (estandar)</option>
+                    <option value="15" {% if min_dwell == 15 %}selected{% endif %}>Solo ≥15 min en sitio</option>
+                    <option value="30" {% if min_dwell == 30 %}selected{% endif %}>Solo ≥30 min en sitio</option>
+                    <option value="60" {% if min_dwell == 60 %}selected{% endif %}>Solo ≥60 min en sitio</option>
                 </select>
             </div>
             <div><label class="block text-xs font-medium text-slate-400 mb-1">Km/dia anomalo ></label><input type="number" name="anomaly_km" value="{{ anomaly_km }}" min="50" step="50" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200"></div>
@@ -112,7 +112,7 @@
         <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between gap-2 flex-wrap">
             <div>
                 <h2 class="text-sm font-semibold text-slate-300">Mapa: aliados y recorrido</h2>
-                <p class="text-[11px] text-slate-500">Numero en cada aliado = veces que estuvo en su radio {% if min_dwell %}mas de {{ min_dwell }} min{% else %}(todas){% endif %} · verde = visitado, gris = sin visitas · linea indigo = recorrido del dia</p>
+                <p class="text-[11px] text-slate-500">Numero en cada aliado = dias que el GPS paso por su radio (max 1 por dia){% if min_dwell %}, permaneciendo ≥{{ min_dwell }} min{% endif %} · verde = visitado, gris = sin visitas · linea indigo = recorrido del dia</p>
             </div>
             <form method="get" class="flex items-center gap-2">
                 <input type="hidden" name="start_date" value="{{ start_date }}"><input type="hidden" name="end_date" value="{{ end_date }}">
@@ -260,9 +260,9 @@
                   + 'font-weight:800;font-size:16px;box-shadow:0 1px 4px rgba(0,0,0,.4);'
                   + 'border:2px solid #fff;">' + (a.visits || 0) + '</div>'
         });
-        const cond = {{ min_dwell }} ? ('de mas de {{ min_dwell }} min') : '';
+        const cond = {{ min_dwell }} ? (' con permanencia ≥{{ min_dwell }} min') : '';
         L.marker([a.lat, a.lon], { icon: icon, zIndexOffset: has ? 1000 : 0 }).addTo(map)
-            .bindPopup('<b>' + a.name + '</b><br>' + (a.visits || 0) + ' visita(s) ' + cond + ' en el radio de ' + a.radius + ' m');
+            .bindPopup('<b>' + a.name + '</b><br>' + (a.visits || 0) + ' dia(s) en el radio de ' + a.radius + ' m (max 1/dia)' + cond);
         bounds.push([a.lat, a.lon]);
     });
 
