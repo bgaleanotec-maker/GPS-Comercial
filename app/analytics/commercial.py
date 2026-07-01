@@ -19,7 +19,7 @@ from flask_login import login_required, current_user
 from app.analytics import bp
 from app.analytics.routes import _count_working_days, _count_months, COLOMBIA_TZ
 from app.models import Visit, Ally, User
-from app.traccar import get_devices, get_device_summary_daily, get_device_route
+from app.traccar import get_devices, get_device_summary_daily, get_device_route, get_device_positions
 
 DEFAULT_ANOMALY_KM = 600
 # Definicion estandar de VISITA en toda la analitica:
@@ -440,8 +440,9 @@ def commercial_executive_detail(user_id):
     now = datetime.now(COLOMBIA_TZ)
     today = now.date()
 
-    first_visit = Visit.query.filter_by(user_id=u.id).order_by(Visit.timestamp.asc()).first()
-    default_start = _fmt_dt_local(first_visit.timestamp).date() if first_visit else today.replace(day=1)
+    # La deteccion por trayectoria es pesada (baja todo el GPS del rango), por eso el
+    # detalle abre por defecto en el MES ACTUAL. Los filtros rapidos permiten ampliar.
+    default_start = today.replace(day=1)
 
     start_str = request.args.get('start_date', default_start.strftime('%Y-%m-%d'))
     end_str = request.args.get('end_date', today.strftime('%Y-%m-%d'))
@@ -466,78 +467,93 @@ def commercial_executive_detail(user_id):
     working_days = _count_working_days(start_d, end_d)
     months = _count_months(start_d, end_d)
 
-    visits = Visit.query.filter(
-        Visit.user_id == u.id,
-        Visit.timestamp >= start_utc,
-        Visit.timestamp < end_utc,
-    ).order_by(Visit.timestamp.desc()).all()
+    # Radio de deteccion por trayectoria (metros). Una VISITA se cuenta si el GPS del
+    # ejecutivo paso a <= radio de la ubicacion registrada del aliado, MAX 1 por dia.
+    radius_m = request.args.get('radius_m', 1000, type=int)
 
     allies_map = {a.id: a for a in Ally.query.all()}
     day_names = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo']
+    detect_allies = [a for a in allies_map.values()
+                     if a.latitude is not None and a.longitude is not None
+                     and (not ally_filter or a.id in ally_filter)]
 
-    per_ally = defaultdict(lambda: {'count': 0, 'dwell_sum': 0.0, 'dwell_n': 0})
+    # Posiciones GPS del ejecutivo en el rango (una sola consulta a Traccar)
+    positions = get_device_positions(u.traccar_device_id, start_utc, end_utc) if u.traccar_device_id else []
+    positions = positions or []
+
+    # Deteccion: ally_id -> {fecha_local: primera_hora_local dentro del radio}
+    from app.utils import haversine_distance
+    traj = defaultdict(dict)
+    for p in positions:
+        lat, lon = p.get('latitude'), p.get('longitude')
+        if lat is None or lon is None:
+            continue
+        ft = p.get('fixTime')
+        if not ft:
+            continue
+        try:
+            tloc = datetime.fromisoformat(str(ft).replace('Z', '+00:00')).astimezone(COLOMBIA_TZ)
+        except (ValueError, AttributeError):
+            continue
+        dd = tloc.date()
+        for a in detect_allies:
+            dm = traj[a.id]
+            if dd in dm:
+                continue  # ya contado ese dia para este aliado
+            if haversine_distance(lat, lon, a.latitude, a.longitude) <= radius_m:
+                dm[dd] = tloc
+
+    # Observaciones existentes para enriquecer el timeline, por (aliado, dia)
+    obs_map = {}
+    for v in Visit.query.filter(Visit.user_id == u.id, Visit.timestamp >= start_utc,
+                                Visit.timestamp < end_utc).all():
+        if v.ally_id and v.observations:
+            obs_map[(v.ally_id, _fmt_dt_local(v.timestamp).date())] = v.observations
+
+    per_ally = {}          # ally_id -> visitas laborales (dias, 1/dia)
     per_weekday = {i: 0 for i in range(7)}
     per_month = defaultdict(int)
-    timeline = []
-    weekday_total = gps_auto = manual = pending = 0
     active_dates = set()
-    seen_day_ally = set()   # (aliado, dia) -> maximo 1 visita por dia por aliado
+    timeline_events = []   # (hora_local, ally_id)
+    for aid, dm in traj.items():
+        wd_count = 0
+        for d, tloc in dm.items():
+            per_weekday[tloc.weekday()] += 1
+            if d.weekday() < 5:
+                wd_count += 1
+                active_dates.add(d)
+                per_month[d.strftime('%Y-%m')] += 1
+            timeline_events.append((tloc, aid))
+        if wd_count:
+            per_ally[aid] = wd_count
 
-    for v in visits:
-        # Una visita valida requiere estar en el radio de un aliado registrado
-        if not v.ally_id:
-            continue
-        # Respetar el filtro de aliados si viene de la vista general
-        if ally_filter and v.ally_id not in ally_filter:
-            continue
-        local = _fmt_dt_local(v.timestamp)
-        # Solo 1 visita por dia por aliado
-        _k = (v.ally_id, local.date())
-        if _k in seen_day_ally:
-            continue
-        seen_day_ally.add(_k)
-        wd = local.weekday()
-        per_weekday[wd] += 1
-        ok, is_pending = _visit_passes(v, min_dwell)
-        if is_pending:
-            pending += 1
-        if wd < 5 and ok:
-            weekday_total += 1
-            active_dates.add(local.date())
-            if v.ally_id:
-                pa = per_ally[v.ally_id]
-                pa['count'] += 1
-                if v.dwell_minutes is not None:
-                    pa['dwell_sum'] += v.dwell_minutes
-                    pa['dwell_n'] += 1
-            per_month[local.strftime('%Y-%m')] += 1
-            if v.is_manual:
-                manual += 1
-            else:
-                gps_auto += 1
-        if len(timeline) < 100:
-            a = allies_map.get(v.ally_id)
-            hora = (v.start_time + (' - ' + v.end_time if v.end_time else '')) if v.start_time else local.strftime('%H:%M')
-            timeline.append({
-                'fecha': local.strftime('%d/%m/%Y'),
-                'hora': hora,
-                'ally': a.name if a else '—',
-                'tipo': 'Manual' if v.is_manual else 'GPS',
-                'categoria': v.category or '',
-                'weekend': wd >= 5,
-                'dwell': v.dwell_minutes,
-                'obs': v.observations or '',
-            })
+    weekday_total = sum(per_ally.values())
+    gps_auto = weekday_total
+    manual = pending = 0
 
     ally_rows = []
     max_ally = 0
-    for aid, data in sorted(per_ally.items(), key=lambda kv: kv[1]['count'], reverse=True):
+    for aid, cnt in sorted(per_ally.items(), key=lambda kv: kv[1], reverse=True):
         a = allies_map.get(aid)
         if not a:
             continue
-        max_ally = max(max_ally, data['count'])
-        avg_dwell = round(data['dwell_sum'] / data['dwell_n'], 0) if data['dwell_n'] else None
-        ally_rows.append({'name': a.name, 'category': a.category or '', 'visits': data['count'], 'avg_dwell': avg_dwell})
+        max_ally = max(max_ally, cnt)
+        ally_rows.append({'name': a.name, 'category': a.category or '', 'visits': cnt, 'avg_dwell': None})
+
+    timeline_events.sort(key=lambda x: x[0], reverse=True)
+    timeline = []
+    for tloc, aid in timeline_events[:120]:
+        a = allies_map.get(aid)
+        timeline.append({
+            'fecha': tloc.strftime('%d/%m/%Y'),
+            'hora': tloc.strftime('%H:%M'),
+            'ally': a.name if a else '—',
+            'tipo': 'GPS',
+            'categoria': '',
+            'weekend': tloc.weekday() >= 5,
+            'dwell': None,
+            'obs': obs_map.get((aid, tloc.date()), ''),
+        })
 
     weekday_rows = [{'name': day_names[i], 'count': per_weekday[i], 'laboral': i < 5} for i in range(7)]
     max_weekday = max(per_weekday.values()) if per_weekday else 0
@@ -546,48 +562,38 @@ def commercial_executive_detail(user_id):
 
     # Recorrido: estadisticas por dia (mediana, activos/inactivos, anomalos)
     dstats = None
-    daily = None
     if u.traccar_device_id:
         daily = get_device_summary_daily(u.traccar_device_id, start_utc, end_utc)
         dstats = _distance_stats(daily, start_d, end_d, anomaly_km)
 
-    # Mapa: recorrido de un dia. Por defecto, el dia laboral mas reciente con visita.
-    map_route = []
+    # Mapa: recorrido del dia seleccionado (reutiliza las posiciones ya traidas)
     map_date = None
-    if u.traccar_device_id:
-        if map_date_str:
-            try:
-                map_date = datetime.strptime(map_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                map_date = None
-        if map_date is None:
-            if active_dates:
-                map_date = max(active_dates)
-            else:
-                map_date = end_d
-        m_start = COLOMBIA_TZ.localize(datetime.combine(map_date, datetime.min.time()))
-        m_end = m_start + timedelta(days=1)
-        route = get_device_route(u.traccar_device_id, m_start, m_end)
-        if route:
-            for p in route:
-                lat, lon = p.get('latitude'), p.get('longitude')
-                if lat is not None and lon is not None:
-                    map_route.append({'latitude': lat, 'longitude': lon,
-                                      'speed': round((p.get('speed') or 0) * 1.852, 0)})
+    if map_date_str:
+        try:
+            map_date = datetime.strptime(map_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            map_date = None
+    if map_date is None:
+        map_date = max(active_dates) if active_dates else end_d
+    map_route = []
+    for p in positions:
+        lat, lon = p.get('latitude'), p.get('longitude')
+        if lat is None or lon is None:
+            continue
+        ft = p.get('fixTime')
+        try:
+            tloc = datetime.fromisoformat(str(ft).replace('Z', '+00:00')).astimezone(COLOMBIA_TZ)
+        except (ValueError, AttributeError, TypeError):
+            continue
+        if tloc.date() == map_date:
+            map_route.append({'latitude': lat, 'longitude': lon,
+                              'speed': round((p.get('speed') or 0) * 1.852, 0)})
 
-    # TODOS los aliados en el mapa (fijos). El numero grande = veces que el ejecutivo
-    # estuvo en ese radio mas del umbral de permanencia (>15 min por defecto).
-    # Si hay filtro de aliados activo, se muestran solo esos.
+    # Aliados en el mapa. Radio dibujado = radio de deteccion. Numero = visitas (dias).
     map_allies = []
-    for aid, a in allies_map.items():
-        if a.latitude is None or a.longitude is None:
-            continue
-        if ally_filter and aid not in ally_filter:
-            continue
-        cnt = per_ally[aid]['count'] if aid in per_ally else 0
+    for a in detect_allies:
         map_allies.append({'name': a.name, 'lat': a.latitude, 'lon': a.longitude,
-                           'radius': a.radius or 50, 'visits': cnt})
-    # Ordenar para que los mas visitados queden encima
+                           'radius': radius_m, 'visits': per_ally.get(a.id, 0)})
     map_allies.sort(key=lambda m: m['visits'])
 
     stats = {
@@ -611,6 +617,7 @@ def commercial_executive_detail(user_id):
         map_route=map_route, map_allies=map_allies,
         map_date=map_date.strftime('%Y-%m-%d') if map_date else '',
         min_dwell=min_dwell, anomaly_km=anomaly_km, include_distance=include_distance,
+        radius_m=radius_m,
         selected_ids=selected_ids, selected_allies=selected_allies,
         all_allies_list=sorted(allies_map.values(), key=lambda a: a.name),
         start_date=start_str, end_date=end_str,

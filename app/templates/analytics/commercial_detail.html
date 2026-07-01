@@ -19,9 +19,9 @@
 
     <!-- Filtros rapidos -->
     <div class="flex flex-wrap gap-2 mb-3">
-        <a href="{{ url_for('analytics.commercial_executive_detail', user_id=user.id, start_date=month_start, end_date=today, min_dwell=min_dwell, anomaly_km=anomaly_km, include_distance='1' if include_distance else '0', ally_ids=selected_allies, employee_ids=selected_ids) }}" class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == month_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Mes actual</a>
-        <a href="{{ url_for('analytics.commercial_executive_detail', user_id=user.id, start_date=two_months_start, end_date=today, min_dwell=min_dwell, anomaly_km=anomaly_km, include_distance='1' if include_distance else '0', ally_ids=selected_allies, employee_ids=selected_ids) }}" class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == two_months_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Ultimos 2 meses</a>
-        <a href="{{ url_for('analytics.commercial_executive_detail', user_id=user.id, start_date=default_start, end_date=today, min_dwell=min_dwell, anomaly_km=anomaly_km, include_distance='1' if include_distance else '0', ally_ids=selected_allies, employee_ids=selected_ids) }}" class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == default_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Total historico</a>
+        <a href="{{ url_for('analytics.commercial_executive_detail', user_id=user.id, start_date=month_start, end_date=today, min_dwell=min_dwell, anomaly_km=anomaly_km, radius_m=radius_m, include_distance='1' if include_distance else '0', ally_ids=selected_allies, employee_ids=selected_ids) }}" class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == month_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Mes actual</a>
+        <a href="{{ url_for('analytics.commercial_executive_detail', user_id=user.id, start_date=two_months_start, end_date=today, min_dwell=min_dwell, anomaly_km=anomaly_km, radius_m=radius_m, include_distance='1' if include_distance else '0', ally_ids=selected_allies, employee_ids=selected_ids) }}" class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == two_months_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Ultimos 2 meses</a>
+        <a href="{{ url_for('analytics.commercial_executive_detail', user_id=user.id, start_date=default_start, end_date=today, min_dwell=min_dwell, anomaly_km=anomaly_km, radius_m=radius_m, include_distance='1' if include_distance else '0', ally_ids=selected_allies, employee_ids=selected_ids) }}" class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if start_date == default_start %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">Total historico</a>
     </div>
 
     <!-- Filtro rango + permanencia + aliados (se conservan al aplicar) -->
@@ -33,13 +33,8 @@
             <div><label class="block text-xs font-medium text-slate-400 mb-1">Desde</label><input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200"></div>
             <div><label class="block text-xs font-medium text-slate-400 mb-1">Hasta</label><input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200"></div>
             <div>
-                <label class="block text-xs font-medium text-slate-400 mb-1">Permanencia min.</label>
-                <select name="min_dwell" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
-                    <option value="0" {% if min_dwell == 0 %}selected{% endif %}>Paso por el radio (estandar)</option>
-                    <option value="15" {% if min_dwell == 15 %}selected{% endif %}>Solo ≥15 min en sitio</option>
-                    <option value="30" {% if min_dwell == 30 %}selected{% endif %}>Solo ≥30 min en sitio</option>
-                    <option value="60" {% if min_dwell == 60 %}selected{% endif %}>Solo ≥60 min en sitio</option>
-                </select>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Radio deteccion (m)</label>
+                <input type="number" name="radius_m" value="{{ radius_m }}" min="100" step="100" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
             </div>
             <div><label class="block text-xs font-medium text-slate-400 mb-1">Km/dia anomalo ></label><input type="number" name="anomaly_km" value="{{ anomaly_km }}" min="50" step="50" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200"></div>
             <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-500 transition">Aplicar</button>
@@ -68,7 +63,7 @@
 
     <!-- Stat cards -->
     <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
-        <div class="bg-slate-900 rounded-2xl border border-indigo-500/20 p-4 text-center"><div class="text-2xl font-bold text-indigo-400">{{ stats.total }}</div><div class="text-[11px] text-slate-500 mt-1">Visitas{% if min_dwell %} ≥{{ min_dwell }}min{% endif %}</div></div>
+        <div class="bg-slate-900 rounded-2xl border border-indigo-500/20 p-4 text-center"><div class="text-2xl font-bold text-indigo-400">{{ stats.total }}</div><div class="text-[11px] text-slate-500 mt-1">Visitas (radio {{ radius_m }}m)</div></div>
         <div class="bg-slate-900 rounded-2xl border border-slate-700/40 p-4 text-center"><div class="text-2xl font-bold text-slate-100">{{ stats.allies }}</div><div class="text-[11px] text-slate-500 mt-1">Aliados distintos</div></div>
         <div class="bg-slate-900 rounded-2xl border border-slate-700/40 p-4 text-center"><div class="text-2xl font-bold text-amber-400">{{ stats.repeat_ratio|int }}%</div><div class="text-[11px] text-slate-500 mt-1">Visitas repetidas</div></div>
         <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-4 text-center"><div class="text-2xl font-bold text-emerald-400">{{ stats.avg_day }}</div><div class="text-[11px] text-slate-500 mt-1">Visitas/dia lab.</div></div>
@@ -112,12 +107,13 @@
         <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between gap-2 flex-wrap">
             <div>
                 <h2 class="text-sm font-semibold text-slate-300">Mapa: aliados y recorrido</h2>
-                <p class="text-[11px] text-slate-500">Numero en cada aliado = dias que el GPS paso por su radio (max 1 por dia){% if min_dwell %}, permaneciendo ≥{{ min_dwell }} min{% endif %} · verde = visitado, gris = sin visitas · linea indigo = recorrido del dia</p>
+                <p class="text-[11px] text-slate-500">Numero en cada aliado = dias que la trayectoria del ejecutivo paso a menos de {{ radius_m }} m del aliado (max 1 por dia) · verde = visitado, gris = sin visitas · linea indigo = recorrido del dia</p>
             </div>
             <form method="get" class="flex items-center gap-2">
                 <input type="hidden" name="start_date" value="{{ start_date }}"><input type="hidden" name="end_date" value="{{ end_date }}">
                 <input type="hidden" name="min_dwell" value="{{ min_dwell }}"><input type="hidden" name="anomaly_km" value="{{ anomaly_km }}">
                 <input type="hidden" name="include_distance" value="{{ '1' if include_distance else '0' }}">
+                <input type="hidden" name="radius_m" value="{{ radius_m }}">
                 {% for eid in selected_ids %}<input type="hidden" name="employee_ids" value="{{ eid }}">{% endfor %}
                 {% for aid in selected_allies %}<input type="hidden" name="ally_ids" value="{{ aid }}">{% endfor %}
                 <label class="text-xs text-slate-400">Dia recorrido:</label>
@@ -260,9 +256,8 @@
                   + 'font-weight:800;font-size:16px;box-shadow:0 1px 4px rgba(0,0,0,.4);'
                   + 'border:2px solid #fff;">' + (a.visits || 0) + '</div>'
         });
-        const cond = {{ min_dwell }} ? (' con permanencia ≥{{ min_dwell }} min') : '';
         L.marker([a.lat, a.lon], { icon: icon, zIndexOffset: has ? 1000 : 0 }).addTo(map)
-            .bindPopup('<b>' + a.name + '</b><br>' + (a.visits || 0) + ' dia(s) en el radio de ' + a.radius + ' m (max 1/dia)' + cond);
+            .bindPopup('<b>' + a.name + '</b><br>' + (a.visits || 0) + ' dia(s) que paso a menos de ' + a.radius + ' m (max 1/dia)');
         bounds.push([a.lat, a.lon]);
     });
 
