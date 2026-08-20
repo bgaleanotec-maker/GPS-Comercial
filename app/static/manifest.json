@@ -1,11 +1,11 @@
 {
-  "name": "GPS Comercial",
-  "short_name": "GPS Com",
-  "description": "Plataforma de gestion GPS comercial y flota vehicular",
+  "name": "VantiGo",
+  "short_name": "VantiGo",
+  "description": "Estrategia comercial, planificacion y conduccion segura",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#1e1b4b",
-  "theme_color": "#4f46e5",
+  "background_color": "#0f0a2e",
+  "theme_color": "#6366f1",
   "orientation": "any",
   "icons": [
     {
