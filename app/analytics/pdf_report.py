@@ -176,7 +176,7 @@ def build_commercial_pdf(ctx, routes=None):
     gen = datetime.now(COLOMBIA_TZ).strftime('%d/%m/%Y %H:%M')
 
     # --- Portada / encabezado ---
-    story.append(Paragraph('Analitica Comercial · GPS Comercial', ss['H1x']))
+    story.append(Paragraph('Analitica Comercial · VantiGo', ss['H1x']))
     story.append(Paragraph(
         f"Periodo {ctx['start_date']} a {ctx['end_date']} · Solo dias laborales (Lun-Vie) · "
         f"{ctx['kpis']['working_days']} dias laborales · {ctx['kpis']['months']} mes(es)", ss['Subx']))
@@ -364,6 +364,6 @@ def _footer(canvas, doc):
     canvas.saveState()
     canvas.setFont('Helvetica', 7)
     canvas.setFillColor(SLATE)
-    canvas.drawString(1.2 * cm, 0.6 * cm, 'GPS Comercial — Analitica Comercial')
+    canvas.drawString(1.2 * cm, 0.6 * cm, 'VantiGo — Analitica Comercial')
     canvas.drawRightString(doc.pagesize[0] - 1.2 * cm, 0.6 * cm, f'Pagina {doc.page}')
     canvas.restoreState()

@@ -1,6 +1,6 @@
 # Ruta: app/api_keys/routes.py
 """
-Gestión completa de API Keys para GPS Comercial.
+Gestión completa de API Keys para VantiGo.
 Permite a los administradores crear, listar, revocar y auditar claves de API.
 """
 from flask import render_template, flash, redirect, url_for, abort, request, jsonify, current_app
@@ -199,7 +199,7 @@ def api_status():
     """
     return jsonify({
         'status': 'ok',
-        'service': 'GPS Comercial API',
+        'service': 'VantiGo API',
         'version': '1.0',
         'timestamp': datetime.now(timezone.utc).isoformat() + 'Z',
     })

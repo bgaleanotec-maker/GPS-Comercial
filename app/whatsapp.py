@@ -88,7 +88,7 @@ def format_daily_summary(devices_data, visits_data):
     now = datetime.now(colombia_tz)
 
     lines = [
-        f"*GPS Comercial - Resumen {now.strftime('%d/%m/%Y')}*",
+        f"*VantiGo - Resumen {now.strftime('%d/%m/%Y')}*",
         "",
     ]
 
@@ -152,7 +152,7 @@ def format_task_overdue_message(user_name, task_title, scheduled_date, task_type
         f"🏷️ Tipo: {task_type}\n"
         f"━━━━━━━━━━━━━━━\n"
         f"_Esta tarea no fue completada a tiempo._\n"
-        f"_GPS Comercial - Sistema Automatico_"
+        f"_VantiGo - Sistema Automatico_"
     )
 
 
@@ -202,7 +202,7 @@ def format_leader_daily_task_summary(leader_name, date_str, employee_tasks):
         f"✅ Cumplidas: {cumplidas_all} | 🔴 Vencidas: {vencidas_all}",
         f"📋 Total: {total_all}",
         f"━━━━━━━━━━━━━━━━━━━",
-        f"_GPS Comercial - Reporte Automatico_",
+        f"_VantiGo - Reporte Automatico_",
     ])
 
     return "\n".join(lines)
@@ -368,7 +368,7 @@ def send_manual_whatsapp_test(phone_number, message_type='summary'):
                 f"✅ 5/8 tareas cumplidas (62%)\n"
                 f"🔴 2 vencidas\n"
                 f"━━━━━━━━━━━━━━━━━━━\n"
-                f"_GPS Comercial - Mensaje de Prueba_"
+                f"_VantiGo - Mensaje de Prueba_"
             )
     elif message_type == 'overdue':
         msg = format_task_overdue_message(
@@ -379,7 +379,7 @@ def send_manual_whatsapp_test(phone_number, message_type='summary'):
         )
     else:
         msg = (
-            f"🔔 *GPS Comercial*\n"
+            f"🔔 *VantiGo*\n"
             f"━━━━━━━━━━━━━━━\n"
             f"Mensaje de prueba enviado.\n"
             f"WhatsApp configurado correctamente.\n"
