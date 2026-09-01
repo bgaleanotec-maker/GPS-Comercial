@@ -11,8 +11,20 @@ import locale
 from app.models import Infraction, Setting
 from app.traccar import (
     get_devices, get_device_by_id, get_device_positions,
-    KNOTS_TO_KMH, calculate_route_distances
+    get_device_summary, KNOTS_TO_KMH, calculate_route_distances
 )
+
+
+def _summary_distance_m(device_id, from_time, to_time):
+    """Distancia (metros) via reporte agregado de Traccar. Liviano: no descarga
+    posiciones crudas y tiene timeout corto; si falla devuelve 0."""
+    try:
+        summary = get_device_summary(device_id, from_time, to_time)
+        if summary and summary.get('distance') is not None:
+            return float(summary['distance'])
+    except Exception:
+        pass
+    return 0.0
 from app.utils import haversine_distance, filter_positions_by_working_hours, get_team_ids
 
 logger = logging.getLogger(__name__)
@@ -181,16 +193,19 @@ def dashboard():
             now = datetime.now(colombia_tz)
             today_start = colombia_tz.localize(datetime.combine(now.date(), time.min))
             month_start = today_start.replace(day=1)
-            total_start = colombia_tz.localize(datetime(2000, 1, 1))
+            # "Total" acotado a los ultimos 12 meses. Antes se descargaba TODO el
+            # historial crudo desde el 2000 por dispositivo en cada carga, lo que
+            # excedia el timeout del servidor y tumbaba la pagina (500).
+            total_start = now - timedelta(days=365)
 
             for device in devices:
+                # Solo las posiciones de HOY se descargan crudas (acotado); mes y
+                # total usan el reporte agregado de Traccar (liviano).
                 positions_today = get_device_positions_view(device['id'], today_start, now)
-                positions_month = get_device_positions_view(device['id'], month_start, now)
-                positions_total = get_device_positions_view(device['id'], total_start, now)
 
                 device['distance_today_meters'] = calculate_distance_from_points(positions_today)
-                device['distance_month_meters'] = calculate_distance_from_points(positions_month)
-                device['distance_total_meters'] = calculate_distance_from_points(positions_total)
+                device['distance_month_meters'] = _summary_distance_m(device['id'], month_start, now)
+                device['distance_total_meters'] = _summary_distance_m(device['id'], total_start, now)
 
                 device['distance_today'] = device['distance_today_meters'] / 1000
                 device['distance_month'] = device['distance_month_meters'] / 1000
@@ -228,15 +243,14 @@ def dashboard():
         now = datetime.now(colombia_tz)
         today_start = colombia_tz.localize(datetime.combine(now.date(), time.min))
         month_start = today_start.replace(day=1)
-        total_start = colombia_tz.localize(datetime(2000, 1, 1))
+        total_start = now - timedelta(days=365)
 
+        # Solo hoy en crudo; mes y total via reporte agregado (liviano)
         positions_today = get_device_positions_view(device['id'], today_start, now)
-        positions_month = get_device_positions_view(device['id'], month_start, now)
-        positions_total = get_device_positions_view(device['id'], total_start, now)
 
         device['distance_today_meters'] = calculate_distance_from_points(positions_today)
-        device['distance_month_meters'] = calculate_distance_from_points(positions_month)
-        device['distance_total_meters'] = calculate_distance_from_points(positions_total)
+        device['distance_month_meters'] = _summary_distance_m(device['id'], month_start, now)
+        device['distance_total_meters'] = _summary_distance_m(device['id'], total_start, now)
 
         device['distance_today'] = device['distance_today_meters'] / 1000
         device['distance_month'] = device['distance_month_meters'] / 1000

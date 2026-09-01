@@ -200,15 +200,17 @@ def analytics_dashboard():
         if device_id:
             today_start = colombia_tz.localize(datetime.combine(now.date(), datetime.min.time()))
             month_start = today_start.replace(day=1)
-            total_start = colombia_tz.localize(datetime(2000, 1, 1))
-            
+            total_start = now - timedelta(days=365)
+
+            # Solo hoy en crudo; mes y total via reporte agregado de Traccar (liviano).
+            # Antes se descargaba todo el historial desde el 2000 por cada empleado,
+            # lo que excedia el timeout y tumbaba la pagina.
+            from app.main.routes import _summary_distance_m
             positions_today = get_device_positions_view(device_id, today_start, now)
-            positions_month = get_device_positions_view(device_id, month_start, now)
-            positions_total = get_device_positions_view(device_id, total_start, now)
-            
+
             distance_today_km = calculate_distance_from_points(positions_today) / 1000
-            distance_month_km = calculate_distance_from_points(positions_month) / 1000
-            distance_total_km = calculate_distance_from_points(positions_total) / 1000
+            distance_month_km = _summary_distance_m(device_id, month_start, now) / 1000
+            distance_total_km = _summary_distance_m(device_id, total_start, now) / 1000
         
         # Contar visitas en el período
         visits_query = Visit.query.filter(
