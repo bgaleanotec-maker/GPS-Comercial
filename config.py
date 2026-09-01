@@ -16,6 +16,13 @@ class Config(object):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Resiliencia de conexiones Postgres (Render): verificar la conexion antes de
+    # usarla y reciclarla periodicamente para evitar sockets SSL muertos/corruptos.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
+    }
     TEMPLATES_AUTO_RELOAD = True
     UPLOAD_FOLDER = os.path.join(basedir, 'app/static/uploads')
 
