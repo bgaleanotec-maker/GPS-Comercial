@@ -180,6 +180,33 @@ def create_app(config_class=Config):
             if request.endpoint and request.endpoint not in allowed:
                 return redirect(url_for('auth.change_password'))
 
+    # === DIAGNOSTICO TEMPORAL: captura de tracebacks para depurar el 500 ===
+    import traceback as _tbmod
+    from werkzeug.exceptions import HTTPException
+    app._last_errors = []
+
+    @app.errorhandler(Exception)
+    def _diag_capture(e):
+        if isinstance(e, HTTPException):
+            return e
+        tb = _tbmod.format_exc()
+        try:
+            app._last_errors.append(tb)
+            app._last_errors[:] = app._last_errors[-8:]
+        except Exception:
+            pass
+        app.logger.error("UNHANDLED EXCEPTION:\n%s", tb)
+        return "Internal Server Error", 500
+
+    @app.route('/__diag')
+    def _diag_view():
+        from flask import request, Response
+        if request.args.get('k') != 'vg-diag-7x9k':
+            return ("forbidden", 403)
+        body = "\n\n======== siguiente ========\n\n".join(app._last_errors[-5:]) or "sin errores capturados aun"
+        return Response(body, mimetype='text/plain')
+    # === FIN DIAGNOSTICO TEMPORAL ===
+
     # Crear/actualizar tablas e inicializar datos
     _init_database(app)
 
