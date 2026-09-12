@@ -57,7 +57,7 @@ def _detect_day_for_user(user, day, allies, radius_m):
     if not positions:
         return 0
 
-    seen = {}  # ally_id -> primer fixTime (UTC naive/aware)
+    seen = {}  # ally_id -> [primer fixTime, ultimo fixTime] dentro del radio
     for p in positions:
         lat, lon = p.get('latitude'), p.get('longitude')
         if lat is None or lon is None:
@@ -70,20 +70,22 @@ def _detect_day_for_user(user, day, allies, radius_m):
         except (ValueError, AttributeError):
             continue
         for a in allies:
-            if a.id in seen:
-                continue
             if haversine_distance(lat, lon, a.latitude, a.longitude) <= radius_m:
-                seen[a.id] = t
+                if a.id in seen:
+                    seen[a.id][1] = t   # actualizar ultima hora en el radio
+                else:
+                    seen[a.id] = [t, t]
 
     new = 0
-    for aid, ft in seen.items():
+    for aid, (ft, lt) in seen.items():
         existing = ProximityVisit.query.filter_by(user_id=user.id, ally_id=aid, visit_date=day).first()
         if existing:
             existing.first_time = ft
+            existing.last_time = lt
             existing.radius_m = radius_m
         else:
             db.session.add(ProximityVisit(user_id=user.id, ally_id=aid, visit_date=day,
-                                          first_time=ft, radius_m=radius_m))
+                                          first_time=ft, last_time=lt, radius_m=radius_m))
             new += 1
     db.session.commit()
     return new

@@ -268,6 +268,10 @@ def dashboard():
             device['max_speed_today'] = 0
 
         return render_template('admin_dashboard.html', title='Mi Dashboard', devices=[device])
+    elif current_user.role == 'venta':
+        # El vendedor aterriza en su tablero de negocios
+        from flask import redirect, url_for
+        return redirect(url_for('sales.board'))
     else:
         abort(403)
 

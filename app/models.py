@@ -364,12 +364,78 @@ class ProximityVisit(db.Model):
     ally_id = db.Column(db.Integer, db.ForeignKey('ally.id', name='fk_pv_ally'), nullable=False, index=True)
     visit_date = db.Column(db.Date, nullable=False, index=True)
     first_time = db.Column(db.DateTime)  # UTC, primer momento dentro del radio ese dia
+    last_time = db.Column(db.DateTime)   # UTC, ultimo momento dentro del radio ese dia
     radius_m = db.Column(db.Integer, default=1000)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'ally_id', 'visit_date', name='uq_pv_user_ally_date'),
     )
+
+    @property
+    def duration_minutes(self):
+        """Duracion estimada de la visita (min) entre primer y ultimo paso por el radio."""
+        if self.first_time and self.last_time and self.last_time > self.first_time:
+            return round((self.last_time - self.first_time).total_seconds() / 60.0, 0)
+        return 0
+
+
+# ============================================================
+# MODELO SALES DEAL - Negocios/operaciones del rol Venta
+# ============================================================
+class SalesDeal(db.Model):
+    """Negocio (oportunidad de venta) asignado a un vendedor (rol 'venta').
+    Se precarga desde Excel (formato ciclo de ventas) o se crea manualmente.
+    Estados: asignado -> en_cotizacion -> ganado | perdido."""
+    __tablename__ = 'sales_deal'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Identificacion del negocio / cliente (de la precarga)
+    opportunity_id = db.Column(db.String(50), index=True)   # ID oportunidad
+    client_number = db.Column(db.String(50), index=True)    # Numero de cliente
+    client_name = db.Column(db.String(200), index=True)     # Cliente
+    address = db.Column(db.String(300))
+    phone = db.Column(db.String(50))
+    campaign = db.Column(db.String(200))                    # Campana
+    market = db.Column(db.String(100))                      # Mercado
+    sales_org = db.Column(db.String(150))                   # Organizacion de ventas
+
+    # Origen de la venta (Demanda, Dispersa, Campanas, etc.)
+    origen = db.Column(db.String(100), index=True)
+
+    # Asignacion al vendedor
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_deal_user'), nullable=True, index=True)
+    assigned_date = db.Column(db.Date, index=True)          # Fecha de la asignacion
+    assignment_period = db.Column(db.String(20), default='diaria')  # diaria, semanal, mensual
+
+    # Estado del negocio
+    status = db.Column(db.String(20), default='asignado', index=True)
+    # asignado, en_cotizacion, ganado, perdido
+    status_reason = db.Column(db.String(300))               # Motivo del estado
+    status_date = db.Column(db.DateTime)                    # Cuando se marco el estado (UTC)
+
+    # Fechas del ciclo (de la precarga)
+    start_date = db.Column(db.Date)
+    close_date = db.Column(db.Date)
+
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_deal_creator'), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    seller = db.relationship('User', foreign_keys=[assigned_to], backref='sales_deals')
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    STATUS_LABELS = {
+        'asignado': 'Asignado',
+        'en_cotizacion': 'En Cotizacion',
+        'ganado': 'Ganado',
+        'perdido': 'Perdido',
+    }
+
+    @property
+    def status_display(self):
+        return self.STATUS_LABELS.get(self.status, self.status)
 
 
 @login.user_loader

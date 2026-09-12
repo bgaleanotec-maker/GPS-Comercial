@@ -170,6 +170,9 @@ def create_app(config_class=Config):
     from app.schedule import bp as schedule_bp
     app.register_blueprint(schedule_bp, url_prefix='/schedule')
 
+    from app.sales import bp as sales_bp
+    app.register_blueprint(sales_bp, url_prefix='/sales')
+
     # Forzar cambio de contrasena en cualquier ruta protegida
     @app.before_request
     def check_password_change():

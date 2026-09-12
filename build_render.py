@@ -54,4 +54,14 @@ with app.app_context():
     else:
         print("=== Reinicio de claves ya ejecutado previamente: omitido ===")
 
+    # === Reproceso unico: rellenar last_time (hora final) de visitas por proximidad ===
+    # Al agregar la columna last_time, se reinicia el cursor del backfill una vez para
+    # que el worker reprocese el historico y calcule la duracion de cada visita.
+    LT_FLAG = 'prox_lasttime_reset_v1'
+    if not Setting.query.filter_by(key=LT_FLAG).first():
+        Setting.query.filter_by(key='proximity_cursor_date').delete()
+        db.session.add(Setting(key=LT_FLAG, value='done'))
+        db.session.commit()
+        print("=== Cursor de proximidad reiniciado (backfill de hora final) ===")
+
     print("=== Build completado ===")

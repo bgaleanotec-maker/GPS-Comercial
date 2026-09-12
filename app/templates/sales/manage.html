@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-4 px-3 sm:px-6 lg:px-8" x-data="{ selCount: 0 }">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-100">Gestion de Ventas</h1>
+            <p class="text-sm text-slate-400">Precarga de negocios, asignacion a vendedores y pipeline</p>
+        </div>
+        <a href="{{ url_for('sales.board') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-500 transition">
+            Ver tablero de vendedor
+        </a>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <div class="bg-slate-900 rounded-2xl border border-slate-700/40 p-3 text-center"><div class="text-2xl font-bold text-slate-100">{{ totales.total }}</div><div class="text-[11px] text-slate-500 mt-1">Negocios</div></div>
+        <div class="bg-slate-900 rounded-2xl border border-blue-500/20 p-3 text-center"><div class="text-2xl font-bold text-blue-400">{{ totales.sin_asignar }}</div><div class="text-[11px] text-slate-500 mt-1">Sin asignar</div></div>
+        <div class="bg-slate-900 rounded-2xl border border-amber-500/20 p-3 text-center"><div class="text-2xl font-bold text-amber-400">{{ totales.cotizacion }}</div><div class="text-[11px] text-slate-500 mt-1">En Cotizacion</div></div>
+        <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-3 text-center"><div class="text-2xl font-bold text-emerald-400">{{ totales.ganados }}</div><div class="text-[11px] text-slate-500 mt-1">Ganados</div></div>
+        <div class="bg-slate-900 rounded-2xl border border-red-500/20 p-3 text-center"><div class="text-2xl font-bold text-red-400">{{ totales.perdidos }}</div><div class="text-[11px] text-slate-500 mt-1">Perdidos</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Precarga -->
+        <div class="bg-slate-900 rounded-2xl border border-slate-800/50 p-4">
+            <h2 class="text-sm font-semibold text-slate-300 mb-2">Precarga de negocios (Excel)</h2>
+            <p class="text-[11px] text-slate-500 mb-3">
+                Sube el archivo del ciclo de ventas (.xlsx). Se leen: Cliente, Numero de cliente, ID oportunidad,
+                Estado (Ganada/Perdido), Origen, Demanda espontanea, Fechas, Direccion, Mercado, Campana, Telefonos y Notas.
+                Si el archivo trae una columna "Vendedor" con el usuario, se asigna automaticamente.
+            </p>
+            <form method="post" enctype="multipart/form-data" class="space-y-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="file" name="precarga" accept=".xlsx,.xlsm" required
+                       class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-indigo-600/20 file:text-indigo-400 hover:file:bg-indigo-600/30">
+                <button type="submit" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-500 transition">Importar precarga</button>
+            </form>
+        </div>
+
+        <!-- Resumen por vendedor -->
+        <div class="lg:col-span-2 bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
+            <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800"><h2 class="text-sm font-semibold text-slate-300">Efectividad por vendedor</h2></div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-[11px] uppercase text-slate-500 border-b border-slate-800">
+                            <th class="text-left px-4 py-2 font-medium">Vendedor</th>
+                            <th class="text-right px-3 py-2 font-medium">Asignados</th>
+                            <th class="text-right px-3 py-2 font-medium">Ganados</th>
+                            <th class="text-right px-3 py-2 font-medium">Perdidos</th>
+                            <th class="text-right px-3 py-2 font-medium">En Cotiz.</th>
+                            <th class="text-right px-3 py-2 font-medium">Efectividad</th>
+                            <th class="px-3 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/50">
+                        {% for r in resumen %}
+                        <tr class="hover:bg-slate-800/30 transition">
+                            <td class="px-4 py-2.5 font-medium text-slate-100">{{ r.seller.full_name or r.seller.username }}</td>
+                            <td class="text-right px-3 py-2.5 text-slate-300">{{ r.total }}</td>
+                            <td class="text-right px-3 py-2.5 text-emerald-400 font-bold">{{ r.ganados }}</td>
+                            <td class="text-right px-3 py-2.5 text-red-400">{{ r.perdidos }}</td>
+                            <td class="text-right px-3 py-2.5 text-amber-400">{{ r.cotizacion }}</td>
+                            <td class="text-right px-3 py-2.5 font-bold {% if r.efectividad >= 60 %}text-emerald-400{% elif r.efectividad >= 30 %}text-amber-400{% else %}text-slate-300{% endif %}">{{ r.efectividad }}%</td>
+                            <td class="px-3 py-2.5 text-right"><a href="{{ url_for('sales.board', user_id=r.seller.id, period='mes') }}" class="text-indigo-400 hover:text-indigo-300 text-xs font-medium">Tablero →</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-500">Aun no hay usuarios con rol Venta. Crealos en Gestionar Usuarios con el rol "Venta (Vendedor)".</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asignacion + listado -->
+    <form method="post" action="{{ url_for('sales.assign_deals') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
+            <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-sm font-semibold text-slate-300">Negocios <span class="text-xs text-slate-500">(selecciona y asigna)</span></h2>
+                <!-- Filtros -->
+                <div class="flex items-center gap-2 text-xs">
+                    <select onchange="location.href='{{ url_for('sales.manage') }}?status='+this.value+'&seller_id={{ seller_f or '' }}'" class="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200">
+                        <option value="all" {% if status_f == 'all' %}selected{% endif %}>Todos</option>
+                        <option value="sin_asignar" {% if status_f == 'sin_asignar' %}selected{% endif %}>Sin asignar</option>
+                        <option value="asignado" {% if status_f == 'asignado' %}selected{% endif %}>Asignados</option>
+                        <option value="en_cotizacion" {% if status_f == 'en_cotizacion' %}selected{% endif %}>En Cotizacion</option>
+                        <option value="ganado" {% if status_f == 'ganado' %}selected{% endif %}>Ganados</option>
+                        <option value="perdido" {% if status_f == 'perdido' %}selected{% endif %}>Perdidos</option>
+                    </select>
+                    <select onchange="location.href='{{ url_for('sales.manage') }}?status={{ status_f }}&seller_id='+this.value" class="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200">
+                        <option value="">Todos los vendedores</option>
+                        {% for s in sellers %}<option value="{{ s.id }}" {% if seller_f == s.id %}selected{% endif %}>{{ s.full_name or s.username }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Barra de asignacion -->
+            <div class="px-4 py-3 bg-indigo-500/5 border-b border-slate-800 flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Asignar a (rol Venta)</label>
+                    <select name="seller_id" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
+                        {% for s in sellers %}<option value="{{ s.id }}">{{ s.full_name or s.username }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Periodicidad</label>
+                    <select name="assignment_period" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
+                        <option value="diaria">Diaria</option>
+                        <option value="semanal">Semanal</option>
+                        <option value="mensual">Mensual</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Fecha de asignacion</label>
+                    <input type="date" name="assigned_date" value="{{ today }}" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-500 transition"
+                        :disabled="selCount === 0" :class="{'opacity-50 cursor-not-allowed': selCount === 0}">
+                    Asignar (<span x-text="selCount"></span>)
+                </button>
+                <button type="button" class="text-[11px] text-slate-400 hover:text-slate-200 underline"
+                        @click="document.querySelectorAll('input[name=deal_ids]').forEach(c=>c.checked=true); selCount=document.querySelectorAll('input[name=deal_ids]:checked').length">Todos</button>
+                <button type="button" class="text-[11px] text-slate-400 hover:text-slate-200 underline"
+                        @click="document.querySelectorAll('input[name=deal_ids]').forEach(c=>c.checked=false); selCount=0">Ninguno</button>
+            </div>
+
+            <div class="overflow-x-auto max-h-[560px] overflow-y-auto">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-slate-900">
+                        <tr class="text-[11px] uppercase text-slate-500 border-b border-slate-800">
+                            <th class="px-3 py-2"></th>
+                            <th class="text-left px-3 py-2 font-medium">Cliente</th>
+                            <th class="text-left px-3 py-2 font-medium">Origen</th>
+                            <th class="text-left px-3 py-2 font-medium">Mercado</th>
+                            <th class="text-left px-3 py-2 font-medium">Estado</th>
+                            <th class="text-left px-3 py-2 font-medium">Vendedor</th>
+                            <th class="text-left px-3 py-2 font-medium">Asignado</th>
+                            <th class="text-left px-3 py-2 font-medium">Oportunidad</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/50">
+                        {% for d in deals %}
+                        <tr class="hover:bg-slate-800/30 transition">
+                            <td class="px-3 py-2"><input type="checkbox" name="deal_ids" value="{{ d.id }}"
+                                @change="selCount = document.querySelectorAll('input[name=deal_ids]:checked').length"
+                                class="rounded border-slate-600 bg-slate-900 text-indigo-500"></td>
+                            <td class="px-3 py-2">
+                                <div class="font-medium text-slate-100">{{ d.client_name }}</div>
+                                <div class="text-[11px] text-slate-500">{% if d.client_number %}#{{ d.client_number }} · {% endif %}{{ (d.address or '')[:40] }}</div>
+                            </td>
+                            <td class="px-3 py-2 text-slate-300">{{ d.origen or '—' }}</td>
+                            <td class="px-3 py-2 text-slate-400 text-xs">{{ d.market or '—' }}</td>
+                            <td class="px-3 py-2">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold
+                                    {% if d.status == 'ganado' %}bg-emerald-500/15 text-emerald-400
+                                    {% elif d.status == 'perdido' %}bg-red-500/15 text-red-400
+                                    {% elif d.status == 'en_cotizacion' %}bg-amber-500/15 text-amber-400
+                                    {% else %}bg-slate-500/15 text-slate-400{% endif %}">{{ d.status_display }}</span>
+                            </td>
+                            <td class="px-3 py-2 text-slate-300 text-xs">{{ (d.seller.full_name or d.seller.username) if d.seller else 'Sin asignar' }}</td>
+                            <td class="px-3 py-2 text-slate-400 text-xs">{{ d.assigned_date.strftime('%d/%m/%Y') if d.assigned_date else '—' }}{% if d.assigned_date %} · {{ d.assignment_period }}{% endif %}</td>
+                            <td class="px-3 py-2 text-slate-500 text-xs">{{ d.opportunity_id or '—' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="px-4 py-10 text-center text-sm text-slate-500">Sin negocios. Sube la precarga para empezar.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-4 px-3 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-100">Mis Negocios</h1>
+            <p class="text-sm text-slate-400">{{ seller.full_name or seller.username }} · {{ start_d.strftime('%d/%m/%Y') }} → {{ end_d.strftime('%d/%m/%Y') }}</p>
+        </div>
+        {% if sellers %}
+        <form method="get" class="flex items-center gap-2">
+            <input type="hidden" name="period" value="{{ period }}">
+            <label class="text-xs text-slate-400">Vendedor:</label>
+            <select name="user_id" onchange="this.form.submit()" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
+                {% for s in sellers %}
+                <option value="{{ s.id }}" {% if s.id == seller.id %}selected{% endif %}>{{ s.full_name or s.username }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Filtros rapidos de periodo -->
+    <div class="flex flex-wrap gap-2 mb-5">
+        {% for p, label in [('dia','Hoy'), ('semana','Esta semana'), ('mes','Este mes'), ('todo','Todo')] %}
+        <a href="{{ url_for('sales.board', period=p, user_id=seller.id if sellers else None) }}"
+           class="px-3 py-1.5 rounded-lg text-xs font-medium border {% if period == p %}bg-indigo-600 text-white border-indigo-500{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700{% endif %} transition">{{ label }}</a>
+        {% endfor %}
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+        <div class="bg-slate-900 rounded-2xl border border-indigo-500/20 p-3 text-center">
+            <div class="text-2xl font-bold text-indigo-400">{{ stats.total }}</div>
+            <div class="text-[11px] text-slate-500 mt-1">Asignados</div>
+        </div>
+        <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-3 text-center">
+            <div class="text-2xl font-bold text-emerald-400">{{ stats.ganados }}</div>
+            <div class="text-[11px] text-slate-500 mt-1">Ganados</div>
+        </div>
+        <div class="bg-slate-900 rounded-2xl border border-red-500/20 p-3 text-center">
+            <div class="text-2xl font-bold text-red-400">{{ stats.perdidos }}</div>
+            <div class="text-[11px] text-slate-500 mt-1">Perdidos</div>
+        </div>
+        <div class="bg-slate-900 rounded-2xl border border-amber-500/20 p-3 text-center">
+            <div class="text-2xl font-bold text-amber-400">{{ stats.cotizacion }}</div>
+            <div class="text-[11px] text-slate-500 mt-1">En Cotizacion</div>
+        </div>
+        <div class="rounded-2xl p-3 text-center {% if stats.efectividad >= 60 %}bg-emerald-600{% elif stats.efectividad >= 30 %}bg-amber-500{% else %}bg-slate-900 border border-slate-700/40{% endif %}">
+            <div class="text-2xl font-bold {% if stats.efectividad >= 30 %}text-white{% else %}text-slate-100{% endif %}">{{ stats.efectividad }}%</div>
+            <div class="text-[11px] {% if stats.efectividad >= 30 %}text-white/80{% else %}text-slate-500{% endif %} mt-1">Efectividad</div>
+        </div>
+        <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-3 text-center">
+            <div class="text-2xl font-bold text-emerald-400">{{ stats.ventas_hoy }}<span class="text-xs text-slate-500"> / {{ stats.ventas_mes }}</span></div>
+            <div class="text-[11px] text-slate-500 mt-1">Ventas hoy / mes</div>
+        </div>
+        <div class="bg-slate-900 rounded-2xl border border-blue-500/20 p-3 text-center">
+            <div class="text-2xl font-bold text-blue-400">{{ stats.visitas_total }}</div>
+            <div class="text-[11px] text-slate-500 mt-1">Visitas ({{ stats.visitas_x_dia }}/dia)</div>
+        </div>
+        <div class="bg-slate-900 rounded-2xl border border-purple-500/20 p-3 text-center">
+            <div class="text-2xl font-bold text-purple-400">{{ stats.km if stats.km is not none else '—' }}</div>
+            <div class="text-[11px] text-slate-500 mt-1">Km recorridos</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Negocios asignados -->
+        <div class="lg:col-span-2 bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
+            <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-slate-300">Negocios asignados</h2>
+                <span class="text-xs text-slate-500">{{ stats.deals|length }} negocio(s)</span>
+            </div>
+            <div class="divide-y divide-slate-800/50 max-h-[560px] overflow-y-auto">
+                {% for d in stats.deals %}
+                <div class="px-4 py-3" x-data="{ open: false, motivo: false, target: '' }">
+                    <div class="flex items-center gap-3 cursor-pointer" @click="open = !open">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-sm font-medium text-slate-100 truncate">{{ d.client_name }}</span>
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold
+                                    {% if d.status == 'ganado' %}bg-emerald-500/15 text-emerald-400
+                                    {% elif d.status == 'perdido' %}bg-red-500/15 text-red-400
+                                    {% elif d.status == 'en_cotizacion' %}bg-amber-500/15 text-amber-400
+                                    {% else %}bg-slate-500/15 text-slate-400{% endif %}">{{ d.status_display }}</span>
+                                {% if d.origen %}<span class="px-1.5 py-0.5 bg-blue-500/15 text-blue-400 rounded text-[10px]">{{ d.origen }}</span>{% endif %}
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-0.5 truncate">
+                                {% if d.client_number %}#{{ d.client_number }} · {% endif %}{{ d.address or '' }}{% if d.phone %} · {{ d.phone }}{% endif %}
+                            </p>
+                        </div>
+                        <svg class="w-4 h-4 text-slate-600 flex-shrink-0 transition-transform" :class="{'rotate-180': open}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                    </div>
+                    <div x-show="open" x-cloak class="mt-2 pl-1 text-xs text-slate-500 space-y-2">
+                        <div class="flex flex-wrap gap-x-4 gap-y-1">
+                            {% if d.market %}<span>Mercado: {{ d.market }}</span>{% endif %}
+                            {% if d.campaign %}<span>Campana: {{ d.campaign }}</span>{% endif %}
+                            {% if d.opportunity_id %}<span>Oportunidad: {{ d.opportunity_id }}</span>{% endif %}
+                            <span>Asignado: {{ d.assigned_date.strftime('%d/%m/%Y') if d.assigned_date else '—' }} ({{ d.assignment_period }})</span>
+                        </div>
+                        {% if d.status_reason %}<p class="italic">Motivo: {{ d.status_reason }}</p>{% endif %}
+                        {% if d.notes %}<p>{{ d.notes }}</p>{% endif %}
+
+                        {# Acciones de estado #}
+                        <div class="flex flex-wrap items-center gap-2 pt-1">
+                            <button type="button" @click="motivo = true; target = 'ganado'" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-500 transition">Ganado</button>
+                            <button type="button" @click="motivo = true; target = 'perdido'" class="px-3 py-1.5 bg-red-700 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition">Perdido</button>
+                            <button type="button" @click="motivo = true; target = 'en_cotizacion'" class="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-500 transition">En Cotizacion</button>
+                        </div>
+                        <div x-show="motivo" x-cloak class="pt-1">
+                            <form method="post" action="{{ url_for('sales.set_deal_status', deal_id=d.id) }}" class="space-y-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="next" value="{{ request.url }}">
+                                <input type="hidden" name="status" :value="target">
+                                <textarea name="reason" rows="2" placeholder="Motivo / observacion (opcional)"
+                                          class="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200"></textarea>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-500 transition">Confirmar <span x-text="target"></span></button>
+                                    <button type="button" @click="motivo = false" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 rounded-lg text-xs">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="px-4 py-10 text-center text-sm text-slate-500">Sin negocios asignados en este periodo</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Origen + ventas -->
+        <div class="space-y-4">
+            <div class="bg-slate-900 rounded-2xl border border-slate-800/50 p-4">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Origen de las ventas (ganados)</h3>
+                {% for o, c in stats.origen %}
+                <div class="flex items-center justify-between text-sm py-1">
+                    <span class="text-slate-300">{{ o }}</span><span class="font-bold text-indigo-400">{{ c }}</span>
+                </div>
+                {% else %}
+                <p class="text-xs text-slate-500">Sin ventas en el periodo</p>
+                {% endfor %}
+            </div>
+            <div class="bg-slate-900 rounded-2xl border border-slate-800/50 p-4">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Ventas por dia</h3>
+                <div class="max-h-40 overflow-y-auto">
+                    {% for f, c in stats.ventas_por_dia|reverse %}
+                    <div class="flex items-center justify-between text-sm py-0.5"><span class="text-slate-400">{{ f.strftime('%d/%m/%Y') }}</span><span class="font-bold text-emerald-400">{{ c }}</span></div>
+                    {% else %}<p class="text-xs text-slate-500">Sin ventas en el periodo</p>{% endfor %}
+                </div>
+            </div>
+            <div class="bg-slate-900 rounded-2xl border border-slate-800/50 p-4">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Ventas por mes</h3>
+                {% for m, c in stats.ventas_por_mes|reverse %}
+                <div class="flex items-center justify-between text-sm py-0.5"><span class="text-slate-400">{{ m }}</span><span class="font-bold text-emerald-400">{{ c }}</span></div>
+                {% else %}<p class="text-xs text-slate-500">Sin ventas en el periodo</p>{% endfor %}
+            </div>
+            <div class="bg-slate-900 rounded-2xl border border-slate-800/50 p-4">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Visitas por cliente</h3>
+                <div class="max-h-48 overflow-y-auto">
+                    {% for v in stats.visitas_cliente %}
+                    <div class="flex items-center justify-between text-sm py-0.5">
+                        <span class="text-slate-300 truncate">{{ v.cliente }}</span>
+                        <span class="text-slate-400 text-xs">{{ v.count }} visita(s) · {{ v.dur_prom|int }} min prom</span>
+                    </div>
+                    {% else %}<p class="text-xs text-slate-500">Sin visitas en el periodo</p>{% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalle de visitas (inicio / fin / duracion) -->
+    <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
+        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800">
+            <h2 class="text-sm font-semibold text-slate-300">Visitas: hora de inicio, hora final y duracion</h2>
+        </div>
+        <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="sticky top-0 bg-slate-900">
+                    <tr class="text-[11px] uppercase text-slate-500 border-b border-slate-800">
+                        <th class="text-left px-4 py-2 font-medium">Fecha</th>
+                        <th class="text-left px-3 py-2 font-medium">Cliente / Punto</th>
+                        <th class="text-left px-3 py-2 font-medium">Hora inicio</th>
+                        <th class="text-left px-3 py-2 font-medium">Hora final</th>
+                        <th class="text-right px-4 py-2 font-medium">Duracion (min)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/50">
+                    {% for v in stats.detalle_visitas %}
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="px-4 py-2 text-slate-200 whitespace-nowrap">{{ v.fecha }}</td>
+                        <td class="px-3 py-2 text-slate-200">{{ v.cliente }}</td>
+                        <td class="px-3 py-2 text-slate-400">{{ v.inicio }}</td>
+                        <td class="px-3 py-2 text-slate-400">{{ v.fin }}</td>
+                        <td class="px-4 py-2 text-right font-medium {% if v.duracion >= 15 %}text-emerald-400{% else %}text-slate-400{% endif %}">{{ v.duracion }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">Sin visitas registradas en el periodo</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
