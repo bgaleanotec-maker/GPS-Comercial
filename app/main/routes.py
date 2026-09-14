@@ -1,7 +1,9 @@
 # Ruta: GPS_Comercial/app/main/routes.py
 import logging
+import time as clock
+from concurrent.futures import ThreadPoolExecutor
 
-from flask import render_template, abort, flash, request
+from flask import render_template, abort, flash, request, current_app
 from app.main import bp
 from flask_login import login_required, current_user
 from datetime import datetime, time, timedelta
@@ -36,6 +38,68 @@ def get_device_positions_view(device_id, from_time, to_time):
     if all_positions is None:
         return []
     return filter_positions_by_working_hours(all_positions)
+
+
+# ------------------------------------------------------------
+# Stats de dispositivo para dashboards: paralelo + cache + presupuesto de tiempo.
+# Evita que el dashboard exceda el timeout del worker si Traccar esta lento.
+# ------------------------------------------------------------
+_DIST_CACHE = {}          # (device_id, fecha) -> (expira_epoch, stats)
+_DIST_TTL = 600           # 10 minutos
+_EMPTY_DEVICE_STATS = {
+    'distance_today_meters': 0, 'distance_month_meters': 0, 'distance_total_meters': 0,
+    'walking_km_today': 0, 'vehicle_km_today': 0, 'max_speed_today': 0,
+}
+
+
+def _device_dashboard_stats(device_id, today_start, month_start, total_start, now):
+    """Distancias hoy/mes/total y clasificacion de hoy para UN dispositivo (con cache)."""
+    key = (device_id, today_start.date().isoformat())
+    hit = _DIST_CACHE.get(key)
+    if hit and hit[0] > clock.time():
+        return hit[1]
+
+    positions_today = get_device_positions_view(device_id, today_start, now)
+    res = dict(_EMPTY_DEVICE_STATS)
+    res['distance_today_meters'] = calculate_distance_from_points(positions_today)
+    res['distance_month_meters'] = _summary_distance_m(device_id, month_start, now)
+    res['distance_total_meters'] = _summary_distance_m(device_id, total_start, now)
+    if positions_today and len(positions_today) >= 2:
+        rs = calculate_route_distances(positions_today)
+        res['walking_km_today'] = rs['walking_km']
+        res['vehicle_km_today'] = rs['vehicle_km']
+        res['max_speed_today'] = rs['max_speed_kmh']
+
+    if len(_DIST_CACHE) > 800:
+        _DIST_CACHE.clear()
+    _DIST_CACHE[key] = (clock.time() + _DIST_TTL, res)
+    return res
+
+
+def parallel_device_stats(device_ids, today_start, month_start, total_start, now, budget_s=25):
+    """Calcula stats de varios dispositivos EN PARALELO con tope total de budget_s.
+    Lo que no alcance a llegar se devuelve en ceros (la pagina nunca se cae)."""
+    results = {}
+    if not device_ids:
+        return results
+    app_obj = current_app._get_current_object()
+
+    def job(did):
+        with app_obj.app_context():
+            return _device_dashboard_stats(did, today_start, month_start, total_start, now)
+
+    ex = ThreadPoolExecutor(max_workers=min(8, len(device_ids)))
+    futs = {ex.submit(job, did): did for did in device_ids}
+    deadline = clock.time() + budget_s
+    for fut, did in futs.items():
+        remaining = max(0.1, deadline - clock.time())
+        try:
+            results[did] = fut.result(timeout=remaining)
+        except Exception:
+            results[did] = dict(_EMPTY_DEVICE_STATS)
+    # No bloquear la respuesta esperando hilos rezagados
+    ex.shutdown(wait=False, cancel_futures=True)
+    return results
 
 
 def calculate_distance_from_points(positions):
@@ -198,29 +262,16 @@ def dashboard():
             # excedia el timeout del servidor y tumbaba la pagina (500).
             total_start = now - timedelta(days=365)
 
+            # Stats de todos los dispositivos EN PARALELO con presupuesto de tiempo
+            # (si Traccar esta lento, lo faltante sale en 0 y la pagina no se cae).
+            stats_map = parallel_device_stats([d['id'] for d in devices],
+                                              today_start, month_start, total_start, now)
             for device in devices:
-                # Solo las posiciones de HOY se descargan crudas (acotado); mes y
-                # total usan el reporte agregado de Traccar (liviano).
-                positions_today = get_device_positions_view(device['id'], today_start, now)
-
-                device['distance_today_meters'] = calculate_distance_from_points(positions_today)
-                device['distance_month_meters'] = _summary_distance_m(device['id'], month_start, now)
-                device['distance_total_meters'] = _summary_distance_m(device['id'], total_start, now)
-
+                st = stats_map.get(device['id']) or dict(_EMPTY_DEVICE_STATS)
+                device.update(st)
                 device['distance_today'] = device['distance_today_meters'] / 1000
                 device['distance_month'] = device['distance_month_meters'] / 1000
                 device['distance_total'] = device['distance_total_meters'] / 1000
-
-                # Clasificacion de distancias por modo de transporte
-                if positions_today and len(positions_today) >= 2:
-                    route_stats = calculate_route_distances(positions_today)
-                    device['walking_km_today'] = route_stats['walking_km']
-                    device['vehicle_km_today'] = route_stats['vehicle_km']
-                    device['max_speed_today'] = route_stats['max_speed_kmh']
-                else:
-                    device['walking_km_today'] = 0
-                    device['vehicle_km_today'] = 0
-                    device['max_speed_today'] = 0
         else:
             categorias = []
             flash('No se pudo conectar a Traccar para obtener la lista de dispositivos.', 'danger')
@@ -245,27 +296,13 @@ def dashboard():
         month_start = today_start.replace(day=1)
         total_start = now - timedelta(days=365)
 
-        # Solo hoy en crudo; mes y total via reporte agregado (liviano)
-        positions_today = get_device_positions_view(device['id'], today_start, now)
-
-        device['distance_today_meters'] = calculate_distance_from_points(positions_today)
-        device['distance_month_meters'] = _summary_distance_m(device['id'], month_start, now)
-        device['distance_total_meters'] = _summary_distance_m(device['id'], total_start, now)
-
+        # Stats del dispositivo con presupuesto de tiempo y cache
+        stats_map = parallel_device_stats([device['id']], today_start, month_start, total_start, now)
+        st = stats_map.get(device['id']) or dict(_EMPTY_DEVICE_STATS)
+        device.update(st)
         device['distance_today'] = device['distance_today_meters'] / 1000
         device['distance_month'] = device['distance_month_meters'] / 1000
         device['distance_total'] = device['distance_total_meters'] / 1000
-
-        # Clasificacion de distancias
-        if positions_today and len(positions_today) >= 2:
-            route_stats = calculate_route_distances(positions_today)
-            device['walking_km_today'] = route_stats['walking_km']
-            device['vehicle_km_today'] = route_stats['vehicle_km']
-            device['max_speed_today'] = route_stats['max_speed_kmh']
-        else:
-            device['walking_km_today'] = 0
-            device['vehicle_km_today'] = 0
-            device['max_speed_today'] = 0
 
         return render_template('admin_dashboard.html', title='Mi Dashboard', devices=[device])
     elif current_user.role == 'venta':
