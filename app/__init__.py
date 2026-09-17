@@ -185,8 +185,52 @@ def create_app(config_class=Config):
 
     # === DIAGNOSTICO TEMPORAL: captura de tracebacks para depurar el 500 ===
     import traceback as _tbmod
+    import json as _json
+    import time as _clockmod
+    import tempfile as _tmp
     from werkzeug.exceptions import HTTPException
     app._last_errors = []
+    app._boot_ts = datetime.now().isoformat(timespec='seconds')
+
+    # Detector de "worker matado": si el proceso muere a mitad de una peticion
+    # (timeout/OOM), el archivo inflight queda escrito y al reiniciar lo registramos.
+    _INFLIGHT = os.path.join(_tmp.gettempdir(), 'vg_inflight.json')
+    _KILLED = os.path.join(_tmp.gettempdir(), 'vg_killed.json')
+    try:
+        if os.path.exists(_INFLIGHT):
+            with open(_INFLIGHT) as fh:
+                pend = fh.read().strip()
+            if pend:
+                killed = []
+                if os.path.exists(_KILLED):
+                    try:
+                        killed = _json.load(open(_KILLED))
+                    except Exception:
+                        killed = []
+                killed.append(pend)
+                _json.dump(killed[-10:], open(_KILLED, 'w'))
+            os.remove(_INFLIGHT)
+    except Exception:
+        pass
+
+    @app.before_request
+    def _diag_inflight_start():
+        from flask import request
+        if request.path.startswith(('/static', '/__diag', '/health')):
+            return
+        try:
+            with open(_INFLIGHT, 'w') as fh:
+                fh.write(f"{datetime.now().isoformat(timespec='seconds')} {request.method} {request.full_path}")
+        except Exception:
+            pass
+
+    @app.teardown_request
+    def _diag_inflight_end(exc=None):
+        try:
+            if os.path.exists(_INFLIGHT):
+                os.remove(_INFLIGHT)
+        except Exception:
+            pass
 
     @app.errorhandler(Exception)
     def _diag_capture(e):
@@ -206,8 +250,16 @@ def create_app(config_class=Config):
         from flask import request, Response
         if request.args.get('k') != 'vg-diag-7x9k':
             return ("forbidden", 403)
-        body = "\n\n======== siguiente ========\n\n".join(app._last_errors[-5:]) or "sin errores capturados aun"
-        return Response(body, mimetype='text/plain')
+        killed = []
+        try:
+            if os.path.exists(_KILLED):
+                killed = _json.load(open(_KILLED))
+        except Exception:
+            pass
+        parts = [f"boot: {app._boot_ts}"]
+        parts.append("PETICIONES MATADAS (worker murio a mitad):\n" + ("\n".join(killed) if killed else "  ninguna registrada"))
+        parts.append("EXCEPCIONES CAPTURADAS:\n" + ("\n\n======== siguiente ========\n\n".join(app._last_errors[-5:]) or "  ninguna"))
+        return Response("\n\n".join(parts), mimetype='text/plain')
     # === FIN DIAGNOSTICO TEMPORAL ===
 
     # Crear/actualizar tablas e inicializar datos

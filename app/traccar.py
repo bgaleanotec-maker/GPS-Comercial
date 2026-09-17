@@ -177,7 +177,7 @@ def get_device_summary_daily(device_id, from_time, to_time):
         response = session.get(
             f"{base_url}/api/reports/summary",
             params=params,
-            timeout=30
+            timeout=12
         )
         response.raise_for_status()
         if response.text:

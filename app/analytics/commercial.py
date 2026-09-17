@@ -9,11 +9,13 @@ Incluye:
 - Vista de detalle con mapa del recorrido (Leaflet) y desglose completo.
 """
 import statistics
+import time as clock
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 import pytz
-from flask import render_template, request, abort, jsonify
+from flask import render_template, request, abort, jsonify, current_app
 from flask_login import login_required, current_user
 
 from app.analytics import bp
@@ -35,6 +37,31 @@ def _fmt_dt_local(dt):
     if dt.tzinfo is None:
         dt = pytz.utc.localize(dt)
     return dt.astimezone(COLOMBIA_TZ)
+
+
+def _parallel_fetch(ids, fetch_fn, budget_s=30, max_workers=8):
+    """Ejecuta fetch_fn(id) EN PARALELO con tope total de tiempo. Lo que no llegue
+    queda como None. Evita que Traccar lento tumbe la pagina por timeout del worker."""
+    results = {}
+    if not ids:
+        return results
+    app_obj = current_app._get_current_object()
+
+    def job(i):
+        with app_obj.app_context():
+            return fetch_fn(i)
+
+    ex = ThreadPoolExecutor(max_workers=min(max_workers, len(ids)))
+    futs = {ex.submit(job, i): i for i in ids}
+    deadline = clock.time() + budget_s
+    for fut, i in futs.items():
+        remaining = max(0.1, deadline - clock.time())
+        try:
+            results[i] = fut.result(timeout=remaining)
+        except Exception:
+            results[i] = None
+    ex.shutdown(wait=False, cancel_futures=True)
+    return results
 
 
 def _daily_km_map(daily_rows):
@@ -275,6 +302,14 @@ def _commercial_context():
             e['last'] = v.visit_date
         total_weekday_visits += 1
 
+    # Prefetch PARALELO de los resumenes diarios de Traccar (antes era secuencial:
+    # hasta N ejecutivos x 12s c/u podia exceder el timeout del worker y tumbar la pagina)
+    daily_map = {}
+    if include_distance:
+        dev_ids = [u.traccar_device_id for u in target_execs if u.traccar_device_id]
+        daily_map = _parallel_fetch(
+            dev_ids, lambda did: get_device_summary_daily(did, start_utc, end_utc), budget_s=30)
+
     rows = []
     for u in target_execs:
         d = per_exec.get(u.id)
@@ -284,8 +319,8 @@ def _commercial_context():
         top_ally_share = round(max(allies_dict.values()) / total * 100, 0) if total and allies_dict else 0
         dstats = None
         if include_distance and u.traccar_device_id:
-            daily = get_device_summary_daily(u.traccar_device_id, start_utc, end_utc)
-            dstats = _distance_stats(daily, start_d, end_d, anomaly_km)
+            daily = daily_map.get(u.traccar_device_id)
+            dstats = _distance_stats(daily, start_d, end_d, anomaly_km) if daily is not None else None
         rows.append({
             'id': u.id,
             'name': u.full_name or u.username,
@@ -396,12 +431,19 @@ def commercial_pdf():
     MAX_MAPS = 12
     candidates = [r for r in ctx['rows'] if r.get('device_id') and r.get('last_local') and r['total'] > 0]
     candidates = sorted(candidates, key=lambda r: r['total'], reverse=True)[:MAX_MAPS]
-    for r in candidates:
+
+    # Traer las rutas EN PARALELO con presupuesto (antes secuencial: hasta 12 x 10s)
+    def fetch_route(idx):
+        r = candidates[idx]
+        day = datetime.strptime(r['last_local'], '%Y-%m-%d').date()
+        m_start = COLOMBIA_TZ.localize(datetime.combine(day, datetime.min.time()))
+        m_end = m_start + timedelta(days=1)
+        return get_device_route(r['device_id'], m_start, m_end)
+
+    route_map = _parallel_fetch(list(range(len(candidates))), fetch_route, budget_s=30)
+    for idx, r in enumerate(candidates):
         try:
-            day = datetime.strptime(r['last_local'], '%Y-%m-%d').date()
-            m_start = COLOMBIA_TZ.localize(datetime.combine(day, datetime.min.time()))
-            m_end = m_start + timedelta(days=1)
-            route = get_device_route(r['device_id'], m_start, m_end)
+            route = route_map.get(idx)
             pts = [(p.get('latitude'), p.get('longitude')) for p in (route or [])
                    if p.get('latitude') is not None and p.get('longitude') is not None]
             if len(pts) >= 2:
