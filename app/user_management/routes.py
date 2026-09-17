@@ -130,9 +130,27 @@ def edit_user(user_id):
         user.employee_status = request.form.get('employee_status', 'activo')
         user.status_notes = request.form.get('status_notes', '')
 
-        # Solo admin puede cambiar rol, categoria, filial
+        # Cambio de ROL desde editar usuario (sin necesidad de crear uno nuevo):
+        # - Admin: puede asignar cualquier rol (empleado, venta, lider, admin).
+        # - Lider: puede cambiar entre empleado / venta / lider (nunca admin, ni
+        #   tocar cuentas admin).
+        # - Nadie puede cambiar su PROPIO rol (evita quedarse sin acceso).
+        new_role = request.form.get('role', '').strip()
+        if new_role and new_role != user.role:
+            allowed = {'empleado', 'venta', 'lider', 'admin'} if current_user.role == 'admin' \
+                else {'empleado', 'venta', 'lider'}
+            if user.id == current_user.id:
+                flash('No puedes cambiar tu propio rol.', 'warning')
+            elif user.role == 'admin' and current_user.role != 'admin':
+                flash('Solo un administrador puede modificar una cuenta admin.', 'warning')
+            elif new_role in allowed:
+                user.role = new_role
+                flash(f'Rol de {user.username} cambiado a {new_role}.', 'success')
+            else:
+                flash('No tienes permiso para asignar ese rol.', 'warning')
+
+        # Solo admin puede cambiar categoria y filial
         if current_user.role == 'admin':
-            user.role = request.form.get('role', user.role)
             user.categoria = request.form.get('categoria', user.categoria)
             user.filial = request.form.get('filial', user.filial)
 

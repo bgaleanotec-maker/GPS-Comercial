@@ -33,12 +33,22 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Rol</label>
-                    <select name="role" class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-sm touch-target focus:ring-2 focus:ring-indigo-500">
+                    {% set rol_bloqueado = (user.id == current_user.id) or (user.role == 'admin' and current_user.role != 'admin') %}
+                    <select name="role" {% if rol_bloqueado %}disabled{% endif %} class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-sm touch-target focus:ring-2 focus:ring-indigo-500 {% if rol_bloqueado %}opacity-60 cursor-not-allowed{% endif %}">
                         <option value="empleado" {% if user.role == 'empleado' %}selected{% endif %}>Empleado</option>
                         <option value="venta" {% if user.role == 'venta' %}selected{% endif %}>Venta (Vendedor)</option>
                         <option value="lider" {% if user.role == 'lider' %}selected{% endif %}>Lider de Negocio</option>
+                        {% if current_user.role == 'admin' or user.role == 'admin' %}
                         <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrador</option>
+                        {% endif %}
                     </select>
+                    {% if user.id == current_user.id %}
+                    <p class="text-[11px] text-amber-400/80 mt-1">No puedes cambiar tu propio rol.</p>
+                    {% elif user.role == 'admin' and current_user.role != 'admin' %}
+                    <p class="text-[11px] text-amber-400/80 mt-1">Solo un administrador puede modificar una cuenta admin.</p>
+                    {% else %}
+                    <p class="text-[11px] text-slate-500 mt-1">Cambia el rol y pulsa Guardar: aplica de inmediato, sin crear el usuario de nuevo.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
