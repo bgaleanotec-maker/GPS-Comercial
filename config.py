@@ -14,6 +14,10 @@ class Config(object):
 
     if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
+    # Driver explicito: SQLAlchemy 2.1 asume psycopg (v3) para 'postgresql://' y
+    # el proyecto instala psycopg2-binary.
+    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgresql://"):
+        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgresql://", "postgresql+psycopg2://", 1)
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
