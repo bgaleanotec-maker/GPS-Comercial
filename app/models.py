@@ -410,6 +410,9 @@ class SalesDeal(db.Model):
     longitude = db.Column(db.Float)
     geocoded_at = db.Column(db.DateTime)
     geocode_attempts = db.Column(db.Integer, default=0)
+    # Referencia generada por el celular al registrar un negocio sin internet:
+    # evita duplicados cuando la app reintenta el envio.
+    client_ref = db.Column(db.String(48), index=True)
 
     # Asignacion al vendedor
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_deal_user'), nullable=True, index=True)

@@ -15,7 +15,10 @@
     </div>
   </div>
 
-  <form method="post" class="space-y-4">
+  <div x-show="!online" x-cloak class="mb-3 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">⚡ Sin conexion: el negocio se guardara en el celular y se enviara solo al volver la señal.</div>
+  <p x-show="msg" x-text="msg" x-cloak class="mb-3 text-xs text-indigo-300"></p>
+
+  <form method="post" class="space-y-4" @submit.prevent="save($event)">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="latitude" x-model="lat">
     <input type="hidden" name="longitude" x-model="lng">
@@ -86,15 +89,18 @@
       </div>
     </div>
 
-    <button type="submit" class="w-full py-3.5 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-500 transition touch-target">Guardar negocio</button>
+    <button type="submit" :disabled="saving" class="w-full py-3.5 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-500 transition touch-target disabled:opacity-50">
+      <span x-show="!saving">Guardar negocio</span><span x-show="saving">Guardando…</span>
+    </button>
   </form>
 </div>
 
 <script>
 function dealForm() {
   return {
-    lat: '', lng: '', map: null, marker: null,
+    lat: '', lng: '', map: null, marker: null, online: navigator.onLine, saving: false, msg: '',
     init() {
+      window.addEventListener('online', () => { this.online = true; }); window.addEventListener('offline', () => { this.online = false; });
       this.map = L.map('mini', { zoomControl: false }).setView([4.6533, -74.0836], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(this.map);
       this.map.on('click', e => this.setPos(e.latlng.lat, e.latlng.lng, false));
@@ -109,6 +115,33 @@ function dealForm() {
     locate() {
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(p => this.setPos(p.coords.latitude, p.coords.longitude, true), () => {}, { enableHighAccuracy: true, timeout: 8000 });
+    },
+    // Guardar: por red si hay señal; si no (o si falla), a la cola del celular (IndexedDB)
+    async save(ev) {
+      const form = ev.target, fd = new FormData(form);
+      const fields = {}; fd.forEach((v, k) => { if (k !== 'csrf_token') fields[k] = v; });
+      const ref = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), at = new Date().toISOString();
+      fields.client_ref = ref; fields.at = at;
+      this.saving = true;
+      const done = (m) => { try { localStorage.setItem('vg_msg', m); } catch (e) {} window.location.href = '{{ url_for("sales.mobile_app") }}'; };
+      const queue = async () => {
+        try {
+          await new Promise((res, rej) => { const r = indexedDB.open('VantiGoQueue', 1);
+            r.onupgradeneeded = e => { const db = e.target.result; if (!db.objectStoreNames.contains('q')) db.createObjectStore('q', { keyPath: 'id', autoIncrement: true }); };
+            r.onerror = e => rej(e.target.error);
+            r.onsuccess = e => { const w = e.target.result.transaction('q', 'readwrite').objectStore('q').add({ type: 'deal', fields, ref, at, created: Date.now() }); w.onsuccess = res; w.onerror = () => rej(w.error); }; });
+          done('Negocio "' + (fields.client_name || '') + '" guardado en el celular. Se enviara al volver la señal.');
+        } catch (e) { this.msg = 'No se pudo guardar sin conexion en este navegador.'; this.saving = false; }
+      };
+      if (!navigator.onLine) return queue();
+      try {
+        const body = new FormData(); Object.keys(fields).forEach(k => body.append(k, fields[k]));
+        const r = await fetch(form.action || window.location.href, { method: 'POST', headers: { 'X-Requested-With': 'fetch', 'X-CSRFToken': '{{ csrf_token() }}' }, body });
+        const d = await r.json();
+        if (d.offline) throw new Error('offline');
+        if (!d.ok) { this.msg = d.msg || 'No se pudo guardar.'; this.saving = false; return; }
+        done(d.msg);
+      } catch (e) { queue(); }
     }
   }
 }

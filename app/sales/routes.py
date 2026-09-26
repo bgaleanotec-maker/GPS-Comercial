@@ -681,10 +681,21 @@ def new_deal():
     if current_user.role not in ('venta', 'admin', 'lider'):
         abort(403)
     if request.method == 'POST':
+        # La app movil envia por fetch (y reenvia lo registrado sin internet): responde JSON
+        as_json = request.headers.get('X-Requested-With') == 'fetch'
         client_name = (request.form.get('client_name') or '').strip()
         if not client_name:
+            if as_json:
+                return jsonify({'ok': False, 'msg': 'El nombre del cliente es obligatorio.'}), 400
             flash('El nombre del cliente es obligatorio.', 'danger')
             return redirect(url_for('sales.new_deal'))
+        ref = _clean(request.form.get('client_ref'), 48)
+        if ref:
+            dup = SalesDeal.query.filter_by(client_ref=ref).first()
+            if dup:
+                if as_json:
+                    return jsonify({'ok': True, 'msg': 'El negocio ya estaba registrado.', 'deal_id': dup.id})
+                return redirect(url_for('sales.mobile_app'))
         lat = request.form.get('latitude', type=float)
         lng = request.form.get('longitude', type=float)
         if current_user.role == 'venta':
@@ -692,7 +703,13 @@ def new_deal():
         else:
             seller_id = request.form.get('seller_id', type=int) or current_user.id
         status = request.form.get('status')
+        # Fecha real del registro si se hizo sin internet y llega despues (max 7 dias)
+        reg_date = _today()
+        at = _parse_client_time(request.form.get('at'))
+        if at and datetime.now(pytz.utc) - timedelta(days=7) <= at <= datetime.now(pytz.utc) + timedelta(minutes=5):
+            reg_date = at.astimezone(COLOMBIA_TZ).date()
         deal = SalesDeal(
+            client_ref=ref or None,
             client_name=client_name,
             client_number=_clean(request.form.get('client_number'), 50),
             address=_clean(request.form.get('address'), 300),
@@ -704,11 +721,13 @@ def new_deal():
             status=status if status in DEAL_STATUSES else 'asignado',
             latitude=lat, longitude=lng,
             geocoded_at=datetime.utcnow() if lat is not None else None,
-            assigned_to=seller_id, assigned_date=_today(), assignment_period='diaria',
-            created_by=current_user.id, start_date=_today(),
+            assigned_to=seller_id, assigned_date=reg_date, assignment_period='diaria',
+            created_by=current_user.id, start_date=reg_date,
         )
         db.session.add(deal)
         db.session.commit()
+        if as_json:
+            return jsonify({'ok': True, 'msg': f'Negocio "{client_name}" registrado como Demanda Dispersa.', 'deal_id': deal.id})
         flash(f'Negocio "{client_name}" registrado como Demanda Dispersa.', 'success')
         if current_user.role == 'venta':
             return redirect(url_for('sales.mobile_app'))

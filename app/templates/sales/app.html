@@ -98,6 +98,9 @@
     <template x-if="plan.sin_coords > 0">
       <p class="px-4 py-2 text-[11px] text-amber-400 bg-amber-500/5"><span x-text="plan.sin_coords"></span> negocio(s) aun sin ubicacion (se geocodifican en segundo plano).</p>
     </template>
+    <template x-if="pendingDeals.length > 0">
+      <p class="px-4 py-2 text-[11px] text-indigo-300 bg-indigo-500/5">Registrados sin conexion, pendientes de enviar: <span x-text="pendingDeals.join(', ')"></span>. Entraran a la ruta al sincronizar.</p>
+    </template>
     <div class="divide-y divide-slate-800/50">
       <template x-for="s in plan.stops" :key="s.deal_id">
         <div class="px-4 py-3 flex items-start gap-3">
@@ -169,7 +172,7 @@ function vgApp() {
   return {
     clock: '--:--:--', today: '', msg: '', loading: false, canInstall: false, deferredPrompt: null, iosHint: false,
     uploading: null, photoDeal: null, gallery: { open: false, title: '', items: [] },
-    online: navigator.onLine, pending: 0, syncing: false, fromCache: false, prefetched: '',
+    online: navigator.onLine, pending: 0, pendingDeals: [], syncing: false, fromCache: false, prefetched: '',
     shift: {{ shift|tojson }},
     plan: { stops: [], geometry: [], total_travel_min: 0, total_visit_min: 0, end_time: '', source: 'none', sin_coords: 0 },
     map: null, meMarker: null, routeLayer: null, stopLayer: null, myPos: null,
@@ -185,6 +188,9 @@ function vgApp() {
       window.addEventListener('offline', () => { this.online = false; });
       if (navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.type === 'vg-flush') this.flush(); });
       this.countPending(); setInterval(() => { if (this.pending > 0 && this.online) this.flush(); }, 30000);
+      try { const m = localStorage.getItem('vg_msg'); if (m) { this.msg = m; localStorage.removeItem('vg_msg'); } } catch (e) {}
+      // Deja el formulario de Negocio Dispersa disponible sin internet (el service worker lo guarda)
+      if (navigator.onLine && this.isSelf) setTimeout(() => fetch('{{ url_for("sales.new_deal") }}', { headers: { 'Accept': 'text/html' } }).catch(() => null), 3000);
       this.map = L.map('map', { zoomControl: false }).setView([4.6533, -74.0836], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
       this.routeLayer = L.layerGroup().addTo(this.map);
@@ -274,7 +280,10 @@ function vgApp() {
     async qAdd(item) { const db = await this.qdb(); await new Promise((res, rej) => { const r = db.transaction('q', 'readwrite').objectStore('q').add(Object.assign({ created: Date.now() }, item)); r.onsuccess = res; r.onerror = () => rej(r.error); }); await this.countPending(); },
     async qAll() { const db = await this.qdb(); return new Promise((res, rej) => { const r = db.transaction('q', 'readonly').objectStore('q').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); },
     async qDel(id) { const db = await this.qdb(); return new Promise((res, rej) => { const r = db.transaction('q', 'readwrite').objectStore('q').delete(id); r.onsuccess = res; r.onerror = () => rej(r.error); }); },
-    async countPending() { try { this.pending = (await this.qAll()).length; } catch (e) { this.pending = 0; } },
+    async countPending() {
+      try { const all = await this.qAll(); this.pending = all.length; this.pendingDeals = all.filter(x => x.type === 'deal').map(x => (x.fields && x.fields.client_name) || 'Negocio'); }
+      catch (e) { this.pending = 0; this.pendingDeals = []; }
+    },
     async flush() {
       if (this.syncing || !navigator.onLine) return; this.syncing = true;
       let sent = 0;
@@ -294,6 +303,10 @@ function vgApp() {
               const r = await fetch('/sales/deal/' + it.dealId + '/photo', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, body: fd });
               const d = await r.json(); ok = d.ok === true || r.status === 403 || r.status === 404;
               const s = this.plan.stops.find(x => x.deal_id === it.dealId); if (s && d.total != null) { s.photos = d.total; s.photos_pending = Math.max(0, (s.photos_pending || 1) - 1); }
+            } else if (it.type === 'deal') {
+              const fd = new FormData(); Object.keys(it.fields || {}).forEach(k => fd.append(k, it.fields[k]));
+              const r = await fetch('{{ url_for("sales.new_deal") }}', { method: 'POST', headers: { 'X-Requested-With': 'fetch', 'X-CSRFToken': '{{ csrf_token() }}' }, body: fd });
+              const d = await r.json(); ok = d.ok === true || (r.status >= 400 && r.status < 500 && !d.offline);
             } else ok = true;
           } catch (e) { ok = false; }
           if (!ok) break;           // sin red: se reintenta luego, en orden
