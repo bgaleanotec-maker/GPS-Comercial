@@ -105,8 +105,19 @@
               <span class="text-slate-400">Sale <span x-text="s.depart"></span></span>
             </div>
           </div>
-          <a :href="'https://www.google.com/maps/dir/?api=1&destination=' + s.lat + ',' + s.lng + '&travelmode=driving'" target="_blank" rel="noopener"
-             class="flex-shrink-0 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition">Navegar</a>
+          <div class="flex flex-col gap-1.5 flex-shrink-0">
+            <a :href="'https://www.google.com/maps/dir/?api=1&destination=' + s.lat + ',' + s.lng + '&travelmode=driving'" target="_blank" rel="noopener"
+               class="px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition text-center">Navegar</a>
+            {% if is_self %}
+            <button type="button" @click="takePhoto(s.deal_id)" :disabled="uploading===s.deal_id"
+                    class="px-3 py-2 rounded-xl bg-slate-800 border border-slate-600 text-slate-100 text-xs font-bold hover:bg-slate-700 transition disabled:opacity-50">
+              <span x-show="uploading!==s.deal_id">📷 Foto <span x-show="s.photos>0" class="text-emerald-400">(<span x-text="s.photos"></span>)</span></span>
+              <span x-show="uploading===s.deal_id">Subiendo…</span>
+            </button>
+            {% else %}
+            <button type="button" x-show="s.photos>0" @click="viewPhotos(s.deal_id, s.client)" class="px-3 py-2 rounded-xl bg-slate-800 border border-slate-600 text-emerald-300 text-xs font-bold">📷 <span x-text="s.photos"></span></button>
+            {% endif %}
+          </div>
         </div>
       </template>
       <template x-if="!loading && plan.stops.length === 0">
@@ -121,12 +132,33 @@
     <a href="{{ url_for('sales.new_deal') }}" class="px-5 py-3 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-xl hover:bg-emerald-500 transition">+ Negocio Dispersa</a>
     <a href="{{ url_for('sales.board') }}" class="px-4 py-2 rounded-full bg-slate-800 border border-slate-600 text-slate-200 text-xs font-bold shadow-lg">Mis negocios</a>
   </div>
+
+  <!-- Camara (captura directa en celular) -->
+  <input type="file" accept="image/*" capture="environment" class="hidden" x-ref="cam" @change="onPhotoPicked($event)">
+
+  <!-- Visor de fotos -->
+  <div x-show="gallery.open" x-cloak class="fixed inset-0 z-[700] bg-black/85 flex flex-col" @click.self="gallery.open=false">
+    <div class="flex items-center justify-between px-4 py-3 text-slate-200">
+      <span class="text-sm font-bold" x-text="gallery.title"></span>
+      <button type="button" @click="gallery.open=false" class="w-9 h-9 rounded-full bg-slate-800 text-lg">✕</button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-3 pb-6 grid grid-cols-2 sm:grid-cols-3 gap-2 content-start">
+      <template x-for="p in gallery.items" :key="p.id">
+        <figure class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+          <img :src="p.url" class="w-full h-40 object-cover" loading="lazy">
+          <figcaption class="px-2 py-1 text-[10px] text-slate-400"><span x-text="p.at"></span> <span x-text="p.note"></span></figcaption>
+        </figure>
+      </template>
+      <p x-show="gallery.items.length===0" class="text-slate-500 text-sm col-span-full text-center py-8">Sin fotos aun</p>
+    </div>
+  </div>
 </div>
 
 <script>
 function vgApp() {
   return {
     clock: '--:--:--', today: '', msg: '', loading: false, canInstall: false, deferredPrompt: null,
+    uploading: null, photoDeal: null, gallery: { open: false, title: '', items: [] },
     shift: {{ shift|tojson }},
     plan: { stops: [], geometry: [], total_travel_min: 0, total_visit_min: 0, end_time: '', source: 'none', sin_coords: 0 },
     map: null, meMarker: null, routeLayer: null, stopLayer: null, myPos: null,
@@ -198,7 +230,33 @@ function vgApp() {
       if (navigator.geolocation) navigator.geolocation.getCurrentPosition(p => send(p.coords.latitude, p.coords.longitude), () => send(null, null), { timeout: 6000 });
       else send(null, null);
     },
-    async installApp() { if (!this.deferredPrompt) return; this.deferredPrompt.prompt(); await this.deferredPrompt.userChoice; this.deferredPrompt = null; this.canInstall = false; }
+    async installApp() { if (!this.deferredPrompt) return; this.deferredPrompt.prompt(); await this.deferredPrompt.userChoice; this.deferredPrompt = null; this.canInstall = false; },
+
+    // ---- Fotos de evidencia en sitio ----
+    takePhoto(dealId) { this.photoDeal = dealId; this.$refs.cam.value = ''; this.$refs.cam.click(); },
+    onPhotoPicked(ev) {
+      const file = ev.target.files && ev.target.files[0]; if (!file || !this.photoDeal) return;
+      const dealId = this.photoDeal; this.uploading = dealId;
+      const img = new Image(); const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1280; let w = img.width, h = img.height;
+        if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; } else if (h >= w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url);
+        cv.toBlob(blob => {
+          const fd = new FormData(); fd.append('photo', blob, 'sitio.jpg');
+          if (this.myPos) { fd.append('lat', this.myPos.lat); fd.append('lng', this.myPos.lng); }
+          fetch('/sales/deal/' + dealId + '/photo', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, body: fd })
+            .then(r => r.json()).then(d => { this.msg = d.msg; const s = this.plan.stops.find(x => x.deal_id === dealId); if (s && d.total != null) s.photos = d.total; })
+            .catch(() => { this.msg = 'No se pudo subir la foto.'; }).finally(() => { this.uploading = null; });
+        }, 'image/jpeg', 0.8);
+      };
+      img.src = url;
+    },
+    async viewPhotos(dealId, title) {
+      const r = await fetch('/sales/deal/' + dealId + '/photos'); const d = await r.json();
+      this.gallery = { open: true, title: 'Fotos · ' + title, items: d.photos };
+    }
   }
 }
 </script>

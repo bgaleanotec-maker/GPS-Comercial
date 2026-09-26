@@ -448,8 +448,8 @@ def assign_deals():
 # ============================================================
 # MODO UBER: JORNADA (RELOJ), RUTA OPTIMA, DEMANDA DISPERSA, MONITOREO EN VIVO
 # ============================================================
-from flask import jsonify
-from app.models import WorkShift
+from flask import jsonify, Response
+from app.models import WorkShift, DealPhoto
 from app.sales.routing import build_plan, get_params, set_param, PARAM_DEFAULTS
 
 BOGOTA_CENTER = (4.6533, -74.0836)
@@ -513,7 +513,8 @@ def _pos_from_traccar(p):
     except Exception:
         age_min = None
     return {'lat': p.get('latitude'), 'lng': p.get('longitude'),
-            'speed_kmh': round((p.get('speed') or 0) * 1.852), 'age_min': age_min}
+            'speed_kmh': round((p.get('speed') or 0) * 1.852), 'age_min': age_min,
+            'course': p.get('course')}
 
 
 @bp.route('/app')
@@ -593,6 +594,8 @@ def api_plan():
     ).order_by(SalesDeal.assigned_date).all()
 
     plan = build_plan((lat, lng), deals)
+    for s in plan['stops']:
+        s['photos'] = DealPhoto.query.filter_by(deal_id=s['deal_id']).count()
     plan['origin'] = {'lat': lat, 'lng': lng, 'source': origin_src}
     plan['end_time'] = plan['end_time'].strftime('%H:%M')
     plan['seller'] = {'id': seller.id, 'name': seller.full_name or seller.username, **_avatar(seller)}
@@ -694,3 +697,70 @@ def save_params():
     db.session.commit()
     flash('Parametros de ruta actualizados.', 'success')
     return redirect(url_for('sales.manage'))
+
+
+# ============================================================
+# FOTOS DE EVIDENCIA EN SITIO
+# ============================================================
+MAX_PHOTO_BYTES = 2 * 1024 * 1024  # el celular comprime a ~1280px antes de subir
+
+
+def _image_mime(data):
+    """Detecta el tipo por los primeros bytes; el mimetype del navegador no es confiable."""
+    if data[:3] == b'\xff\xd8\xff':
+        return 'image/jpeg'
+    if data[:8] == b'\x89PNG\r\n\x1a\n':
+        return 'image/png'
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return 'image/webp'
+    return None
+
+
+@bp.route('/deal/<int:deal_id>/photo', methods=['POST'])
+@login_required
+def upload_photo(deal_id):
+    """Sube una foto del sitio (fachada / evidencia). Multipart: photo, lat, lng, note."""
+    deal = SalesDeal.query.get_or_404(deal_id)
+    if current_user.role == 'venta' and deal.assigned_to != current_user.id:
+        abort(403)
+    if current_user.role not in ('venta', 'admin', 'lider'):
+        abort(403)
+    f = request.files.get('photo')
+    if not f or not f.filename:
+        return jsonify({'ok': False, 'msg': 'No llego la foto.'}), 400
+    data = f.read()
+    if len(data) > MAX_PHOTO_BYTES:
+        return jsonify({'ok': False, 'msg': 'La foto es muy pesada (max 2 MB).'}), 400
+    mime = _image_mime(data)
+    if not mime:
+        return jsonify({'ok': False, 'msg': 'El archivo no es una imagen (JPG, PNG o WebP).'}), 400
+    ph = DealPhoto(deal_id=deal.id, user_id=current_user.id, image=data, mime=mime,
+                   size_bytes=len(data), lat=request.form.get('lat', type=float),
+                   lng=request.form.get('lng', type=float), note=_clean(request.form.get('note'), 300))
+    db.session.add(ph)
+    db.session.commit()
+    total = DealPhoto.query.filter_by(deal_id=deal.id).count()
+    return jsonify({'ok': True, 'msg': 'Foto guardada.', 'photo_id': ph.id, 'total': total})
+
+
+@bp.route('/photo/<int:photo_id>')
+@login_required
+def photo(photo_id):
+    ph = DealPhoto.query.get_or_404(photo_id)
+    if current_user.role == 'venta' and ph.deal and ph.deal.assigned_to != current_user.id:
+        abort(403)
+    return Response(ph.image, mimetype=ph.mime or 'image/jpeg',
+                    headers={'Cache-Control': 'private, max-age=86400'})
+
+
+@bp.route('/deal/<int:deal_id>/photos')
+@login_required
+def deal_photos(deal_id):
+    """Lista JSON de fotos de un negocio (para la app y el monitoreo)."""
+    deal = SalesDeal.query.get_or_404(deal_id)
+    if current_user.role == 'venta' and deal.assigned_to != current_user.id:
+        abort(403)
+    items = [{'id': p.id, 'url': url_for('sales.photo', photo_id=p.id),
+              'at': _fmt_local(p.created_at).strftime('%d/%m %H:%M') if p.created_at else '',
+              'note': p.note or ''} for p in deal.photos.order_by(DealPhoto.created_at.desc()).all()]
+    return jsonify({'deal': deal.client_name, 'photos': items})

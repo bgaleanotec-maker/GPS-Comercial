@@ -103,6 +103,19 @@
                         </div>
                         {% if d.status_reason %}<p class="italic">Motivo: {{ d.status_reason }}</p>{% endif %}
                         {% if d.notes %}<p>{{ d.notes }}</p>{% endif %}
+                        {% set fotos = d.photos.order_by(None).all() %}
+                        {% if fotos %}
+                        <div>
+                            <p class="text-[11px] font-semibold text-slate-400 mb-1">📷 Fotos en sitio ({{ fotos|length }})</p>
+                            <div class="flex gap-2 overflow-x-auto pb-1">
+                                {% for f in fotos %}
+                                <a href="{{ url_for('sales.photo', photo_id=f.id) }}" target="_blank" class="flex-shrink-0">
+                                    <img src="{{ url_for('sales.photo', photo_id=f.id) }}" class="w-20 h-20 object-cover rounded-lg border border-slate-700" loading="lazy" alt="Foto sitio">
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
 
                         {# Acciones de estado #}
                         <div class="flex flex-wrap items-center gap-2 pt-1">

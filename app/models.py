@@ -450,6 +450,30 @@ class SalesDeal(db.Model):
 
 
 # ============================================================
+# MODELO DEAL PHOTO - Fotos de evidencia en sitio (fachada del comercio)
+# ============================================================
+class DealPhoto(db.Model):
+    """Foto tomada por el vendedor en sitio. Se guarda en la base de datos
+    (no en disco) para que sobreviva a los redespliegues. El celular la
+    comprime antes de subirla (max ~1280px)."""
+    __tablename__ = 'deal_photo'
+
+    id = db.Column(db.Integer, primary_key=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('sales_deal.id', name='fk_photo_deal'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_photo_user'), nullable=True)
+    image = db.Column(db.LargeBinary, nullable=False)
+    mime = db.Column(db.String(40), default='image/jpeg')
+    size_bytes = db.Column(db.Integer)
+    lat = db.Column(db.Float)
+    lng = db.Column(db.Float)
+    note = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    deal = db.relationship('SalesDeal', backref=db.backref('photos', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User')
+
+
+# ============================================================
 # MODELO WORK SHIFT - Jornada del vendedor (reloj digital inicio/fin)
 # ============================================================
 class WorkShift(db.Model):

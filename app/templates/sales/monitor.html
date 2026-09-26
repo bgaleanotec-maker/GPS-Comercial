@@ -4,32 +4,43 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <style>
-  .vg-avatar { width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;
-               box-shadow:0 0 0 3px rgba(255,255,255,.9),0 4px 14px rgba(0,0,0,.45);font-size:14px; }
-  .vg-pulse { position:relative; }
-  .vg-pulse::before { content:'';position:absolute;inset:-10px;border-radius:50%;border:3px solid currentColor;opacity:.55;animation:vgp 1.8s ease-out infinite; }
-  @keyframes vgp { 0%{transform:scale(.6);opacity:.7} 100%{transform:scale(1.5);opacity:0} }
+  /* Avatar estilo app de domicilios: anillo con gradiente, halo cuando esta en jornada,
+     flecha de rumbo y etiqueta con el nombre */
+  .rp { position:relative; width:52px; height:66px; }
+  .rp .ring { position:absolute; left:50%; top:26px; transform:translate(-50%,-50%); width:46px; height:46px; border-radius:50%;
+              padding:3px; background:linear-gradient(135deg,#fff,#c7d2fe); box-shadow:0 6px 18px rgba(0,0,0,.55); }
+  .rp .ring .in { width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center;
+                  font-weight:900; font-size:14px; color:#fff; letter-spacing:.5px; }
+  .rp.live .ring::before { content:''; position:absolute; inset:-10px; border-radius:50%; border:3px solid var(--c); opacity:.6; animation:rpp 1.8s ease-out infinite; }
+  .rp.moving .ring::after { content:''; position:absolute; inset:-4px; border-radius:50%; border:2px solid #fff; opacity:.9; animation:rpp 1.2s ease-out infinite; }
+  @keyframes rpp { 0%{transform:scale(.7);opacity:.75} 100%{transform:scale(1.6);opacity:0} }
+  .rp .dir { position:absolute; left:50%; top:26px; width:0; height:0; transform-origin:0 0; }
+  .rp .dir i { position:absolute; left:-7px; top:-36px; width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:12px solid var(--c);
+               filter:drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+  .rp .lbl { position:absolute; left:50%; top:52px; transform:translateX(-50%); white-space:nowrap; font-size:10px; font-weight:800; color:#fff;
+             background:rgba(15,23,42,.92); border:1px solid rgba(255,255,255,.15); padding:2px 7px; border-radius:999px; }
+  .rp .spd { position:absolute; right:-6px; top:8px; font-size:9px; font-weight:800; color:#0f172a; background:#fbbf24; padding:1px 5px; border-radius:999px; }
   .vg-stop { width:26px;height:26px;border-radius:50%;background:#4f46e5;color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff; }
   .clock { font-variant-numeric: tabular-nums; }
-  #map { height: 62vh; min-height: 380px; }
+  #map { height: 64vh; min-height: 400px; }
+  .leaflet-marker-icon { transition: none; }
 </style>
 
 <div class="max-w-7xl mx-auto px-3 sm:px-6 py-4" x-data="monitor()" x-init="init()">
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-100">Monitoreo de Ventas en vivo</h1>
-      <p class="text-sm text-slate-400">Jornada (inicio / fin), ubicacion en tiempo real y ruta de cada vendedor</p>
+      <p class="text-sm text-slate-400">Jornada (inicio / fin), movimiento de cada vendedor y su ruta sugerida</p>
     </div>
     <div class="flex items-center gap-4">
       <div class="text-right">
         <div class="clock text-2xl font-black text-indigo-300" x-text="clock"></div>
-        <div class="text-[10px] text-slate-500">actualizado <span x-text="ts"></span> · cada 20 s</div>
+        <div class="text-[10px] text-slate-500">posiciones cada 60 s · <span x-text="ts"></span> · proxima en <span x-text="countdown"></span>s</div>
       </div>
       <a href="{{ url_for('sales.manage') }}" class="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-sm hover:bg-slate-700">Gestion</a>
     </div>
   </div>
 
-  <!-- KPIs jornada -->
   <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
     <div class="bg-slate-900 rounded-2xl border border-slate-700/40 p-3 text-center"><div class="text-2xl font-bold text-slate-100" x-text="sellers.length"></div><div class="text-[11px] text-slate-500">Vendedores</div></div>
     <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-3 text-center"><div class="text-2xl font-bold text-emerald-400" x-text="count('en_jornada')"></div><div class="text-[11px] text-slate-500">En jornada</div></div>
@@ -39,27 +50,29 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <!-- Mapa -->
     <div class="lg:col-span-2 bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden relative">
       <div id="map"></div>
+      <div class="absolute top-2 right-2 z-[500] flex gap-2">
+        <button type="button" @click="follow=!follow" :class="follow?'bg-indigo-600 text-white':'bg-slate-900/90 text-slate-300'" class="px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-bold shadow-lg">Seguir</button>
+        <button type="button" @click="fitAll()" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 text-slate-300 text-xs font-bold shadow-lg">Ver todos</button>
+      </div>
       <div class="absolute bottom-2 left-2 z-[500] text-[10px] px-2 py-1 rounded-lg bg-slate-900/85 text-slate-300 border border-slate-700">
-        <span x-show="!selected">Toca un vendedor para ver su ruta sugerida</span>
+        <span x-show="!selected">Toca un avatar o un vendedor de la lista para ver su ruta</span>
         <span x-show="selected" x-text="selected ? ('Ruta de ' + selected.name + (planSrc==='osrm' ? ' · por vias' : ' · estimada')) : ''"></span>
         <span x-show="loading" class="text-indigo-300"> · calculando…</span>
       </div>
     </div>
 
-    <!-- Lista de vendedores -->
     <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
       <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-slate-300">Vendedores</h2>
         <span class="text-[11px] text-slate-500">visita max {{ params.visit_minutes }} min</span>
       </div>
-      <div class="divide-y divide-slate-800/50 max-h-[62vh] overflow-y-auto">
+      <div class="divide-y divide-slate-800/50 max-h-[64vh] overflow-y-auto">
         <template x-for="s in sellers" :key="s.id">
           <div class="px-4 py-3 cursor-pointer hover:bg-slate-800/40 transition" :class="selected && selected.id===s.id ? 'bg-indigo-500/10' : ''" @click="select(s)">
             <div class="flex items-center gap-3">
-              <div class="vg-avatar" :style="'background:'+s.color" x-text="s.initials"></div>
+              <div class="w-11 h-11 rounded-full flex items-center justify-center font-black text-white text-sm" :style="'background:'+s.color+';box-shadow:0 0 0 3px rgba(255,255,255,.85)'" x-text="s.initials"></div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-semibold text-slate-100 truncate" x-text="s.name"></p>
                 <p class="text-[11px]">
@@ -69,7 +82,7 @@
                 </p>
                 <p class="text-[11px] text-slate-500">
                   <span x-text="s.pending"></span> pendientes · <span class="text-emerald-400" x-text="s.won_today + ' ventas hoy'"></span>
-                  <template x-if="s.position"><span> · GPS hace <span x-text="s.position.age_min"></span> min<span x-show="s.position.speed_kmh>2"> · <span x-text="s.position.speed_kmh"></span> km/h</span></span></template>
+                  <template x-if="s.position"><span> · <span x-show="s.position.speed_kmh>3" class="text-amber-300">🚗 <span x-text="s.position.speed_kmh"></span> km/h</span><span x-show="s.position.speed_kmh<=3">detenido</span> · hace <span x-text="s.position.age_min"></span> min</span></template>
                   <template x-if="!s.position"><span class="text-slate-600"> · sin señal GPS</span></template>
                 </p>
               </div>
@@ -80,7 +93,6 @@
     </div>
   </div>
 
-  <!-- Ruta del seleccionado -->
   <div x-show="selected" x-cloak class="mt-4 bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
     <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
       <h2 class="text-sm font-semibold text-slate-300">Ruta sugerida · <span x-text="selected ? selected.name : ''"></span></h2>
@@ -90,7 +102,7 @@
       <table class="w-full text-sm">
         <thead><tr class="text-[11px] uppercase text-slate-500 border-b border-slate-800">
           <th class="text-left px-3 py-2">#</th><th class="text-left px-3 py-2">Cliente</th><th class="text-left px-3 py-2">Direccion</th>
-          <th class="text-right px-3 py-2">Desplaz.</th><th class="text-right px-3 py-2">Llega</th><th class="text-right px-3 py-2">Visita</th><th class="text-right px-3 py-2">Sale</th><th class="text-left px-3 py-2">Origen</th>
+          <th class="text-right px-3 py-2">Desplaz.</th><th class="text-right px-3 py-2">Llega</th><th class="text-right px-3 py-2">Visita</th><th class="text-right px-3 py-2">Sale</th><th class="text-left px-3 py-2">Origen</th><th class="text-left px-3 py-2">Fotos</th>
         </tr></thead>
         <tbody class="divide-y divide-slate-800/50">
           <template x-for="st in plan.stops" :key="st.deal_id">
@@ -103,34 +115,69 @@
               <td class="px-3 py-2 text-right text-amber-400" x-text="st.visit_min + ' min'"></td>
               <td class="px-3 py-2 text-right text-slate-400" x-text="st.depart"></td>
               <td class="px-3 py-2 text-slate-400 text-xs" x-text="st.origen"></td>
+              <td class="px-3 py-2"><button type="button" x-show="st.photos>0" @click="viewPhotos(st.deal_id, st.client)" class="text-xs text-emerald-300 font-bold">📷 <span x-text="st.photos"></span></button><span x-show="!st.photos" class="text-slate-600 text-xs">—</span></td>
             </tr>
           </template>
-          <template x-if="plan.stops.length===0 && !loading"><tr><td colspan="8" class="px-4 py-6 text-center text-slate-500 text-sm">Sin paradas pendientes con ubicacion</td></tr></template>
+          <template x-if="plan.stops.length===0 && !loading"><tr><td colspan="9" class="px-4 py-6 text-center text-slate-500 text-sm">Sin paradas pendientes con ubicacion</td></tr></template>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Visor de fotos -->
+  <div x-show="gallery.open" x-cloak class="fixed inset-0 z-[700] bg-black/85 flex flex-col" @click.self="gallery.open=false">
+    <div class="flex items-center justify-between px-4 py-3 text-slate-200">
+      <span class="text-sm font-bold" x-text="gallery.title"></span>
+      <button type="button" @click="gallery.open=false" class="w-9 h-9 rounded-full bg-slate-800 text-lg">✕</button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-3 pb-6 grid grid-cols-2 sm:grid-cols-4 gap-2 content-start">
+      <template x-for="p in gallery.items" :key="p.id">
+        <figure class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+          <img :src="p.url" class="w-full h-48 object-cover" loading="lazy">
+          <figcaption class="px-2 py-1 text-[10px] text-slate-400"><span x-text="p.at"></span> <span x-text="p.note"></span></figcaption>
+        </figure>
+      </template>
     </div>
   </div>
 </div>
 
 <script>
 function monitor() {
+  const POLL = 60;  // segundos (suficiente y liviano; el movimiento se anima entre lecturas)
   return {
-    sellers: [], ts: '--', clock: '', selected: null, loading: false, planSrc: '',
-    plan: { stops: [], total_travel_min: 0, end_time: '' },
-    map: null, avatars: {}, routeLayer: null, stopLayer: null,
+    sellers: [], ts: '--', clock: '', countdown: POLL, selected: null, loading: false, planSrc: '', follow: false,
+    plan: { stops: [], total_travel_min: 0, end_time: '' }, gallery: { open: false, title: '', items: [] },
+    map: null, avatars: {}, trails: {}, last: {}, routeLayer: null, stopLayer: null, trailLayer: null,
+
     init() {
       setInterval(() => { this.clock = new Date().toLocaleTimeString('es-CO', { hour12: false }); }, 1000);
       this.map = L.map('map').setView([4.6533, -74.0836], 11);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
+      this.trailLayer = L.layerGroup().addTo(this.map);
       this.routeLayer = L.layerGroup().addTo(this.map);
       this.stopLayer = L.layerGroup().addTo(this.map);
-      this.refresh(true); setInterval(() => this.refresh(false), 20000);
+      this.refresh(true);
+      setInterval(() => { this.countdown--; if (this.countdown <= 0) { this.countdown = POLL; this.refresh(false); } }, 1000);
     },
     count(st) { return this.sellers.filter(s => s.shift.status === st).length; },
     fmtMin(m) { m = m || 0; return Math.floor(m/60) + 'h ' + (m%60) + 'm'; },
-    icon(s) {
-      return L.divIcon({ className: '', iconSize: [42,42], iconAnchor: [21,21],
-        html: '<div class="vg-avatar ' + (s.shift.status==='en_jornada' ? 'vg-pulse' : '') + '" style="background:' + s.color + ';color:' + s.color + '"><span style="color:#fff">' + s.initials + '</span></div>' });
+    bearing(a, b) { const toR = x => x * Math.PI / 180; const dL = toR(b[1] - a[1]); const y = Math.sin(dL) * Math.cos(toR(b[0])); const x = Math.cos(toR(a[0])) * Math.sin(toR(b[0])) - Math.sin(toR(a[0])) * Math.cos(toR(b[0])) * Math.cos(dL); return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; },
+    icon(s, heading, moving) {
+      const live = s.shift.status === 'en_jornada';
+      const spd = (s.position && s.position.speed_kmh > 3) ? '<span class="spd">' + s.position.speed_kmh + '</span>' : '';
+      const dir = (heading != null && moving) ? '<div class="dir" style="transform:rotate(' + heading + 'deg)"><i></i></div>' : '';
+      return L.divIcon({ className: '', iconSize: [52, 66], iconAnchor: [26, 26],
+        html: '<div class="rp ' + (live ? 'live ' : '') + (moving ? 'moving' : '') + '" style="--c:' + s.color + '">' + dir +
+              '<div class="ring"><div class="in" style="background:' + s.color + '">' + s.initials + '</div></div>' + spd +
+              '<div class="lbl">' + s.name.split(' ')[0] + '</div></div>' });
+    },
+    animate(marker, from, to, ms) {
+      // Movimiento suave entre la posicion anterior y la nueva (como una app de domicilios)
+      const t0 = performance.now(); const ease = x => 1 - Math.pow(1 - x, 3);
+      const step = now => { const k = Math.min(1, (now - t0) / ms); const e = ease(k);
+        marker.setLatLng([from[0] + (to[0] - from[0]) * e, from[1] + (to[1] - from[1]) * e]);
+        if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
     },
     async refresh(fit) {
       try {
@@ -140,13 +187,30 @@ function monitor() {
         d.sellers.forEach(s => {
           if (!s.position || s.position.lat == null) return;
           const ll = [s.position.lat, s.position.lng]; b.push(ll);
+          const prev = this.last[s.id];
+          const moved = prev && (Math.abs(prev[0] - ll[0]) > 1e-5 || Math.abs(prev[1] - ll[1]) > 1e-5);
+          const heading = moved ? this.bearing(prev, ll) : (s.position.course != null ? s.position.course : null);
+          const moving = moved || (s.position.speed_kmh > 3);
           const pop = '<b>' + s.name + '</b><br>' + (s.shift.status==='en_jornada' ? 'En jornada desde ' + s.shift.start : (s.shift.status==='finalizada' ? 'Jornada ' + s.shift.start + ' → ' + s.shift.end : 'Sin iniciar jornada')) + '<br>' + s.pending + ' pendientes · ' + s.won_today + ' ventas hoy';
-          if (this.avatars[s.id]) { this.avatars[s.id].setLatLng(ll).setIcon(this.icon(s)).setPopupContent(pop); }
-          else { this.avatars[s.id] = L.marker(ll, { icon: this.icon(s), zIndexOffset: 1000 }).addTo(this.map).bindPopup(pop).on('click', () => this.select(s)); }
+          if (this.avatars[s.id]) {
+            const mk = this.avatars[s.id]; mk.setIcon(this.icon(s, heading, moving)).setPopupContent(pop);
+            if (moved) { this.animate(mk, prev, ll, 2500); if (this.follow && this.selected && this.selected.id === s.id) this.map.panTo(ll, { animate: true, duration: 2 }); }
+            else mk.setLatLng(ll);
+          } else {
+            this.avatars[s.id] = L.marker(ll, { icon: this.icon(s, heading, moving), zIndexOffset: 1000 }).addTo(this.map).bindPopup(pop).on('click', () => this.select(s));
+          }
+          // Estela de recorrido (ultimas 30 lecturas de esta sesion)
+          if (moved || !this.trails[s.id]) {
+            const pts = (this.trails[s.id] ? this.trails[s.id].pts : []).concat([ll]).slice(-30);
+            if (this.trails[s.id]) this.trailLayer.removeLayer(this.trails[s.id].line);
+            this.trails[s.id] = { pts, line: L.polyline(pts, { color: s.color, weight: 3, opacity: .5, dashArray: '4 6' }).addTo(this.trailLayer) };
+          }
+          this.last[s.id] = ll;
         });
-        if (fit && b.length) this.map.fitBounds(b, { padding: [40, 40] });
+        if (fit && b.length) this.map.fitBounds(b, { padding: [50, 50] });
       } catch (e) {}
     },
+    fitAll() { const b = Object.values(this.last); if (b.length) this.map.fitBounds(b, { padding: [50, 50] }); },
     async select(s) {
       this.selected = s; this.loading = true;
       try {
@@ -160,9 +224,13 @@ function monitor() {
             .addTo(this.stopLayer).bindPopup('<b>' + st.order + '. ' + st.client + '</b><br>Llega ' + st.arrive + ' · Sale ' + st.depart);
           b.push([st.lat, st.lng]);
         });
-        if (b.length > 1) this.map.fitBounds(b, { padding: [40, 40] });
+        if (b.length > 1) this.map.fitBounds(b, { padding: [50, 50] });
       } catch (e) {}
       this.loading = false;
+    },
+    async viewPhotos(dealId, title) {
+      const r = await fetch('/sales/deal/' + dealId + '/photos'); const d = await r.json();
+      this.gallery = { open: true, title: 'Fotos · ' + title, items: d.photos };
     }
   }
 }
