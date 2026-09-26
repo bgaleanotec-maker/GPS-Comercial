@@ -10,11 +10,14 @@ set -euo pipefail
 PUBKEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEDV+IODRrZkiFf7x+8QDcirI1jxJjZ35QusAdP3dBCv vantigo-backup@bgale-pc'
 SRC="$(cd "$(dirname "$0")" && pwd)"
 
+echo "== Instalando copia semanal de Traccar =="
 mkdir -p /opt/traccar-backups
 install -m 750 "$SRC/traccar-backup.sh" /opt/traccar-backups/traccar-backup.sh
+echo "Script copiado a /opt/traccar-backups/traccar-backup.sh"
 
-# Cron semanal (sin duplicar si ya existe)
-( crontab -l 2>/dev/null | grep -v traccar-backup.sh; echo "0 3 * * 0 /opt/traccar-backups/traccar-backup.sh >> /opt/traccar-backups/cron.log 2>&1" ) | crontab -
+# Cron semanal (sin duplicar si ya existe; el servidor puede no tener crontab aun)
+CRON_LINE="0 3 * * 0 /opt/traccar-backups/traccar-backup.sh >> /opt/traccar-backups/cron.log 2>&1"
+{ crontab -l 2>/dev/null | grep -v 'traccar-backup.sh' || true; echo "$CRON_LINE"; } | crontab -
 echo "Cron instalado: domingos 03:00"
 
 # Llave del PC (para que el PC descargue las copias con scp)

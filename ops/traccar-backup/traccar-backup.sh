@@ -85,6 +85,7 @@ ln -sfn "$OUT.sha256" "$BACKUP_DIR/latest.tar.gz.sha256"
 log "OK -> $OUT ($SIZE)"
 
 # --- Rotacion: solo se borran COPIAS ANTIGUAS de este directorio, nunca la BD ---
-ls -1t "$BACKUP_DIR"/traccar-backup-*.tar.gz 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r f; do
+{ ls -1t "$BACKUP_DIR"/traccar-backup-*.tar.gz 2>/dev/null || true; } | tail -n +$((KEEP + 1)) | while read -r f; do
   rm -f "$f" "$f.sha256"; log "rotada: $(basename "$f")"
 done
+exit 0
