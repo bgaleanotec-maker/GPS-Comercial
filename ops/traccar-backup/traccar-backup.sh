@@ -76,7 +76,8 @@ Contenido: db/ (base de datos), conf/ (traccar.xml), media/ (adjuntos)
 Restaurar: ver README.md (ops/traccar-backup) en el repositorio GPS-Comercial
 EOF
 
-tar -C "$WORK" -czf "$OUT" .
+# tar devuelve 1 si algun archivo cambio mientras se leia (no es fatal para copias estaticas)
+tar --warning=no-file-changed -C "$WORK" -czf "$OUT" . || [ $? -eq 1 ]
 rm -rf "$WORK"
 SIZE="$(du -h "$OUT" | cut -f1)"
 sha256sum "$OUT" > "$OUT.sha256"
