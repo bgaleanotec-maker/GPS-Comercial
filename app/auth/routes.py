@@ -20,7 +20,9 @@ def login():
         if user is None or not user.check_password(form.password.data):
             flash('Usuario o contrasena invalidos', 'danger')
             return redirect(url_for('auth.login'))
-        login_user(user, remember=form.remember_me.data)
+        # Vendedores usan la app instalada en el celular: la sesion se recuerda
+        # siempre para que funcione sin volver a ingresar (incluso sin internet).
+        login_user(user, remember=(form.remember_me.data or user.role == 'venta'))
 
         # Si debe cambiar clave, redirigir
         if getattr(user, 'must_change_password', False):

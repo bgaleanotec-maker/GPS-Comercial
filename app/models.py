@@ -468,6 +468,9 @@ class DealPhoto(db.Model):
     lng = db.Column(db.Float)
     note = db.Column(db.String(300))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # Identificador generado por el celular: evita duplicados cuando la foto se
+    # tomo sin internet y la app reintenta la subida.
+    client_ref = db.Column(db.String(48), index=True)
 
     deal = db.relationship('SalesDeal', backref=db.backref('photos', lazy='dynamic', cascade='all, delete-orphan'))
     user = db.relationship('User')

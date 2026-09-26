@@ -36,6 +36,13 @@
         <div class="text-[10px] text-slate-500" x-text="today"></div>
       </div>
     </div>
+    <!-- Estado de conexion / sincronizacion -->
+    <div class="mt-2 flex items-center gap-2 text-[11px]" x-show="!online || pending>0 || fromCache" x-cloak>
+      <span x-show="!online" class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">⚡ Sin conexion · la app sigue funcionando</span>
+      <span x-show="online && pending>0" class="px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30"><span x-text="syncing ? 'Sincronizando…' : ('Pendiente por enviar: ' + pending)"></span></span>
+      <span x-show="!online && pending>0" class="text-slate-500"><span x-text="pending"></span> registro(s) guardados en el celular</span>
+      <span x-show="online && pending===0 && fromCache" class="text-slate-500">Mostrando ultima ruta guardada</span>
+    </div>
 
     {% if is_self %}
     <div class="grid grid-cols-2 gap-2 mt-3">
@@ -162,6 +169,7 @@ function vgApp() {
   return {
     clock: '--:--:--', today: '', msg: '', loading: false, canInstall: false, deferredPrompt: null, iosHint: false,
     uploading: null, photoDeal: null, gallery: { open: false, title: '', items: [] },
+    online: navigator.onLine, pending: 0, syncing: false, fromCache: false, prefetched: '',
     shift: {{ shift|tojson }},
     plan: { stops: [], geometry: [], total_travel_min: 0, total_visit_min: 0, end_time: '', source: 'none', sin_coords: 0 },
     map: null, meMarker: null, routeLayer: null, stopLayer: null, myPos: null,
@@ -169,10 +177,19 @@ function vgApp() {
 
     init() {
       this.tick(); setInterval(() => this.tick(), 1000);
+      // Pintado instantaneo: ultima ruta y jornada guardadas en el celular
+      try {
+        const cs = localStorage.getItem('vg_shift_' + this.sellerId); if (cs && this.isSelf) { const s = JSON.parse(cs); if (s.date === this.dateKey()) this.shift = s.shift; }
+      } catch (e) {}
+      window.addEventListener('online', () => { this.online = true; this.flush(); this.loadPlan(); });
+      window.addEventListener('offline', () => { this.online = false; });
+      if (navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.type === 'vg-flush') this.flush(); });
+      this.countPending(); setInterval(() => { if (this.pending > 0 && this.online) this.flush(); }, 30000);
       this.map = L.map('map', { zoomControl: false }).setView([4.6533, -74.0836], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
       this.routeLayer = L.layerGroup().addTo(this.map);
       this.stopLayer = L.layerGroup().addTo(this.map);
+      try { const cp = localStorage.getItem('vg_plan_' + this.sellerId); if (cp) { const d = JSON.parse(cp); this.plan = d; this.fromCache = true; this.draw(d); } } catch (e) {}
       this.locate(false);
       if (this.isSelf && navigator.geolocation) {
         navigator.geolocation.watchPosition(p => this.updateMe(p.coords.latitude, p.coords.longitude), () => {}, { enableHighAccuracy: true, maximumAge: 10000 });
@@ -210,11 +227,81 @@ function vgApp() {
       if (this.isSelf && this.myPos) url += '&lat=' + this.myPos.lat + '&lng=' + this.myPos.lng;
       try {
         const r = await fetch(url); const d = await r.json();
-        this.plan = d; this.shift = d.shift || this.shift;
+        if (d.offline) throw new Error('offline');
+        this.fromCache = r.headers.get('X-VG-Cache') === '1';
+        this.plan = d;
+        // La jornada del servidor manda, salvo que haya un cambio local aun sin enviar
+        if (d.shift && this.pending === 0) { this.shift = d.shift; this.saveShift(); }
         if (!this.isSelf && d.origin) this.updateMe(d.origin.lat, d.origin.lng);
         this.draw(d);
-      } catch (e) { this.msg = 'No se pudo calcular la ruta.'; }
+        try { localStorage.setItem('vg_plan_' + this.sellerId, JSON.stringify(d)); } catch (e) {}
+        if (!this.fromCache) this.prefetchTiles(d);
+      } catch (e) {
+        this.msg = this.plan.stops.length ? 'Sin conexion: mostrando la ultima ruta guardada.' : 'Sin conexion: no hay ruta guardada aun.';
+        this.fromCache = true;
+      }
       this.loading = false;
+    },
+    dateKey() { return new Date().toLocaleDateString('es-CO'); },
+    saveShift() { try { localStorage.setItem('vg_shift_' + this.sellerId, JSON.stringify({ date: this.dateKey(), shift: this.shift })); } catch (e) {} },
+    hhmm(d) { return d.toLocaleTimeString('es-CO', { hour12: false, hour: '2-digit', minute: '2-digit' }); },
+
+    // ---- Precarga de mosaicos del mapa alrededor de la ruta (para verla sin internet) ----
+    prefetchTiles(d) {
+      if (!navigator.onLine || !d.stops || !d.stops.length) return;
+      const key = d.stops.map(s => s.deal_id).join(',');
+      if (key === this.prefetched) return; this.prefetched = key;
+      const pts = d.stops.map(s => [s.lat, s.lng]); if (d.origin) pts.push([d.origin.lat, d.origin.lng]);
+      const urls = new Set();
+      [14, 15, 16].forEach(z => pts.forEach(([lat, lng]) => {
+        const n = Math.pow(2, z), x0 = Math.floor((lng + 180) / 360 * n);
+        const y0 = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n);
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) urls.add('https://a.tile.openstreetmap.org/' + z + '/' + (x0 + dx) + '/' + (y0 + dy) + '.png');
+      }));
+      // De a pocos, sin bloquear la interfaz (el service worker los guarda)
+      const list = Array.from(urls).slice(0, 400); let i = 0;
+      const next = () => { if (i >= list.length) return; const batch = list.slice(i, i += 6);
+        Promise.all(batch.map(u => fetch(u, { mode: 'no-cors' }).catch(() => null))).then(() => setTimeout(next, 150)); };
+      setTimeout(next, 1500);
+    },
+
+    // ---- Cola offline (IndexedDB): jornada y fotos que no pudieron enviarse ----
+    qdb() {
+      return new Promise((res, rej) => { const r = indexedDB.open('VantiGoQueue', 1);
+        r.onupgradeneeded = e => { const db = e.target.result; if (!db.objectStoreNames.contains('q')) db.createObjectStore('q', { keyPath: 'id', autoIncrement: true }); };
+        r.onsuccess = e => res(e.target.result); r.onerror = e => rej(e.target.error); });
+    },
+    async qAdd(item) { const db = await this.qdb(); await new Promise((res, rej) => { const r = db.transaction('q', 'readwrite').objectStore('q').add(Object.assign({ created: Date.now() }, item)); r.onsuccess = res; r.onerror = () => rej(r.error); }); await this.countPending(); },
+    async qAll() { const db = await this.qdb(); return new Promise((res, rej) => { const r = db.transaction('q', 'readonly').objectStore('q').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); },
+    async qDel(id) { const db = await this.qdb(); return new Promise((res, rej) => { const r = db.transaction('q', 'readwrite').objectStore('q').delete(id); r.onsuccess = res; r.onerror = () => rej(r.error); }); },
+    async countPending() { try { this.pending = (await this.qAll()).length; } catch (e) { this.pending = 0; } },
+    async flush() {
+      if (this.syncing || !navigator.onLine) return; this.syncing = true;
+      let sent = 0;
+      try {
+        const items = (await this.qAll()).sort((a, b) => a.created - b.created);
+        for (const it of items) {
+          let ok = false;
+          try {
+            if (it.type === 'shift') {
+              const r = await fetch('/sales/shift/' + it.action, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                body: JSON.stringify({ lat: it.lat, lng: it.lng, at: it.at }) });
+              const d = await r.json(); ok = r.status < 500 && !d.offline;   // 'ya iniciada' tambien cuenta como entregado
+              if (d.shift && !items.some(x => x.type === 'shift' && x.created > it.created)) { this.shift = d.shift; this.saveShift(); }
+            } else if (it.type === 'photo') {
+              const fd = new FormData(); fd.append('photo', it.blob, 'sitio.jpg'); fd.append('client_ref', it.ref); fd.append('taken_at', it.at);
+              if (it.lat != null) { fd.append('lat', it.lat); fd.append('lng', it.lng); }
+              const r = await fetch('/sales/deal/' + it.dealId + '/photo', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, body: fd });
+              const d = await r.json(); ok = d.ok === true || r.status === 403 || r.status === 404;
+              const s = this.plan.stops.find(x => x.deal_id === it.dealId); if (s && d.total != null) { s.photos = d.total; s.photos_pending = Math.max(0, (s.photos_pending || 1) - 1); }
+            } else ok = true;
+          } catch (e) { ok = false; }
+          if (!ok) break;           // sin red: se reintenta luego, en orden
+          await this.qDel(it.id); sent++;
+        }
+      } catch (e) {}
+      await this.countPending(); this.syncing = false;
+      if (sent) { this.msg = sent + ' registro(s) sincronizado(s).'; if (this.pending === 0) this.loadPlan(); }
     },
     draw(d) {
       this.routeLayer.clearLayers(); this.stopLayer.clearLayers();
@@ -231,9 +318,24 @@ function vgApp() {
       setTimeout(() => this.map.invalidateSize(), 150);
     },
     shiftAction(action) {
-      const send = (lat, lng) => fetch('/sales/shift/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-          body: JSON.stringify({ lat, lng }) }).then(r => r.json()).then(d => { this.msg = d.msg; if (d.shift) this.shift = d.shift; });
-      if (navigator.geolocation) navigator.geolocation.getCurrentPosition(p => send(p.coords.latitude, p.coords.longitude), () => send(null, null), { timeout: 6000 });
+      const pressed = new Date(), at = pressed.toISOString();
+      // Respuesta inmediata en pantalla; el servidor confirma (o se encola si no hay red)
+      const local = () => {
+        if (action === 'start') this.shift = { status: 'en_jornada', start: this.hhmm(pressed), end: null, worked_min: 0 };
+        else this.shift = Object.assign({}, this.shift, { status: 'finalizada', end: this.hhmm(pressed) });
+        this.saveShift();
+      };
+      const queue = (lat, lng) => this.qAdd({ type: 'shift', action, lat, lng, at }).then(() => {
+        this.msg = 'Sin conexion: hora ' + this.hhmm(pressed) + ' guardada en el celular. Se enviara al volver la señal.'; });
+      const send = (lat, lng) => {
+        local();
+        if (!navigator.onLine) return queue(lat, lng);
+        return fetch('/sales/shift/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+            body: JSON.stringify({ lat, lng, at }) })
+          .then(r => r.json()).then(d => { if (d.offline) throw new Error('offline'); this.msg = d.msg; if (d.shift) { this.shift = d.shift; this.saveShift(); } })
+          .catch(() => queue(lat, lng));
+      };
+      if (navigator.geolocation) navigator.geolocation.getCurrentPosition(p => send(p.coords.latitude, p.coords.longitude), () => send(this.myPos && this.myPos.lat, this.myPos && this.myPos.lng), { timeout: 6000, maximumAge: 30000 });
       else send(null, null);
     },
     async installApp() { if (!this.deferredPrompt) return; this.deferredPrompt.prompt(); await this.deferredPrompt.userChoice; this.deferredPrompt = null; this.canInstall = false; },
@@ -250,11 +352,19 @@ function vgApp() {
         const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
         cv.getContext('2d').drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url);
         cv.toBlob(blob => {
-          const fd = new FormData(); fd.append('photo', blob, 'sitio.jpg');
-          if (this.myPos) { fd.append('lat', this.myPos.lat); fd.append('lng', this.myPos.lng); }
-          fetch('/sales/deal/' + dealId + '/photo', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, body: fd })
-            .then(r => r.json()).then(d => { this.msg = d.msg; const s = this.plan.stops.find(x => x.deal_id === dealId); if (s && d.total != null) s.photos = d.total; })
-            .catch(() => { this.msg = 'No se pudo subir la foto.'; }).finally(() => { this.uploading = null; });
+          const ref = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), at = new Date().toISOString();
+          const lat = this.myPos ? this.myPos.lat : null, lng = this.myPos ? this.myPos.lng : null;
+          const stop = this.plan.stops.find(x => x.deal_id === dealId);
+          const queue = () => this.qAdd({ type: 'photo', dealId, blob, ref, at, lat, lng }).then(() => {
+            if (stop) { stop.photos = (stop.photos || 0) + 1; stop.photos_pending = (stop.photos_pending || 0) + 1; }
+            this.msg = 'Foto guardada en el celular. Se subira cuando haya señal.'; });
+          const fd = new FormData(); fd.append('photo', blob, 'sitio.jpg'); fd.append('client_ref', ref); fd.append('taken_at', at);
+          if (lat != null) { fd.append('lat', lat); fd.append('lng', lng); }
+          const p = !navigator.onLine ? queue() :
+            fetch('/sales/deal/' + dealId + '/photo', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, body: fd })
+              .then(r => r.json()).then(d => { if (d.offline) throw new Error('offline'); this.msg = d.msg; if (stop && d.total != null) stop.photos = d.total; })
+              .catch(queue);
+          p.finally(() => { this.uploading = null; });
         }, 'image/jpeg', 0.8);
       };
       img.src = url;

@@ -24,6 +24,10 @@ class Config(object):
         'pool_recycle': 280,
     }
     TEMPLATES_AUTO_RELOAD = True
+    # App instalada en el celular (vendedores): sesion recordada por 60 dias
+    REMEMBER_COOKIE_DURATION = 60 * 24 * 3600
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = 'Lax'
     UPLOAD_FOLDER = os.path.join(basedir, 'app/static/uploads')
 
     # Traccar - URL no es secreto, puede tener fallback

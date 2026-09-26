@@ -80,6 +80,19 @@ def _fmt_local(dt):
     return dt.astimezone(COLOMBIA_TZ)
 
 
+def _parse_client_time(value):
+    """ISO 8601 enviado por el celular -> datetime UTC (None si no es valido)."""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    except (TypeError, ValueError):
+        return None
+    if dt.tzinfo is None:
+        dt = COLOMBIA_TZ.localize(dt)
+    return dt.astimezone(pytz.utc)
+
+
 def _sellers_query():
     return User.query.filter_by(role='venta').order_by(User.full_name)
 
@@ -546,11 +559,31 @@ def shift_action(action):
         abort(404)
     data = request.get_json(silent=True) or {}
     lat, lng = data.get('lat'), data.get('lng')
-    sh = _shift_today(current_user.id, create=True)
+    # 'at': hora real en que el vendedor toco el boton (la app la envia cuando
+    # estuvo sin internet y sincroniza despues). Solo se acepta si es pasada
+    # y de las ultimas 36 horas; si no, se usa la hora del servidor.
     now = datetime.now(pytz.utc)
+    at = _parse_client_time(data.get('at'))
+    if at and now - timedelta(hours=36) <= at <= now + timedelta(minutes=5):
+        now = at
+    shift_date = now.astimezone(COLOMBIA_TZ).date()
+    sh = None
+    if action == 'end':
+        # Cerrar la jornada abierta aunque haya empezado ayer (cruce de medianoche)
+        sh = WorkShift.query.filter(WorkShift.user_id == current_user.id, WorkShift.start_at.isnot(None),
+                                    WorkShift.end_at.is_(None), WorkShift.shift_date >= shift_date - timedelta(days=1)
+                                    ).order_by(WorkShift.shift_date.desc()).first()
+    if sh is None:
+        sh = WorkShift.query.filter_by(user_id=current_user.id, shift_date=shift_date).first()
+    if sh is None:
+        sh = WorkShift(user_id=current_user.id, shift_date=shift_date)
+        db.session.add(sh)
     if action == 'start':
         if sh.start_at and not sh.end_at:
             return jsonify({'ok': False, 'msg': 'La jornada ya esta iniciada.', 'shift': _shift_json(sh)})
+        if sh.start_at and at:
+            # Reenvio de una accion encolada sin internet: ya quedo registrada, no se reabre
+            return jsonify({'ok': False, 'msg': 'El inicio de jornada ya estaba registrado.', 'shift': _shift_json(sh)})
         sh.start_at, sh.end_at = now, None
         sh.start_lat, sh.start_lng = lat, lng
         msg = 'Jornada iniciada. Buen recorrido!'
@@ -725,6 +758,13 @@ def upload_photo(deal_id):
         abort(403)
     if current_user.role not in ('venta', 'admin', 'lider'):
         abort(403)
+    # Reintento de una foto tomada sin internet: si ya llego, no se duplica
+    ref = _clean(request.form.get('client_ref'), 48)
+    if ref:
+        dup = DealPhoto.query.filter_by(deal_id=deal.id, client_ref=ref).first()
+        if dup:
+            total = DealPhoto.query.filter_by(deal_id=deal.id).count()
+            return jsonify({'ok': True, 'msg': 'Foto ya estaba guardada.', 'photo_id': dup.id, 'total': total})
     f = request.files.get('photo')
     if not f or not f.filename:
         return jsonify({'ok': False, 'msg': 'No llego la foto.'}), 400
@@ -736,7 +776,13 @@ def upload_photo(deal_id):
         return jsonify({'ok': False, 'msg': 'El archivo no es una imagen (JPG, PNG o WebP).'}), 400
     ph = DealPhoto(deal_id=deal.id, user_id=current_user.id, image=data, mime=mime,
                    size_bytes=len(data), lat=request.form.get('lat', type=float),
-                   lng=request.form.get('lng', type=float), note=_clean(request.form.get('note'), 300))
+                   lng=request.form.get('lng', type=float), note=_clean(request.form.get('note'), 300),
+                   client_ref=ref or None)
+    # Hora real de la toma (si la foto se hizo sin internet y se subio despues)
+    taken = _parse_client_time(request.form.get('taken_at'))
+    now = datetime.now(pytz.utc)
+    if taken and now - timedelta(days=7) <= taken <= now + timedelta(minutes=5):
+        ph.created_at = taken
     db.session.add(ph)
     db.session.commit()
     total = DealPhoto.query.filter_by(deal_id=deal.id).count()
