@@ -308,7 +308,7 @@ def dashboard():
     elif current_user.role == 'venta':
         # El vendedor aterriza en su tablero de negocios
         from flask import redirect, url_for
-        return redirect(url_for('sales.board'))
+        return redirect(url_for('sales.mobile_app'))
     else:
         abort(403)
 

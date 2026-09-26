@@ -292,6 +292,14 @@ def _background_loop(app):
                         refresh_proximity_today(app)
                 except Exception as pe:
                     logger.debug("Proximity backfill: %s", pe)
+                # Geocodificar direcciones de negocios (Excel) sin coordenadas
+                try:
+                    from app.sales.routing import geocode_pending_deals
+                    g = geocode_pending_deals(app, max_items=4)
+                    if g:
+                        logger.info("Geocodificados %d negocio(s)", g)
+                except Exception as ge2:
+                    logger.debug("Geocode negocios: %s", ge2)
                 # WhatsApp: alertas de tareas vencidas (cada hora en horario laboral)
                 try:
                     global _last_task_overdue_check_hour

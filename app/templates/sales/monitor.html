@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+  .vg-avatar { width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;
+               box-shadow:0 0 0 3px rgba(255,255,255,.9),0 4px 14px rgba(0,0,0,.45);font-size:14px; }
+  .vg-pulse { position:relative; }
+  .vg-pulse::before { content:'';position:absolute;inset:-10px;border-radius:50%;border:3px solid currentColor;opacity:.55;animation:vgp 1.8s ease-out infinite; }
+  @keyframes vgp { 0%{transform:scale(.6);opacity:.7} 100%{transform:scale(1.5);opacity:0} }
+  .vg-stop { width:26px;height:26px;border-radius:50%;background:#4f46e5;color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff; }
+  .clock { font-variant-numeric: tabular-nums; }
+  #map { height: 62vh; min-height: 380px; }
+</style>
+
+<div class="max-w-7xl mx-auto px-3 sm:px-6 py-4" x-data="monitor()" x-init="init()">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-100">Monitoreo de Ventas en vivo</h1>
+      <p class="text-sm text-slate-400">Jornada (inicio / fin), ubicacion en tiempo real y ruta de cada vendedor</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right">
+        <div class="clock text-2xl font-black text-indigo-300" x-text="clock"></div>
+        <div class="text-[10px] text-slate-500">actualizado <span x-text="ts"></span> · cada 20 s</div>
+      </div>
+      <a href="{{ url_for('sales.manage') }}" class="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-sm hover:bg-slate-700">Gestion</a>
+    </div>
+  </div>
+
+  <!-- KPIs jornada -->
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/40 p-3 text-center"><div class="text-2xl font-bold text-slate-100" x-text="sellers.length"></div><div class="text-[11px] text-slate-500">Vendedores</div></div>
+    <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-3 text-center"><div class="text-2xl font-bold text-emerald-400" x-text="count('en_jornada')"></div><div class="text-[11px] text-slate-500">En jornada</div></div>
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/40 p-3 text-center"><div class="text-2xl font-bold text-slate-300" x-text="count('finalizada')"></div><div class="text-[11px] text-slate-500">Finalizaron</div></div>
+    <div class="bg-slate-900 rounded-2xl border border-amber-500/20 p-3 text-center"><div class="text-2xl font-bold text-amber-400" x-text="count('sin_iniciar')"></div><div class="text-[11px] text-slate-500">Sin iniciar</div></div>
+    <div class="bg-slate-900 rounded-2xl border border-indigo-500/20 p-3 text-center"><div class="text-2xl font-bold text-indigo-400" x-text="sellers.reduce((a,s)=>a+s.won_today,0)"></div><div class="text-[11px] text-slate-500">Ventas hoy</div></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Mapa -->
+    <div class="lg:col-span-2 bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden relative">
+      <div id="map"></div>
+      <div class="absolute bottom-2 left-2 z-[500] text-[10px] px-2 py-1 rounded-lg bg-slate-900/85 text-slate-300 border border-slate-700">
+        <span x-show="!selected">Toca un vendedor para ver su ruta sugerida</span>
+        <span x-show="selected" x-text="selected ? ('Ruta de ' + selected.name + (planSrc==='osrm' ? ' · por vias' : ' · estimada')) : ''"></span>
+        <span x-show="loading" class="text-indigo-300"> · calculando…</span>
+      </div>
+    </div>
+
+    <!-- Lista de vendedores -->
+    <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
+      <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-300">Vendedores</h2>
+        <span class="text-[11px] text-slate-500">visita max {{ params.visit_minutes }} min</span>
+      </div>
+      <div class="divide-y divide-slate-800/50 max-h-[62vh] overflow-y-auto">
+        <template x-for="s in sellers" :key="s.id">
+          <div class="px-4 py-3 cursor-pointer hover:bg-slate-800/40 transition" :class="selected && selected.id===s.id ? 'bg-indigo-500/10' : ''" @click="select(s)">
+            <div class="flex items-center gap-3">
+              <div class="vg-avatar" :style="'background:'+s.color" x-text="s.initials"></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-slate-100 truncate" x-text="s.name"></p>
+                <p class="text-[11px]">
+                  <span x-show="s.shift.status==='en_jornada'" class="text-emerald-400">● En jornada · inicio <span x-text="s.shift.start"></span> · <span x-text="fmtMin(s.shift.worked_min)"></span></span>
+                  <span x-show="s.shift.status==='finalizada'" class="text-slate-400">■ <span x-text="s.shift.start"></span> → <span x-text="s.shift.end"></span> · <span x-text="fmtMin(s.shift.worked_min)"></span></span>
+                  <span x-show="s.shift.status==='sin_iniciar'" class="text-amber-400">○ Sin iniciar jornada</span>
+                </p>
+                <p class="text-[11px] text-slate-500">
+                  <span x-text="s.pending"></span> pendientes · <span class="text-emerald-400" x-text="s.won_today + ' ventas hoy'"></span>
+                  <template x-if="s.position"><span> · GPS hace <span x-text="s.position.age_min"></span> min<span x-show="s.position.speed_kmh>2"> · <span x-text="s.position.speed_kmh"></span> km/h</span></span></template>
+                  <template x-if="!s.position"><span class="text-slate-600"> · sin señal GPS</span></template>
+                </p>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ruta del seleccionado -->
+  <div x-show="selected" x-cloak class="mt-4 bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
+    <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-300">Ruta sugerida · <span x-text="selected ? selected.name : ''"></span></h2>
+      <span class="text-[11px] text-slate-500"><span x-text="plan.total_travel_min"></span> min desplazamiento · fin estimado <span x-text="plan.end_time"></span></span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-[11px] uppercase text-slate-500 border-b border-slate-800">
+          <th class="text-left px-3 py-2">#</th><th class="text-left px-3 py-2">Cliente</th><th class="text-left px-3 py-2">Direccion</th>
+          <th class="text-right px-3 py-2">Desplaz.</th><th class="text-right px-3 py-2">Llega</th><th class="text-right px-3 py-2">Visita</th><th class="text-right px-3 py-2">Sale</th><th class="text-left px-3 py-2">Origen</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-800/50">
+          <template x-for="st in plan.stops" :key="st.deal_id">
+            <tr class="hover:bg-slate-800/30">
+              <td class="px-3 py-2 font-bold text-indigo-400" x-text="st.order"></td>
+              <td class="px-3 py-2 text-slate-100" x-text="st.client"></td>
+              <td class="px-3 py-2 text-slate-400 text-xs" x-text="st.address"></td>
+              <td class="px-3 py-2 text-right text-blue-400" x-text="st.travel_min + ' min · ' + st.distance_km + ' km'"></td>
+              <td class="px-3 py-2 text-right text-emerald-400" x-text="st.arrive"></td>
+              <td class="px-3 py-2 text-right text-amber-400" x-text="st.visit_min + ' min'"></td>
+              <td class="px-3 py-2 text-right text-slate-400" x-text="st.depart"></td>
+              <td class="px-3 py-2 text-slate-400 text-xs" x-text="st.origen"></td>
+            </tr>
+          </template>
+          <template x-if="plan.stops.length===0 && !loading"><tr><td colspan="8" class="px-4 py-6 text-center text-slate-500 text-sm">Sin paradas pendientes con ubicacion</td></tr></template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function monitor() {
+  return {
+    sellers: [], ts: '--', clock: '', selected: null, loading: false, planSrc: '',
+    plan: { stops: [], total_travel_min: 0, end_time: '' },
+    map: null, avatars: {}, routeLayer: null, stopLayer: null,
+    init() {
+      setInterval(() => { this.clock = new Date().toLocaleTimeString('es-CO', { hour12: false }); }, 1000);
+      this.map = L.map('map').setView([4.6533, -74.0836], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
+      this.routeLayer = L.layerGroup().addTo(this.map);
+      this.stopLayer = L.layerGroup().addTo(this.map);
+      this.refresh(true); setInterval(() => this.refresh(false), 20000);
+    },
+    count(st) { return this.sellers.filter(s => s.shift.status === st).length; },
+    fmtMin(m) { m = m || 0; return Math.floor(m/60) + 'h ' + (m%60) + 'm'; },
+    icon(s) {
+      return L.divIcon({ className: '', iconSize: [42,42], iconAnchor: [21,21],
+        html: '<div class="vg-avatar ' + (s.shift.status==='en_jornada' ? 'vg-pulse' : '') + '" style="background:' + s.color + ';color:' + s.color + '"><span style="color:#fff">' + s.initials + '</span></div>' });
+    },
+    async refresh(fit) {
+      try {
+        const r = await fetch('{{ url_for("sales.api_live") }}'); const d = await r.json();
+        this.sellers = d.sellers; this.ts = d.ts;
+        const b = [];
+        d.sellers.forEach(s => {
+          if (!s.position || s.position.lat == null) return;
+          const ll = [s.position.lat, s.position.lng]; b.push(ll);
+          const pop = '<b>' + s.name + '</b><br>' + (s.shift.status==='en_jornada' ? 'En jornada desde ' + s.shift.start : (s.shift.status==='finalizada' ? 'Jornada ' + s.shift.start + ' → ' + s.shift.end : 'Sin iniciar jornada')) + '<br>' + s.pending + ' pendientes · ' + s.won_today + ' ventas hoy';
+          if (this.avatars[s.id]) { this.avatars[s.id].setLatLng(ll).setIcon(this.icon(s)).setPopupContent(pop); }
+          else { this.avatars[s.id] = L.marker(ll, { icon: this.icon(s), zIndexOffset: 1000 }).addTo(this.map).bindPopup(pop).on('click', () => this.select(s)); }
+        });
+        if (fit && b.length) this.map.fitBounds(b, { padding: [40, 40] });
+      } catch (e) {}
+    },
+    async select(s) {
+      this.selected = s; this.loading = true;
+      try {
+        const r = await fetch('{{ url_for("sales.api_plan") }}?user_id=' + s.id); const d = await r.json();
+        this.plan = d; this.planSrc = d.source;
+        this.routeLayer.clearLayers(); this.stopLayer.clearLayers();
+        const b = [[d.origin.lat, d.origin.lng]];
+        if (d.geometry && d.geometry.length > 1) L.polyline(d.geometry, { color: s.color, weight: 5, opacity: .85 }).addTo(this.routeLayer);
+        d.stops.forEach(st => {
+          L.marker([st.lat, st.lng], { icon: L.divIcon({ className: '', iconSize: [26,26], iconAnchor: [13,13], html: '<div class="vg-stop">' + st.order + '</div>' }) })
+            .addTo(this.stopLayer).bindPopup('<b>' + st.order + '. ' + st.client + '</b><br>Llega ' + st.arrive + ' · Sale ' + st.depart);
+          b.push([st.lat, st.lng]);
+        });
+        if (b.length > 1) this.map.fitBounds(b, { padding: [40, 40] });
+      } catch (e) {}
+      this.loading = false;
+    }
+  }
+}
+</script>
+{% endblock %}

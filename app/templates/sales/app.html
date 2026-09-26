@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+  .vg-avatar { width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+               font-weight:800;color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.9),0 4px 14px rgba(0,0,0,.45);font-size:15px; }
+  .vg-pulse { position:relative; }
+  .vg-pulse::before { content:'';position:absolute;inset:-10px;border-radius:50%;border:3px solid currentColor;opacity:.55;animation:vgp 1.8s ease-out infinite; }
+  @keyframes vgp { 0%{transform:scale(.6);opacity:.7} 100%{transform:scale(1.5);opacity:0} }
+  .vg-stop { width:30px;height:30px;border-radius:50%;background:#4f46e5;color:#fff;font-weight:800;font-size:13px;
+             display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5); }
+  .vg-stop.done { background:#10b981; } .vg-stop.cot { background:#f59e0b; }
+  .clock { font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+  #map { height: 46vh; min-height: 300px; }
+  @media (min-width: 1024px) { #map { height: 60vh; } }
+</style>
+
+<div class="max-w-5xl mx-auto px-3 sm:px-6 py-3" x-data="vgApp()" x-init="init()">
+
+  <!-- CABECERA: avatar + reloj + jornada -->
+  <div class="bg-slate-900 rounded-2xl border border-slate-800/50 p-4 mb-3">
+    <div class="flex items-center gap-3">
+      <div class="vg-avatar" style="background: {{ avatar.color }}">{{ avatar.initials }}</div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold text-slate-100 truncate">{{ seller.full_name or seller.username }}</p>
+        <p class="text-[11px] text-slate-500">
+          <span x-show="shift.status==='sin_iniciar'">Jornada sin iniciar</span>
+          <span x-show="shift.status==='en_jornada'" class="text-emerald-400">En jornada desde <span x-text="shift.start"></span> · <span x-text="fmtMin(shift.worked_min)"></span></span>
+          <span x-show="shift.status==='finalizada'" class="text-slate-400">Jornada <span x-text="shift.start"></span> → <span x-text="shift.end"></span> · <span x-text="fmtMin(shift.worked_min)"></span></span>
+        </p>
+      </div>
+      <div class="text-right">
+        <div class="clock text-2xl font-black text-indigo-300" x-text="clock"></div>
+        <div class="text-[10px] text-slate-500" x-text="today"></div>
+      </div>
+    </div>
+
+    {% if is_self %}
+    <div class="grid grid-cols-2 gap-2 mt-3">
+      <button type="button" @click="shiftAction('start')" :disabled="shift.status==='en_jornada'"
+              class="py-3 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-500 transition disabled:opacity-40 disabled:cursor-not-allowed touch-target">
+        ▶ Iniciar jornada
+      </button>
+      <button type="button" @click="shiftAction('end')" :disabled="shift.status!=='en_jornada'"
+              class="py-3 rounded-xl text-sm font-bold bg-red-700 text-white hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed touch-target">
+        ■ Finalizar jornada
+      </button>
+    </div>
+    {% else %}
+    <form method="get" class="mt-3 flex items-center gap-2">
+      <label class="text-xs text-slate-400">Vendedor:</label>
+      <select name="user_id" onchange="this.form.submit()" class="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
+        {% for s in sellers %}<option value="{{ s.id }}" {% if s.id == seller.id %}selected{% endif %}>{{ s.full_name or s.username }}</option>{% endfor %}
+      </select>
+    </form>
+    {% endif %}
+    <p x-show="msg" x-text="msg" x-cloak class="mt-2 text-xs text-indigo-300"></p>
+  </div>
+
+  <!-- RESUMEN DEL PLAN -->
+  <div class="grid grid-cols-4 gap-2 mb-3">
+    <div class="bg-slate-900 rounded-xl border border-slate-800/50 p-2 text-center"><div class="text-lg font-bold text-indigo-400" x-text="plan.stops.length"></div><div class="text-[10px] text-slate-500">Paradas</div></div>
+    <div class="bg-slate-900 rounded-xl border border-slate-800/50 p-2 text-center"><div class="text-lg font-bold text-blue-400" x-text="plan.total_travel_min + 'm'"></div><div class="text-[10px] text-slate-500">Desplazam.</div></div>
+    <div class="bg-slate-900 rounded-xl border border-slate-800/50 p-2 text-center"><div class="text-lg font-bold text-amber-400" x-text="plan.total_visit_min + 'm'"></div><div class="text-[10px] text-slate-500">En visitas</div></div>
+    <div class="bg-slate-900 rounded-xl border border-slate-800/50 p-2 text-center"><div class="text-lg font-bold text-emerald-400" x-text="plan.end_time || '--:--'"></div><div class="text-[10px] text-slate-500">Fin estimado</div></div>
+  </div>
+
+  <!-- MAPA -->
+  <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden mb-3 relative">
+    <div id="map"></div>
+    <div class="absolute top-2 right-2 z-[500] flex flex-col gap-2">
+      <button type="button" @click="locate(true)" class="w-10 h-10 rounded-xl bg-slate-900/90 border border-slate-700 text-indigo-300 shadow-lg" title="Mi ubicacion">◎</button>
+      <button type="button" @click="loadPlan()" class="w-10 h-10 rounded-xl bg-slate-900/90 border border-slate-700 text-emerald-300 shadow-lg" title="Recalcular ruta">⟳</button>
+    </div>
+    <div class="absolute bottom-2 left-2 z-[500] text-[10px] px-2 py-1 rounded-lg bg-slate-900/85 text-slate-300 border border-slate-700">
+      <span x-show="plan.source==='osrm'">Ruta real por vias · tiempos de trafico normal</span>
+      <span x-show="plan.source==='estimado'">Tiempos estimados (velocidad urbana {{ params.avg_speed_kmh|int }} km/h)</span>
+      <span x-show="plan.source==='none'">Sin paradas con ubicacion</span>
+      <span x-show="loading" class="text-indigo-300"> · calculando…</span>
+    </div>
+  </div>
+
+  <!-- PARADAS (estilo Uber) -->
+  <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden mb-20">
+    <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-300">Ruta sugerida de hoy</h2>
+      <span class="text-[11px] text-slate-500">visita max {{ params.visit_minutes }} min</span>
+    </div>
+    <template x-if="plan.sin_coords > 0">
+      <p class="px-4 py-2 text-[11px] text-amber-400 bg-amber-500/5"><span x-text="plan.sin_coords"></span> negocio(s) aun sin ubicacion (se geocodifican en segundo plano).</p>
+    </template>
+    <div class="divide-y divide-slate-800/50">
+      <template x-for="s in plan.stops" :key="s.deal_id">
+        <div class="px-4 py-3 flex items-start gap-3">
+          <div class="vg-stop flex-shrink-0" :class="{'cot': s.status==='en_cotizacion'}" x-text="s.order"></div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-slate-100 truncate" x-text="s.client"></p>
+            <p class="text-[11px] text-slate-500 truncate" x-text="s.address"></p>
+            <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11px]">
+              <span class="text-blue-400">🚗 <span x-text="s.travel_min"></span> min · <span x-text="s.distance_km"></span> km</span>
+              <span class="text-emerald-400">Llega <span x-text="s.arrive"></span></span>
+              <span class="text-amber-400">Visita <span x-text="s.visit_min"></span> min</span>
+              <span class="text-slate-400">Sale <span x-text="s.depart"></span></span>
+            </div>
+          </div>
+          <a :href="'https://www.google.com/maps/dir/?api=1&destination=' + s.lat + ',' + s.lng + '&travelmode=driving'" target="_blank" rel="noopener"
+             class="flex-shrink-0 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition">Navegar</a>
+        </div>
+      </template>
+      <template x-if="!loading && plan.stops.length === 0">
+        <div class="px-4 py-8 text-center text-sm text-slate-500">No hay paradas pendientes con ubicacion. Registra una Demanda Dispersa o espera la asignacion.</div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ACCIONES FLOTANTES -->
+  <div class="fixed bottom-20 md:bottom-6 right-4 z-[600] flex flex-col gap-2 items-end">
+    <button type="button" x-show="canInstall" x-cloak @click="installApp()" class="px-4 py-2 rounded-full bg-slate-800 border border-slate-600 text-slate-100 text-xs font-bold shadow-lg">⬇ Instalar app</button>
+    <a href="{{ url_for('sales.new_deal') }}" class="px-5 py-3 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-xl hover:bg-emerald-500 transition">+ Negocio Dispersa</a>
+    <a href="{{ url_for('sales.board') }}" class="px-4 py-2 rounded-full bg-slate-800 border border-slate-600 text-slate-200 text-xs font-bold shadow-lg">Mis negocios</a>
+  </div>
+</div>
+
+<script>
+function vgApp() {
+  return {
+    clock: '--:--:--', today: '', msg: '', loading: false, canInstall: false, deferredPrompt: null,
+    shift: {{ shift|tojson }},
+    plan: { stops: [], geometry: [], total_travel_min: 0, total_visit_min: 0, end_time: '', source: 'none', sin_coords: 0 },
+    map: null, meMarker: null, routeLayer: null, stopLayer: null, myPos: null,
+    sellerId: {{ seller.id }}, isSelf: {{ 'true' if is_self else 'false' }},
+
+    init() {
+      this.tick(); setInterval(() => this.tick(), 1000);
+      this.map = L.map('map', { zoomControl: false }).setView([4.6533, -74.0836], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
+      this.routeLayer = L.layerGroup().addTo(this.map);
+      this.stopLayer = L.layerGroup().addTo(this.map);
+      this.locate(false);
+      if (this.isSelf && navigator.geolocation) {
+        navigator.geolocation.watchPosition(p => this.updateMe(p.coords.latitude, p.coords.longitude), () => {}, { enableHighAccuracy: true, maximumAge: 10000 });
+      }
+      window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); this.deferredPrompt = e; this.canInstall = true; });
+      setInterval(() => { if (!this.isSelf) this.loadPlan(); }, 60000);
+    },
+    tick() {
+      const n = new Date();
+      this.clock = n.toLocaleTimeString('es-CO', { hour12: false });
+      this.today = n.toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long' });
+    },
+    fmtMin(m) { m = m || 0; return Math.floor(m/60) + 'h ' + (m%60) + 'm'; },
+    avatarIcon() {
+      return L.divIcon({ className: '', iconSize: [44,44], iconAnchor: [22,22],
+        html: '<div class="vg-avatar vg-pulse" style="background:{{ avatar.color }};color:{{ avatar.color }}"><span style="color:#fff">{{ avatar.initials }}</span></div>' });
+    },
+    updateMe(lat, lng) {
+      this.myPos = { lat, lng };
+      if (!this.meMarker) { this.meMarker = L.marker([lat, lng], { icon: this.avatarIcon(), zIndexOffset: 1000 }).addTo(this.map); }
+      else { this.meMarker.setLatLng([lat, lng]); }
+    },
+    locate(center) {
+      const done = (lat, lng) => { this.updateMe(lat, lng); if (center) this.map.setView([lat, lng], 15); this.loadPlan(); };
+      if (this.isSelf && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(p => done(p.coords.latitude, p.coords.longitude), () => this.loadPlan(), { enableHighAccuracy: true, timeout: 8000 });
+      } else { this.loadPlan(); }
+    },
+    async loadPlan() {
+      this.loading = true;
+      let url = '{{ url_for("sales.api_plan") }}?user_id=' + this.sellerId;
+      if (this.isSelf && this.myPos) url += '&lat=' + this.myPos.lat + '&lng=' + this.myPos.lng;
+      try {
+        const r = await fetch(url); const d = await r.json();
+        this.plan = d; this.shift = d.shift || this.shift;
+        if (!this.isSelf && d.origin) this.updateMe(d.origin.lat, d.origin.lng);
+        this.draw(d);
+      } catch (e) { this.msg = 'No se pudo calcular la ruta.'; }
+      this.loading = false;
+    },
+    draw(d) {
+      this.routeLayer.clearLayers(); this.stopLayer.clearLayers();
+      const b = [];
+      if (d.origin) b.push([d.origin.lat, d.origin.lng]);
+      if (d.geometry && d.geometry.length > 1) { L.polyline(d.geometry, { color: '#6366f1', weight: 5, opacity: .85 }).addTo(this.routeLayer); }
+      d.stops.forEach(s => {
+        const ic = L.divIcon({ className: '', iconSize: [30,30], iconAnchor: [15,15], html: '<div class="vg-stop ' + (s.status==='en_cotizacion'?'cot':'') + '">' + s.order + '</div>' });
+        L.marker([s.lat, s.lng], { icon: ic }).addTo(this.stopLayer)
+          .bindPopup('<b>' + s.order + '. ' + s.client + '</b><br>' + s.address + '<br>🚗 ' + s.travel_min + ' min · Llega ' + s.arrive + ' · Sale ' + s.depart);
+        b.push([s.lat, s.lng]);
+      });
+      if (b.length > 1) this.map.fitBounds(b, { padding: [30, 30] }); else if (b.length === 1) this.map.setView(b[0], 14);
+      setTimeout(() => this.map.invalidateSize(), 150);
+    },
+    shiftAction(action) {
+      const send = (lat, lng) => fetch('/sales/shift/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+          body: JSON.stringify({ lat, lng }) }).then(r => r.json()).then(d => { this.msg = d.msg; if (d.shift) this.shift = d.shift; });
+      if (navigator.geolocation) navigator.geolocation.getCurrentPosition(p => send(p.coords.latitude, p.coords.longitude), () => send(null, null), { timeout: 6000 });
+      else send(null, null);
+    },
+    async installApp() { if (!this.deferredPrompt) return; this.deferredPrompt.prompt(); await this.deferredPrompt.userChoice; this.deferredPrompt = null; this.canInstall = false; }
+  }
+}
+</script>
+{% endblock %}

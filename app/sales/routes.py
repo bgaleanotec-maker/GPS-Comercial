@@ -398,9 +398,11 @@ def manage():
         'cotizacion': SalesDeal.query.filter_by(status='en_cotizacion').count(),
     }
 
+    from app.sales.routing import get_params as _gp
     return render_template('sales/manage.html', title='Gestion de Ventas',
                            deals=deals, sellers=sellers, resumen=resumen,
                            totales=totales, status_f=status_f, seller_f=seller_f,
+                           params=_gp(),
                            today=datetime.now(COLOMBIA_TZ).date().strftime('%Y-%m-%d'))
 
 
@@ -440,4 +442,255 @@ def assign_deals():
             count += 1
     db.session.commit()
     flash(f'{count} negocio(s) asignado(s) a {seller.full_name or seller.username} ({period}).', 'success')
+    return redirect(url_for('sales.manage'))
+
+
+# ============================================================
+# MODO UBER: JORNADA (RELOJ), RUTA OPTIMA, DEMANDA DISPERSA, MONITOREO EN VIVO
+# ============================================================
+from flask import jsonify
+from app.models import WorkShift
+from app.sales.routing import build_plan, get_params, set_param, PARAM_DEFAULTS
+
+BOGOTA_CENTER = (4.6533, -74.0836)
+AVATAR_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6', '#ef4444', '#14b8a6']
+
+
+def _avatar(user):
+    name = (user.full_name or user.username or '?').strip()
+    parts = [p for p in name.split() if p]
+    initials = (parts[0][0] + (parts[1][0] if len(parts) > 1 else '')).upper() if parts else '?'
+    return {'initials': initials, 'color': AVATAR_COLORS[user.id % len(AVATAR_COLORS)]}
+
+
+def _today():
+    return datetime.now(COLOMBIA_TZ).date()
+
+
+def _shift_today(user_id, create=False):
+    sh = WorkShift.query.filter_by(user_id=user_id, shift_date=_today()).first()
+    if sh is None and create:
+        sh = WorkShift(user_id=user_id, shift_date=_today())
+        db.session.add(sh)
+    return sh
+
+
+def _shift_json(sh):
+    if not sh:
+        return {'status': 'sin_iniciar', 'start': None, 'end': None, 'worked_min': 0}
+    return {
+        'status': sh.status,
+        'start': _fmt_local(sh.start_at).strftime('%H:%M') if sh.start_at else None,
+        'end': _fmt_local(sh.end_at).strftime('%H:%M') if sh.end_at else None,
+        'worked_min': sh.worked_minutes,
+    }
+
+
+def _resolve_seller():
+    """Vendedor objetivo: el propio (rol venta) o ?user_id (admin/lider)."""
+    if current_user.role == 'venta':
+        return current_user
+    if current_user.role in ('admin', 'lider'):
+        uid = request.args.get('user_id', type=int) or request.form.get('user_id', type=int)
+        return db.session.get(User, uid) if uid else _sellers_query().first()
+    abort(403)
+
+
+def _latest_positions(users, budget_s=12):
+    """Ultima posicion Traccar de varios usuarios EN PARALELO."""
+    from app.traccar import get_latest_position
+    from app.analytics.commercial import _parallel_fetch
+    ids = [u.traccar_device_id for u in users if u.traccar_device_id]
+    return _parallel_fetch(ids, lambda did: get_latest_position(did), budget_s=budget_s)
+
+
+def _pos_from_traccar(p):
+    if not p:
+        return None
+    try:
+        ts = datetime.fromisoformat(str(p.get('fixTime', '')).replace('Z', '+00:00'))
+        age_min = int((datetime.now(pytz.utc) - ts).total_seconds() // 60)
+    except Exception:
+        age_min = None
+    return {'lat': p.get('latitude'), 'lng': p.get('longitude'),
+            'speed_kmh': round((p.get('speed') or 0) * 1.852), 'age_min': age_min}
+
+
+@bp.route('/app')
+@login_required
+def mobile_app():
+    """Vista movil del vendedor (modo Uber): reloj de jornada, mapa, ruta optima."""
+    seller = _resolve_seller()
+    if seller is None:
+        flash('Aun no hay usuarios con rol Venta.', 'warning')
+        return redirect(url_for('sales.manage'))
+    sh = _shift_today(seller.id)
+    pending = SalesDeal.query.filter(
+        SalesDeal.assigned_to == seller.id,
+        SalesDeal.status.in_(('asignado', 'en_cotizacion')),
+    ).count()
+    sellers = _sellers_query().all() if current_user.role in ('admin', 'lider') else []
+    return render_template('sales/app.html', title='Mi Ruta', seller=seller, avatar=_avatar(seller),
+                           shift=_shift_json(sh), params=get_params(), pending=pending, sellers=sellers,
+                           is_self=(current_user.id == seller.id))
+
+
+@bp.route('/shift/<action>', methods=['POST'])
+@login_required
+def shift_action(action):
+    """Marcar inicio o fin de jornada con ubicacion GPS (JSON: lat, lng)."""
+    if current_user.role != 'venta':
+        abort(403)
+    if action not in ('start', 'end'):
+        abort(404)
+    data = request.get_json(silent=True) or {}
+    lat, lng = data.get('lat'), data.get('lng')
+    sh = _shift_today(current_user.id, create=True)
+    now = datetime.now(pytz.utc)
+    if action == 'start':
+        if sh.start_at and not sh.end_at:
+            return jsonify({'ok': False, 'msg': 'La jornada ya esta iniciada.', 'shift': _shift_json(sh)})
+        sh.start_at, sh.end_at = now, None
+        sh.start_lat, sh.start_lng = lat, lng
+        msg = 'Jornada iniciada. Buen recorrido!'
+    else:
+        if not sh.start_at:
+            return jsonify({'ok': False, 'msg': 'Primero inicia la jornada.', 'shift': _shift_json(sh)})
+        sh.end_at = now
+        sh.end_lat, sh.end_lng = lat, lng
+        msg = 'Jornada finalizada. Buen trabajo!'
+    db.session.commit()
+    return jsonify({'ok': True, 'msg': msg, 'shift': _shift_json(sh)})
+
+
+@bp.route('/api/plan')
+@login_required
+def api_plan():
+    """Ruta optima del vendedor desde su posicion actual (JSON para el mapa)."""
+    seller = _resolve_seller()
+    if seller is None:
+        return jsonify({'error': 'sin vendedor'}), 404
+
+    lat = request.args.get('lat', type=float)
+    lng = request.args.get('lng', type=float)
+    origin_src = 'gps_celular'
+    if lat is None or lng is None:
+        pos = None
+        if seller.traccar_device_id:
+            pos = _pos_from_traccar(_latest_positions([seller]).get(seller.traccar_device_id))
+        if pos and pos['lat'] is not None:
+            lat, lng, origin_src = pos['lat'], pos['lng'], 'traccar'
+        else:
+            sh = _shift_today(seller.id)
+            if sh and sh.start_lat is not None:
+                lat, lng, origin_src = sh.start_lat, sh.start_lng, 'inicio_jornada'
+            else:
+                lat, lng, origin_src = BOGOTA_CENTER[0], BOGOTA_CENTER[1], 'ciudad'
+
+    deals = SalesDeal.query.filter(
+        SalesDeal.assigned_to == seller.id,
+        SalesDeal.status.in_(('asignado', 'en_cotizacion')),
+    ).order_by(SalesDeal.assigned_date).all()
+
+    plan = build_plan((lat, lng), deals)
+    plan['origin'] = {'lat': lat, 'lng': lng, 'source': origin_src}
+    plan['end_time'] = plan['end_time'].strftime('%H:%M')
+    plan['seller'] = {'id': seller.id, 'name': seller.full_name or seller.username, **_avatar(seller)}
+    plan['shift'] = _shift_json(_shift_today(seller.id))
+    plan['params'] = get_params()
+    return jsonify(plan)
+
+
+@bp.route('/api/live')
+@login_required
+def api_live():
+    """Monitoreo en vivo (admin/lider): posicion, jornada y pendientes de cada vendedor."""
+    if current_user.role not in ('admin', 'lider'):
+        abort(403)
+    sellers = _sellers_query().all()
+    positions = _latest_positions(sellers)
+    today = _today()
+    shifts = {s.user_id: s for s in WorkShift.query.filter_by(shift_date=today).all()}
+    day_start_utc = COLOMBIA_TZ.localize(datetime.combine(today, datetime.min.time())).astimezone(pytz.utc)
+    out = []
+    for u in sellers:
+        pend = SalesDeal.query.filter(SalesDeal.assigned_to == u.id,
+                                      SalesDeal.status.in_(('asignado', 'en_cotizacion'))).count()
+        won_today = SalesDeal.query.filter(SalesDeal.assigned_to == u.id, SalesDeal.status == 'ganado',
+                                           SalesDeal.status_date >= day_start_utc).count()
+        pos = _pos_from_traccar(positions.get(u.traccar_device_id)) if u.traccar_device_id else None
+        out.append({
+            'id': u.id, 'name': u.full_name or u.username, **_avatar(u),
+            'position': pos, 'shift': _shift_json(shifts.get(u.id)),
+            'pending': pend, 'won_today': won_today, 'has_device': bool(u.traccar_device_id),
+        })
+    return jsonify({'sellers': out, 'ts': datetime.now(COLOMBIA_TZ).strftime('%H:%M:%S')})
+
+
+@bp.route('/monitor')
+@login_required
+def monitor():
+    """Centro de monitoreo en vivo de vendedores (admin/lider)."""
+    if current_user.role not in ('admin', 'lider'):
+        abort(403)
+    return render_template('sales/monitor.html', title='Monitoreo de Ventas', params=get_params(),
+                           sellers=_sellers_query().all())
+
+
+@bp.route('/deal/new', methods=['GET', 'POST'])
+@login_required
+def new_deal():
+    """Demanda DISPERSA: el vendedor registra un negocio encontrado en campo, con
+    latitud/longitud capturadas automaticamente del celular."""
+    if current_user.role not in ('venta', 'admin', 'lider'):
+        abort(403)
+    if request.method == 'POST':
+        client_name = (request.form.get('client_name') or '').strip()
+        if not client_name:
+            flash('El nombre del cliente es obligatorio.', 'danger')
+            return redirect(url_for('sales.new_deal'))
+        lat = request.form.get('latitude', type=float)
+        lng = request.form.get('longitude', type=float)
+        if current_user.role == 'venta':
+            seller_id = current_user.id
+        else:
+            seller_id = request.form.get('seller_id', type=int) or current_user.id
+        status = request.form.get('status')
+        deal = SalesDeal(
+            client_name=client_name,
+            client_number=_clean(request.form.get('client_number'), 50),
+            address=_clean(request.form.get('address'), 300),
+            phone=_clean(request.form.get('phone'), 50),
+            market=_clean(request.form.get('market'), 100),
+            campaign=_clean(request.form.get('campaign'), 200),
+            notes=_clean(request.form.get('notes')),
+            origen='Dispersa',
+            status=status if status in DEAL_STATUSES else 'asignado',
+            latitude=lat, longitude=lng,
+            geocoded_at=datetime.utcnow() if lat is not None else None,
+            assigned_to=seller_id, assigned_date=_today(), assignment_period='diaria',
+            created_by=current_user.id, start_date=_today(),
+        )
+        db.session.add(deal)
+        db.session.commit()
+        flash(f'Negocio "{client_name}" registrado como Demanda Dispersa.', 'success')
+        if current_user.role == 'venta':
+            return redirect(url_for('sales.mobile_app'))
+        return redirect(url_for('sales.manage'))
+    sellers = _sellers_query().all() if current_user.role in ('admin', 'lider') else []
+    return render_template('sales/deal_form.html', title='Nuevo negocio (Dispersa)', sellers=sellers)
+
+
+@bp.route('/params', methods=['POST'])
+@login_required
+def save_params():
+    """Parametros del modo ruta (ciudad para geocodificar, tiempo de visita, velocidad)."""
+    if current_user.role != 'admin':
+        abort(403)
+    for key in PARAM_DEFAULTS:
+        val = (request.form.get(key) or '').strip()
+        if val:
+            set_param(key, val)
+    db.session.commit()
+    flash('Parametros de ruta actualizados.', 'success')
     return redirect(url_for('sales.manage'))

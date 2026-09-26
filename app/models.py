@@ -404,6 +404,13 @@ class SalesDeal(db.Model):
     # Origen de la venta (Demanda, Dispersa, Campanas, etc.)
     origen = db.Column(db.String(100), index=True)
 
+    # Ubicacion del negocio: la Dispersa la captura el vendedor con el GPS del
+    # celular; la del Excel se geocodifica en segundo plano desde la direccion.
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    geocoded_at = db.Column(db.DateTime)
+    geocode_attempts = db.Column(db.Integer, default=0)
+
     # Asignacion al vendedor
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_deal_user'), nullable=True, index=True)
     assigned_date = db.Column(db.Date, index=True)          # Fecha de la asignacion
@@ -436,6 +443,53 @@ class SalesDeal(db.Model):
     @property
     def status_display(self):
         return self.STATUS_LABELS.get(self.status, self.status)
+
+    @property
+    def has_coords(self):
+        return self.latitude is not None and self.longitude is not None
+
+
+# ============================================================
+# MODELO WORK SHIFT - Jornada del vendedor (reloj digital inicio/fin)
+# ============================================================
+class WorkShift(db.Model):
+    """Jornada diaria del vendedor: hora de inicio del recorrido y hora de fin,
+    con la ubicacion GPS de cada marcacion. Una por usuario y dia."""
+    __tablename__ = 'work_shift'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_shift_user'), nullable=False, index=True)
+    shift_date = db.Column(db.Date, nullable=False, index=True)
+    start_at = db.Column(db.DateTime)   # UTC
+    end_at = db.Column(db.DateTime)     # UTC
+    start_lat = db.Column(db.Float)
+    start_lng = db.Column(db.Float)
+    end_lat = db.Column(db.Float)
+    end_lng = db.Column(db.Float)
+    notes = db.Column(db.String(300))
+
+    user = db.relationship('User', backref='work_shifts')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'shift_date', name='uq_shift_user_date'),
+    )
+
+    @property
+    def status(self):
+        if self.end_at:
+            return 'finalizada'
+        if self.start_at:
+            return 'en_jornada'
+        return 'sin_iniciar'
+
+    @property
+    def worked_minutes(self):
+        if not self.start_at:
+            return 0
+        end = self.end_at or datetime.now(timezone.utc).replace(tzinfo=None)
+        start = self.start_at.replace(tzinfo=None) if self.start_at.tzinfo else self.start_at
+        end = end.replace(tzinfo=None) if getattr(end, 'tzinfo', None) else end
+        return max(0, int((end - start).total_seconds() // 60))
 
 
 @login.user_loader
