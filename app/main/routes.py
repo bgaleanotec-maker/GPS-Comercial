@@ -138,6 +138,17 @@ def health_check():
     return {'status': 'ok'}, 200
 
 
+@bp.route('/sw.js')
+def service_worker():
+    """El service worker debe servirse desde la raiz para poder controlar toda la
+    app (scope '/'); desde /static/ el navegador lo limita a /static/."""
+    from flask import send_from_directory
+    resp = send_from_directory(current_app.static_folder, 'sw.js', mimetype='application/javascript')
+    resp.headers['Service-Worker-Allowed'] = '/'
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
+
 @bp.route('/docs')
 def docs():
     """Documentacion BPM del sistema - accesible sin login."""
