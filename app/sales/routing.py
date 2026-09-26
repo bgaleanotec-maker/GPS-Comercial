@@ -31,6 +31,7 @@ PARAM_DEFAULTS = {
     'sales_city_context': 'Bogota, Colombia',   # se agrega a la direccion al geocodificar
     'sales_visit_minutes': '60',                 # tiempo estimado de visita (tope)
     'sales_avg_speed_kmh': '22',                 # velocidad urbana para el respaldo
+    'sales_deviation_m': '300',                  # metros fuera de la ruta para avisar desvio (tipo Uber)
     'sales_road_factor': '1.35',                 # distancia por via vs linea recta
 }
 
@@ -55,6 +56,7 @@ def get_params():
         'visit_minutes': int(float(get_param('sales_visit_minutes'))),
         'avg_speed_kmh': float(get_param('sales_avg_speed_kmh')),
         'road_factor': float(get_param('sales_road_factor')),
+        'deviation_m': int(float(get_param('sales_deviation_m'))),
     }
 
 

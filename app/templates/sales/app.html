@@ -146,6 +146,24 @@
     <a href="{{ url_for('sales.board') }}" class="px-4 py-2 rounded-full bg-slate-800 border border-slate-600 text-slate-200 text-xs font-bold shadow-lg">Mis negocios</a>
   </div>
 
+  <!-- Aviso de desvio de ruta (tipo Uber) -->
+  <div x-show="dev.open" x-cloak class="fixed inset-x-0 bottom-0 z-[800] p-3 pb-safe">
+    <div class="max-w-lg mx-auto rounded-3xl bg-red-600 text-white shadow-2xl p-4 border border-red-400/60" style="animation: vgshake .6s ease">
+      <div class="flex items-start gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl flex-shrink-0">⚠️</div>
+        <div class="flex-1">
+          <p class="font-black text-base leading-tight">Te desviaste de la ruta</p>
+          <p class="text-sm text-red-100 mt-0.5">Estas a <b x-text="dev.dist"></b> m de la ruta sugerida. ¿Recalculamos la ruta desde donde estas?</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-3">
+        <button type="button" @click="devRecalc()" class="py-3 rounded-2xl bg-white text-red-700 font-black text-sm">⟳ Recalcular ruta</button>
+        <button type="button" @click="devSnooze()" class="py-3 rounded-2xl bg-red-800/70 text-white font-bold text-sm">Seguir asi (10 min)</button>
+      </div>
+    </div>
+  </div>
+  <style>@keyframes vgshake { 0%{transform:translateY(40px);opacity:0} 60%{transform:translateY(-6px);opacity:1} 100%{transform:translateY(0)} }</style>
+
   <!-- Camara (captura directa en celular) -->
   <input type="file" accept="image/*" capture="environment" class="hidden" x-ref="cam" @change="onPhotoPicked($event)">
 
@@ -173,6 +191,7 @@ function vgApp() {
     clock: '--:--:--', today: '', msg: '', loading: false, canInstall: false, deferredPrompt: null, iosHint: false,
     uploading: null, photoDeal: null, gallery: { open: false, title: '', items: [] },
     online: navigator.onLine, pending: 0, pendingDeals: [], syncing: false, fromCache: false, prefetched: '',
+    dev: { open: false, dist: 0, count: 0, since: 0, snoozeUntil: 0 },
     shift: {{ shift|tojson }},
     plan: { stops: [], geometry: [], total_travel_min: 0, total_visit_min: 0, end_time: '', source: 'none', sin_coords: 0 },
     map: null, meMarker: null, routeLayer: null, stopLayer: null, myPos: null,
@@ -201,6 +220,8 @@ function vgApp() {
         navigator.geolocation.watchPosition(p => this.updateMe(p.coords.latitude, p.coords.longitude), () => {}, { enableHighAccuracy: true, maximumAge: 10000 });
       }
       window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); this.deferredPrompt = e; this.canInstall = true; });
+      // Permiso de notificaciones para avisar el desvio aunque la app este en segundo plano
+      if (this.isSelf && 'Notification' in window && Notification.permission === 'default') setTimeout(() => { try { Notification.requestPermission(); } catch (e) {} }, 8000);
       // iPhone/iPad no dispara beforeinstallprompt: se guia al usuario si aun no esta instalada
       const ios = /iphone|ipad|ipod/i.test(navigator.userAgent), standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
       if (ios && !standalone && !localStorage.getItem('vg_ios_hint')) { this.iosHint = true; localStorage.setItem('vg_ios_hint', '1'); }
@@ -220,7 +241,60 @@ function vgApp() {
       this.myPos = { lat, lng };
       if (!this.meMarker) { this.meMarker = L.marker([lat, lng], { icon: this.avatarIcon(), zIndexOffset: 1000 }).addTo(this.map); }
       else { this.meMarker.setLatLng([lat, lng]); }
+      if (this.isSelf) this.checkDeviation(lat, lng);
     },
+
+    // ---- Desvio de la ruta (tipo Uber): fuera de la ruta sugerida por mas de X metros, de forma sostenida ----
+    distToSeg(p, a, b) {
+      // distancia (m) del punto p al segmento a-b, en proyeccion local
+      const k = Math.cos(p[0] * Math.PI / 180), M = 111320;
+      const px = (p[1] - a[1]) * k * M, py = (p[0] - a[0]) * M, bx = (b[1] - a[1]) * k * M, by = (b[0] - a[0]) * M;
+      const l2 = bx * bx + by * by; let t = l2 ? (px * bx + py * by) / l2 : 0; t = Math.max(0, Math.min(1, t));
+      const dx = px - t * bx, dy = py - t * by; return Math.sqrt(dx * dx + dy * dy);
+    },
+    distToRoute(lat, lng) {
+      const g = this.plan.geometry || []; if (g.length < 2) return null;
+      let best = Infinity; const p = [lat, lng];
+      for (let i = 1; i < g.length; i++) { const d = this.distToSeg(p, g[i - 1], g[i]); if (d < best) best = d; }
+      return best;
+    },
+    nearStop(lat, lng, radius) {
+      return (this.plan.stops || []).some(s => this.distToSeg([lat, lng], [s.lat, s.lng], [s.lat, s.lng]) <= radius);
+    },
+    checkDeviation(lat, lng) {
+      if (this.shift.status !== 'en_jornada' || this.dev.open || Date.now() < this.dev.snoozeUntil) return;
+      const th = (this.plan.params && this.plan.params.deviation_m) || 300;
+      const d = this.distToRoute(lat, lng);
+      if (d == null) return;
+      // En una parada (o llegando) no cuenta como desvio
+      if (d <= th || this.nearStop(lat, lng, 150)) { this.dev.count = 0; this.dev.since = 0; return; }
+      const now = Date.now();
+      if (!this.dev.since) { this.dev.since = now; this.dev.count = 1; return; }
+      this.dev.count++;
+      // Sostenido: al menos 2 lecturas y 45 s fuera de la ruta (evita falsos avisos por saltos del GPS)
+      if (this.dev.count >= 2 && now - this.dev.since >= 45000) this.raiseDeviation(Math.round(d), lat, lng);
+    },
+    raiseDeviation(dist, lat, lng) {
+      this.dev.open = true; this.dev.dist = dist; this.dev.count = 0; this.dev.since = 0;
+      try { if (navigator.vibrate) navigator.vibrate([350, 120, 350, 120, 500]); } catch (e) {}
+      this.beep();
+      if (document.hidden && 'Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) {
+        navigator.serviceWorker.ready.then(reg => reg.showNotification('VantiGo · Te desviaste de la ruta', {
+          body: 'Estas a ' + dist + ' m de la ruta sugerida. Abre la app para recalcular.', icon: '/static/icons/icon-192.png', vibrate: [300, 100, 300], tag: 'vg-desvio' })).catch(() => null);
+      }
+      if (navigator.onLine) fetch('/sales/api/deviation', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+        body: JSON.stringify({ lat, lng, distance_m: dist, detail: 'Fuera de la ruta sugerida' }) }).catch(() => null);
+    },
+    beep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)(); const t = ctx.currentTime;
+        [[880, 0], [660, .22], [880, .44]].forEach(([f, o]) => { const g = ctx.createGain(), s = ctx.createOscillator(); s.type = 'sine'; s.frequency.value = f;
+          g.gain.setValueAtTime(0.0001, t + o); g.gain.exponentialRampToValueAtTime(0.5, t + o + .03); g.gain.exponentialRampToValueAtTime(0.0001, t + o + .2);
+          s.connect(g).connect(ctx.destination); s.start(t + o); s.stop(t + o + .22); });
+      } catch (e) {}
+    },
+    devRecalc() { this.dev.open = false; this.dev.snoozeUntil = Date.now() + 120000; this.loadPlan(); this.msg = 'Ruta recalculada desde tu posicion actual.'; },
+    devSnooze() { this.dev.open = false; this.dev.snoozeUntil = Date.now() + 10 * 60000; this.msg = 'Aviso de desvio pausado 10 minutos.'; },
     locate(center) {
       const done = (lat, lng) => { this.updateMe(lat, lng); if (center) this.map.setView([lat, lng], 15); this.loadPlan(); };
       if (this.isSelf && navigator.geolocation) {

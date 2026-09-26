@@ -482,6 +482,21 @@ class DealPhoto(db.Model):
 # ============================================================
 # MODELO WORK SHIFT - Jornada del vendedor (reloj digital inicio/fin)
 # ============================================================
+class RouteEvent(db.Model):
+    """Eventos de la ruta del vendedor reportados por la app (p. ej. desvio
+    significativo de la ruta sugerida). Solo se agregan registros."""
+    __tablename__ = 'route_event'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_route_event_user'), nullable=False, index=True)
+    kind = db.Column(db.String(20), default='desvio', index=True)
+    at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    lat = db.Column(db.Float)
+    lng = db.Column(db.Float)
+    distance_m = db.Column(db.Integer)
+    detail = db.Column(db.String(200))
+
+
 class WorkShift(db.Model):
     """Jornada diaria del vendedor: hora de inicio del recorrido y hora de fin,
     con la ubicacion GPS de cada marcacion. Una por usuario y dia."""

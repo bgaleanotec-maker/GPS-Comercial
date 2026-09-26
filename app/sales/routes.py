@@ -648,6 +648,15 @@ def api_live():
     today = _today()
     shifts = {s.user_id: s for s in WorkShift.query.filter_by(shift_date=today).all()}
     day_start_utc = COLOMBIA_TZ.localize(datetime.combine(today, datetime.min.time())).astimezone(pytz.utc)
+    # Desvios recientes (ultimos 15 min) reportados por la app de cada vendedor
+    from app.models import RouteEvent
+    since = datetime.now(pytz.utc) - timedelta(minutes=15)
+    deviations = {}
+    for ev in RouteEvent.query.filter(RouteEvent.kind == 'desvio', RouteEvent.at >= since.replace(tzinfo=None)
+                                      ).order_by(RouteEvent.at.asc()).all():
+        deviations[ev.user_id] = {'at': _fmt_local(ev.at).strftime('%H:%M'), 'distance_m': ev.distance_m,
+                                  'min_ago': int((datetime.now(pytz.utc) - pytz.utc.localize(ev.at)).total_seconds() // 60),
+                                  'detail': ev.detail}
     out = []
     for u in sellers:
         pend = SalesDeal.query.filter(SalesDeal.assigned_to == u.id,
@@ -659,8 +668,52 @@ def api_live():
             'id': u.id, 'name': u.full_name or u.username, **_avatar(u),
             'position': pos, 'shift': _shift_json(shifts.get(u.id)),
             'pending': pend, 'won_today': won_today, 'has_device': bool(u.traccar_device_id),
+            'deviation': deviations.get(u.id),
         })
     return jsonify({'sellers': out, 'ts': datetime.now(COLOMBIA_TZ).strftime('%H:%M:%S')})
+
+
+@bp.route('/api/potential')
+@login_required
+def api_potential():
+    """Potencial en el mapa (admin/lider): todos los negocios pendientes con ubicacion."""
+    if current_user.role not in ('admin', 'lider'):
+        abort(403)
+    sellers = {u.id: u for u in _sellers_query().all()}
+    deals = SalesDeal.query.filter(SalesDeal.status.in_(('asignado', 'en_cotizacion')),
+                                   SalesDeal.latitude.isnot(None), SalesDeal.longitude.isnot(None)).all()
+    out = []
+    for d in deals:
+        s = sellers.get(d.assigned_to)
+        out.append({'id': d.id, 'client': d.client_name, 'lat': d.latitude, 'lng': d.longitude,
+                    'status': d.status, 'status_display': d.status_display, 'origen': d.origen or '',
+                    'seller_id': d.assigned_to, 'seller': (s.full_name or s.username) if s else 'Sin asignar',
+                    'color': _avatar(s)['color'] if s else '#64748b', 'address': d.address or ''})
+    return jsonify({'deals': out, 'total': len(out)})
+
+
+@bp.route('/api/deviation', methods=['POST'])
+@login_required
+def api_deviation():
+    """La app del vendedor reporta un desvio significativo de la ruta sugerida.
+    Se registra maximo uno cada 5 minutos por vendedor."""
+    if current_user.role != 'venta':
+        abort(403)
+    from app.models import RouteEvent
+    data = request.get_json(silent=True) or {}
+    now = datetime.now(pytz.utc)
+    last = RouteEvent.query.filter_by(user_id=current_user.id, kind='desvio').order_by(RouteEvent.at.desc()).first()
+    if last and (now - pytz.utc.localize(last.at)).total_seconds() < 300:
+        return jsonify({'ok': True, 'stored': False})
+    try:
+        dist = int(float(data.get('distance_m') or 0))
+    except (TypeError, ValueError):
+        dist = 0
+    ev = RouteEvent(user_id=current_user.id, kind='desvio', at=now, lat=data.get('lat'), lng=data.get('lng'),
+                    distance_m=dist, detail=_clean(data.get('detail'), 200))
+    db.session.add(ev)
+    db.session.commit()
+    return jsonify({'ok': True, 'stored': True, 'id': ev.id})
 
 
 @bp.route('/monitor')

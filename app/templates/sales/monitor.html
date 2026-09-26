@@ -20,6 +20,11 @@
   .rp .lbl { position:absolute; left:50%; top:52px; transform:translateX(-50%); white-space:nowrap; font-size:10px; font-weight:800; color:#fff;
              background:rgba(15,23,42,.92); border:1px solid rgba(255,255,255,.15); padding:2px 7px; border-radius:999px; }
   .rp .spd { position:absolute; right:-6px; top:8px; font-size:9px; font-weight:800; color:#0f172a; background:#fbbf24; padding:1px 5px; border-radius:999px; }
+  .rp.dev .ring { background:linear-gradient(135deg,#fecaca,#ef4444); }
+  .rp.dev .ring::before { content:''; position:absolute; inset:-10px; border-radius:50%; border:3px solid #ef4444; opacity:.8; animation:rpp 1s ease-out infinite; }
+  .rp .warn { position:absolute; left:-8px; top:6px; font-size:9px; font-weight:900; color:#fff; background:#ef4444; padding:1px 6px; border-radius:999px; box-shadow:0 2px 6px rgba(0,0,0,.5); }
+  .pot { width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.6); }
+  .pot.cot { border-color:#fbbf24; }
   .vg-stop { width:26px;height:26px;border-radius:50%;background:#4f46e5;color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff; }
   .clock { font-variant-numeric: tabular-nums; }
   #map { height: 64vh; min-height: 400px; }
@@ -41,8 +46,10 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+  <div class="grid grid-cols-2 sm:grid-cols-7 gap-3 mb-4">
     <div class="bg-slate-900 rounded-2xl border border-slate-700/40 p-3 text-center"><div class="text-2xl font-bold text-slate-100" x-text="sellers.length"></div><div class="text-[11px] text-slate-500">Vendedores</div></div>
+    <div class="bg-slate-900 rounded-2xl border border-red-500/30 p-3 text-center" :class="devCount()>0 ? 'bg-red-500/10' : ''"><div class="text-2xl font-bold text-red-400" x-text="devCount()"></div><div class="text-[11px] text-slate-500">Desviados</div></div>
+    <div class="bg-slate-900 rounded-2xl border border-cyan-500/20 p-3 text-center"><div class="text-2xl font-bold text-cyan-400" x-text="potential.length"></div><div class="text-[11px] text-slate-500">Potencial en mapa</div></div>
     <div class="bg-slate-900 rounded-2xl border border-emerald-500/20 p-3 text-center"><div class="text-2xl font-bold text-emerald-400" x-text="count('en_jornada')"></div><div class="text-[11px] text-slate-500">En jornada</div></div>
     <div class="bg-slate-900 rounded-2xl border border-slate-700/40 p-3 text-center"><div class="text-2xl font-bold text-slate-300" x-text="count('finalizada')"></div><div class="text-[11px] text-slate-500">Finalizaron</div></div>
     <div class="bg-slate-900 rounded-2xl border border-amber-500/20 p-3 text-center"><div class="text-2xl font-bold text-amber-400" x-text="count('sin_iniciar')"></div><div class="text-[11px] text-slate-500">Sin iniciar</div></div>
@@ -53,6 +60,7 @@
     <div class="lg:col-span-2 bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden relative">
       <div id="map"></div>
       <div class="absolute top-2 right-2 z-[500] flex gap-2">
+        <button type="button" @click="togglePotential()" :class="showPot?'bg-cyan-600 text-white':'bg-slate-900/90 text-slate-300'" class="px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-bold shadow-lg">Potencial</button>
         <button type="button" @click="follow=!follow" :class="follow?'bg-indigo-600 text-white':'bg-slate-900/90 text-slate-300'" class="px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-bold shadow-lg">Seguir</button>
         <button type="button" @click="fitAll()" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 text-slate-300 text-xs font-bold shadow-lg">Ver todos</button>
       </div>
@@ -80,6 +88,7 @@
                   <span x-show="s.shift.status==='finalizada'" class="text-slate-400">■ <span x-text="s.shift.start"></span> → <span x-text="s.shift.end"></span> · <span x-text="fmtMin(s.shift.worked_min)"></span></span>
                   <span x-show="s.shift.status==='sin_iniciar'" class="text-amber-400">○ Sin iniciar jornada</span>
                 </p>
+                <p x-show="s.deviation" class="text-[11px] text-red-400 font-bold">⚠ Desviado de la ruta · <span x-text="s.deviation ? (s.deviation.distance_m + ' m · hace ' + s.deviation.min_ago + ' min') : ''"></span></p>
                 <p class="text-[11px] text-slate-500">
                   <span x-text="s.pending"></span> pendientes · <span class="text-emerald-400" x-text="s.won_today + ' ventas hoy'"></span>
                   <template x-if="s.position"><span> · <span x-show="s.position.speed_kmh>3" class="text-amber-300">🚗 <span x-text="s.position.speed_kmh"></span> km/h</span><span x-show="s.position.speed_kmh<=3">detenido</span> · hace <span x-text="s.position.age_min"></span> min</span></template>
@@ -148,28 +157,44 @@ function monitor() {
     sellers: [], ts: '--', clock: '', countdown: POLL, selected: null, loading: false, planSrc: '', follow: false,
     plan: { stops: [], total_travel_min: 0, end_time: '' }, gallery: { open: false, title: '', items: [] },
     map: null, avatars: {}, trails: {}, last: {}, routeLayer: null, stopLayer: null, trailLayer: null,
+    potential: [], showPot: true, potLayer: null, devSeen: {},
+    devCount() { return this.sellers.filter(s => s.deviation).length; },
+    async loadPotential() {
+      try {
+        const r = await fetch('{{ url_for("sales.api_potential") }}'); const d = await r.json();
+        this.potential = d.deals; this.potLayer.clearLayers();
+        d.deals.forEach(p => {
+          L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', iconSize: [14, 14], iconAnchor: [7, 7], html: '<div class="pot ' + (p.status === 'en_cotizacion' ? 'cot' : '') + '" style="background:' + p.color + '"></div>' }), zIndexOffset: 100 })
+            .addTo(this.potLayer).bindPopup('<b>' + p.client + '</b><br>' + p.address + '<br>' + p.status_display + ' · ' + p.origen + '<br><span style="color:' + p.color + '">● ' + p.seller + '</span>');
+        });
+      } catch (e) {}
+    },
+    togglePotential() { this.showPot = !this.showPot; if (this.showPot) this.map.addLayer(this.potLayer); else this.map.removeLayer(this.potLayer); },
 
     init() {
       setInterval(() => { this.clock = new Date().toLocaleTimeString('es-CO', { hour12: false }); }, 1000);
       this.map = L.map('map').setView([4.6533, -74.0836], 11);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
+      this.potLayer = L.layerGroup().addTo(this.map);
       this.trailLayer = L.layerGroup().addTo(this.map);
       this.routeLayer = L.layerGroup().addTo(this.map);
       this.stopLayer = L.layerGroup().addTo(this.map);
       this.refresh(true);
+      this.loadPotential(); setInterval(() => this.loadPotential(), 5 * 60000);
       setInterval(() => { this.countdown--; if (this.countdown <= 0) { this.countdown = POLL; this.refresh(false); } }, 1000);
     },
     count(st) { return this.sellers.filter(s => s.shift.status === st).length; },
     fmtMin(m) { m = m || 0; return Math.floor(m/60) + 'h ' + (m%60) + 'm'; },
     bearing(a, b) { const toR = x => x * Math.PI / 180; const dL = toR(b[1] - a[1]); const y = Math.sin(dL) * Math.cos(toR(b[0])); const x = Math.cos(toR(a[0])) * Math.sin(toR(b[0])) - Math.sin(toR(a[0])) * Math.cos(toR(b[0])) * Math.cos(dL); return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; },
     icon(s, heading, moving) {
-      const live = s.shift.status === 'en_jornada';
+      const live = s.shift.status === 'en_jornada', dev = !!s.deviation;
       const spd = (s.position && s.position.speed_kmh > 3) ? '<span class="spd">' + s.position.speed_kmh + '</span>' : '';
       const dir = (heading != null && moving) ? '<div class="dir" style="transform:rotate(' + heading + 'deg)"><i></i></div>' : '';
+      const warn = dev ? '<span class="warn">⚠ ' + s.deviation.distance_m + 'm</span>' : '';
       return L.divIcon({ className: '', iconSize: [52, 66], iconAnchor: [26, 26],
-        html: '<div class="rp ' + (live ? 'live ' : '') + (moving ? 'moving' : '') + '" style="--c:' + s.color + '">' + dir +
-              '<div class="ring"><div class="in" style="background:' + s.color + '">' + s.initials + '</div></div>' + spd +
-              '<div class="lbl">' + s.name.split(' ')[0] + '</div></div>' });
+        html: '<div class="rp ' + (live ? 'live ' : '') + (moving ? 'moving ' : '') + (dev ? 'dev' : '') + '" style="--c:' + s.color + '">' + dir +
+              '<div class="ring"><div class="in" style="background:' + s.color + '">' + s.initials + '</div></div>' + spd + warn +
+              '<div class="lbl">' + s.name.split(' ')[0] + (dev ? ' · desviado' : '') + '</div></div>' });
     },
     animate(marker, from, to, ms) {
       // Movimiento suave entre la posicion anterior y la nueva (como una app de domicilios)
