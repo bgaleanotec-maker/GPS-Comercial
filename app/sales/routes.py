@@ -17,7 +17,7 @@ from flask import render_template, request, flash, redirect, url_for, abort
 from flask_login import login_required, current_user
 
 from app import db
-from app.models import SalesDeal, User, ProximityVisit, Ally
+from app.models import SalesDeal, User, ProximityVisit, Ally, Setting
 from app.sales import bp
 
 logger = logging.getLogger(__name__)
@@ -125,6 +125,7 @@ def _import_precarga(file_storage, created_by_id):
 
     nuevos = saltados = 0
     errores = []
+    nuevos_sin_coords = []
     today = datetime.now(COLOMBIA_TZ).date()
 
     for idx, row in enumerate(rows, start=2):
@@ -167,6 +168,14 @@ def _import_precarga(file_storage, created_by_id):
                 created_by=created_by_id,
             )
 
+            # Coordenadas si el archivo las trae (Latitud / Longitud); si no, se
+            # geocodifica la direccion (ciudad por defecto parametrizada, Bogota)
+            lat = _parse_coord(col(row, 'latitud', 'lat'))
+            lng = _parse_coord(col(row, 'longitud', 'lng', 'lon', 'long'))
+            if lat is not None and lng is not None and -90 <= lat <= 90 and -180 <= lng <= 180:
+                deal.latitude, deal.longitude = lat, lng
+                deal.geocoded_at = datetime.utcnow()
+
             # Estados finales de la precarga conservan su fecha de cierre
             if deal.status in ('ganado', 'perdido') and deal.close_date:
                 deal.status_date = datetime.combine(deal.close_date, datetime.min.time())
@@ -179,6 +188,8 @@ def _import_precarga(file_storage, created_by_id):
 
             db.session.add(deal)
             nuevos += 1
+            if deal.latitude is None and deal.address:
+                nuevos_sin_coords.append(deal)
         except Exception as e:
             errores.append(f'Fila {idx}: {e}')
             if len(errores) >= 10:
@@ -186,7 +197,29 @@ def _import_precarga(file_storage, created_by_id):
                 break
 
     db.session.commit()
+    # Geocodificacion inmediata de los primeros sin coordenadas (el resto sigue en segundo plano)
+    if nuevos_sin_coords:
+        try:
+            from app.sales.routing import geocode_deals
+            res = geocode_deals(nuevos_sin_coords[:GEOCODE_ON_IMPORT])
+            ok = sum(1 for r in res if r['ok'])
+            errores.append(f'Ubicacion: {ok} de {len(nuevos_sin_coords)} direccion(es) convertidas a coordenadas ahora'
+                           + (f'; las {len(nuevos_sin_coords) - len(res)} restantes se procesan en segundo plano.' if len(nuevos_sin_coords) > len(res) else '.'))
+        except Exception as e:
+            logger.warning('Geocodificacion en importacion fallo: %s', e)
     return nuevos, saltados, errores
+
+
+GEOCODE_ON_IMPORT = 8   # ~10 s de espera maxima al importar
+
+
+def _parse_coord(value):
+    if value in (None, ''):
+        return None
+    try:
+        return float(str(value).strip().replace(',', '.'))
+    except ValueError:
+        return None
 
 
 def _period_range(period, today):
@@ -411,12 +444,135 @@ def manage():
         'cotizacion': SalesDeal.query.filter_by(status='en_cotizacion').count(),
     }
 
+    # Ubicacion (geocodificacion): estado y pendientes para depurar
+    activos = SalesDeal.query.filter(SalesDeal.status.in_(('asignado', 'en_cotizacion')))
+    geo = {
+        'con': activos.filter(SalesDeal.latitude.isnot(None)).count(),
+        'sin': activos.filter(SalesDeal.latitude.is_(None)).count(),
+        'sin_direccion': activos.filter(SalesDeal.latitude.is_(None), SalesDeal.address.is_(None)).count(),
+        'agotados': activos.filter(SalesDeal.latitude.is_(None), SalesDeal.address.isnot(None),
+                                   SalesDeal.geocode_attempts >= 3).count(),
+    }
+    sin_ubicacion = (activos.filter(SalesDeal.latitude.is_(None))
+                     .order_by(SalesDeal.created_at.desc()).limit(200).all())
+    hb = Setting.query.filter_by(key='worker_heartbeat').first()
+    worker_min = None
+    if hb and hb.value:
+        try:
+            worker_min = int((datetime.utcnow() - datetime.fromisoformat(hb.value)).total_seconds() // 60)
+        except ValueError:
+            worker_min = None
+
     from app.sales.routing import get_params as _gp
     return render_template('sales/manage.html', title='Gestion de Ventas',
                            deals=deals, sellers=sellers, resumen=resumen,
                            totales=totales, status_f=status_f, seller_f=seller_f,
-                           params=_gp(),
+                           params=_gp(), geo=geo, sin_ubicacion=sin_ubicacion, worker_min=worker_min,
                            today=datetime.now(COLOMBIA_TZ).date().strftime('%Y-%m-%d'))
+
+
+@bp.route('/geocode-now', methods=['POST'])
+@login_required
+def geocode_now():
+    """Convierte direcciones a coordenadas de inmediato (admin/lider).
+    scope: pending (sin intentos agotados) | failed (reintentar agotados) | selected (ids)."""
+    if current_user.role not in ('admin', 'lider'):
+        abort(403)
+    from app.sales.routing import geocode_deals
+    scope = request.form.get('scope', 'pending')
+    q = SalesDeal.query.filter(SalesDeal.latitude.is_(None), SalesDeal.address.isnot(None))
+    if scope == 'selected':
+        ids = [int(x) for x in request.form.getlist('deal_ids') if str(x).isdigit()]
+        q = q.filter(SalesDeal.id.in_(ids)) if ids else q.filter(False)
+    elif scope == 'failed':
+        q = q.filter(SalesDeal.geocode_attempts >= 3)
+    else:
+        q = q.filter(SalesDeal.geocode_attempts < 3)
+    deals = q.order_by(SalesDeal.created_at.desc()).limit(GEOCODE_NOW_MAX).all()
+    if not deals:
+        flash('No hay negocios pendientes de ubicacion en ese grupo.', 'info')
+        return redirect(url_for('sales.manage'))
+    if scope in ('failed', 'selected'):
+        for d in deals:
+            d.geocode_attempts = 0
+    res = geocode_deals(deals)
+    ok = [r for r in res if r['ok']]
+    bad = [r for r in res if not r['ok']]
+    flash(f'Ubicacion procesada: {len(ok)} con coordenadas, {len(bad)} sin resultado (de {len(res)}).', 'success' if ok else 'warning')
+    for r in bad[:6]:
+        flash(f'Sin ubicacion: "{r["client"]}" — {r["address"]} ({r["info"]})', 'warning')
+    return redirect(url_for('sales.manage'))
+
+
+GEOCODE_NOW_MAX = 15   # ~20 s por clic (limite de cortesia de los geocodificadores)
+
+
+@bp.route('/deals/delete', methods=['POST'])
+@login_required
+def delete_deals():
+    """Depuracion manual: el admin elimina negocios seleccionados (con sus fotos).
+    Accion explicita y confirmada en pantalla; nunca automatica."""
+    if current_user.role != 'admin':
+        abort(403)
+    ids = [int(x) for x in request.form.getlist('deal_ids') if str(x).isdigit()]
+    if not ids:
+        flash('No seleccionaste negocios.', 'warning')
+        return redirect(url_for('sales.manage'))
+    deals = SalesDeal.query.filter(SalesDeal.id.in_(ids)).all()
+    for d in deals:
+        logger.info('Admin %s elimina negocio %s (%s / %s)', current_user.username, d.id, d.client_name, d.address)
+        db.session.delete(d)
+    db.session.commit()
+    flash(f'{len(deals)} negocio(s) eliminado(s) por depuracion.', 'success')
+    return redirect(url_for('sales.manage'))
+
+
+# Simulacion: direcciones reales de Chapinero Alto (Bogota) con coordenadas aproximadas
+DEMO_CHAPINERO = [
+    ('Ferreteria El Tornillo', 'Calle 60 # 4-30', 4.6457, -74.0598, 'Comercial'),
+    ('Panaderia La Espiga', 'Carrera 4 # 62-15', 4.6478, -74.0602, 'Comercial'),
+    ('Drogueria Salud Total', 'Calle 64 # 5-20', 4.6498, -74.0585, 'Comercial'),
+    ('Restaurante Dona Ana', 'Carrera 5 # 66-40', 4.6521, -74.0577, 'Comercial'),
+    ('Conjunto Torres del Bosque', 'Calle 67 # 4A-12', 4.6534, -74.0590, 'Residencial'),
+    ('Lavanderia Express', 'Carrera 3 # 69-25', 4.6552, -74.0583, 'Comercial'),
+    ('Edificio Mirador 70', 'Calle 70A # 5-50', 4.6560, -74.0564, 'Residencial'),
+    ('Cafe de la Montana', 'Carrera 6 # 58-30', 4.6448, -74.0615, 'Comercial'),
+    ('Papeleria Universitaria', 'Calle 57 # 5-60', 4.6436, -74.0607, 'Comercial'),
+    ('Conjunto Balcones de Chapinero', 'Carrera 2 # 65-10', 4.6510, -74.0568, 'Residencial'),
+]
+
+
+@bp.route('/demo-chapinero', methods=['POST'])
+@login_required
+def demo_chapinero():
+    """Precarga una simulacion de 10 negocios en Chapinero Alto asignados a un vendedor.
+    Idempotente: si ya existen (client_ref demo-chapinero-N) no se duplican."""
+    if current_user.role != 'admin':
+        abort(403)
+    seller = db.session.get(User, request.form.get('seller_id', type=int) or 0)
+    if not seller or seller.role != 'venta':
+        flash('Selecciona un vendedor valido.', 'danger')
+        return redirect(url_for('sales.manage'))
+    creados = reasignados = 0
+    for i, (name, addr, lat, lng, market) in enumerate(DEMO_CHAPINERO, start=1):
+        ref = f'demo-chapinero-{i}'
+        d = SalesDeal.query.filter_by(client_ref=ref).first()
+        if d:
+            if d.assigned_to != seller.id:
+                d.assigned_to, d.assigned_date = seller.id, _today()
+                reasignados += 1
+            continue
+        db.session.add(SalesDeal(
+            client_ref=ref, client_name=name, client_number=f'SIM-{i:03d}', address=addr,
+            phone='601 000 00 00', market=market, campaign='Simulacion Chapinero Alto', origen='Demanda',
+            status='asignado', latitude=lat, longitude=lng, geocoded_at=datetime.utcnow(),
+            assigned_to=seller.id, assigned_date=_today(), assignment_period='diaria',
+            created_by=current_user.id, start_date=_today(), notes='Registro de simulacion (Bogota, Chapinero Alto)',
+        ))
+        creados += 1
+    db.session.commit()
+    flash(f'Simulacion Chapinero Alto: {creados} negocio(s) creado(s), {reasignados} reasignado(s) a {seller.full_name or seller.username}.', 'success')
+    return redirect(url_for('sales.manage'))
 
 
 @bp.route('/assign', methods=['POST'])

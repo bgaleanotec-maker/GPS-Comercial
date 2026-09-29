@@ -258,6 +258,17 @@ def _background_loop(app):
     while True:
         try:
             with app.app_context():
+                # Latido: permite ver en Gestion de Ventas si el proceso de fondo esta vivo
+                try:
+                    from app.models import Setting as _S
+                    hb = _S.query.filter_by(key='worker_heartbeat').first()
+                    if not hb:
+                        hb = _S(key='worker_heartbeat', value='')
+                        db.session.add(hb)
+                    hb.value = datetime.utcnow().isoformat(timespec='seconds')
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
                 run_periodic_evaluation(app)
                 check_and_send_report(app)
                 check_and_send_whatsapp(app)

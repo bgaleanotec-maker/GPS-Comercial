@@ -92,8 +92,79 @@
     </form>
     {% endif %}
 
+    <!-- Ubicacion de negocios (geocodificacion) -->
+    <div class="bg-slate-900 rounded-2xl border border-slate-800/50 mb-6 overflow-hidden" x-data="{ selUbi: 0 }">
+        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-300">Ubicacion de negocios en el mapa</h2>
+                <p class="text-[11px] text-slate-500">Los negocios entran a la ruta y al Potencial solo cuando tienen coordenadas. Las direcciones se convierten con la ciudad parametrizada ({{ params.city }}).</p>
+            </div>
+            <div class="flex items-center gap-2 text-[11px]">
+                <span class="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Con ubicacion: <b>{{ geo.con }}</b></span>
+                <span class="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">Sin ubicacion: <b>{{ geo.sin }}</b></span>
+                {% if geo.agotados %}<span class="px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20">Sin resultado tras 3 intentos: <b>{{ geo.agotados }}</b></span>{% endif %}
+                <span class="px-2 py-1 rounded-lg border {% if worker_min is not none and worker_min <= 5 %}bg-emerald-500/10 text-emerald-400 border-emerald-500/20{% else %}bg-red-500/10 text-red-400 border-red-500/20{% endif %}" title="Proceso automatico que geocodifica en segundo plano">
+                    Proceso de fondo: {% if worker_min is none %}no detectado{% elif worker_min <= 5 %}activo{% else %}sin señal hace {{ worker_min }} min{% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="px-4 py-3 flex flex-wrap items-end gap-3 border-b border-slate-800">
+            <form method="post" action="{{ url_for('sales.geocode_now') }}" class="flex gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button name="scope" value="pending" type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-500 transition" {% if geo.sin - geo.sin_direccion - geo.agotados <= 0 %}disabled style="opacity:.4"{% endif %}>📍 Ubicar pendientes ahora (hasta 15)</button>
+                <button name="scope" value="failed" type="submit" class="px-4 py-2 bg-slate-800 border border-slate-600 text-slate-200 rounded-xl text-sm hover:bg-slate-700 transition" {% if not geo.agotados %}disabled style="opacity:.4"{% endif %}>Reintentar los sin resultado</button>
+            </form>
+            {% if current_user.role == 'admin' %}
+            <form method="post" action="{{ url_for('sales.demo_chapinero') }}" class="flex items-end gap-2 ml-auto" onsubmit="return confirm('Se crearan 10 negocios de simulacion en Chapinero Alto (Bogota) asignados al vendedor elegido. Continuar?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Simulacion Chapinero Alto → vendedor</label>
+                    <select name="seller_id" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200">
+                        {% for s in sellers %}<option value="{{ s.id }}">{{ s.full_name or s.username }}</option>{% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="px-4 py-2 bg-cyan-700 text-white rounded-xl text-sm font-medium hover:bg-cyan-600 transition">Cargar simulacion (10)</button>
+            </form>
+            {% endif %}
+        </div>
+        {% if sin_ubicacion %}
+        <form method="post" action="{{ url_for('sales.geocode_now') }}" id="formUbi">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="px-4 py-2 bg-amber-500/5 border-b border-slate-800 flex flex-wrap items-center gap-3 text-xs">
+                <span class="text-slate-400">Negocios activos sin ubicacion ({{ sin_ubicacion|length }}). Selecciona para:</span>
+                <button type="button" onclick="document.querySelectorAll('#formUbi input[name=deal_ids]').forEach(c=>c.checked=true); document.getElementById('cntUbi').textContent=document.querySelectorAll('#formUbi input[name=deal_ids]:checked').length" class="text-indigo-400 underline">Todos</button>
+                <button type="button" onclick="document.querySelectorAll('#formUbi input[name=deal_ids]').forEach(c=>c.checked=false); document.getElementById('cntUbi').textContent=0" class="text-slate-400 underline">Ninguno</button>
+                <span class="text-slate-500">(<span id="cntUbi">0</span> seleccionados)</span>
+                <button name="scope" value="selected" type="submit" class="px-3 py-1.5 bg-indigo-600/80 text-white rounded-lg font-medium hover:bg-indigo-500">📍 Ubicar seleccionados</button>
+                {% if current_user.role == 'admin' %}
+                <button type="submit" formaction="{{ url_for('sales.delete_deals') }}" onclick="return confirm('Se eliminaran los negocios seleccionados (y sus fotos). Esta accion es manual y no se puede deshacer. Continuar?')" class="px-3 py-1.5 bg-red-700/80 text-white rounded-lg font-medium hover:bg-red-600">🗑 Eliminar seleccionados (depurar)</button>
+                {% endif %}
+            </div>
+            <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-slate-900"><tr class="text-[11px] uppercase text-slate-500 border-b border-slate-800">
+                        <th class="px-3 py-2 w-8"></th><th class="text-left px-3 py-2">Cliente</th><th class="text-left px-3 py-2">Direccion</th><th class="text-left px-3 py-2">Vendedor</th><th class="text-left px-3 py-2">Intentos</th><th class="text-left px-3 py-2">Origen</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-slate-800/50">
+                        {% for d in sin_ubicacion %}
+                        <tr class="hover:bg-slate-800/30">
+                            <td class="px-3 py-1.5"><input type="checkbox" name="deal_ids" value="{{ d.id }}" onchange="document.getElementById('cntUbi').textContent=document.querySelectorAll('#formUbi input[name=deal_ids]:checked').length" class="rounded border-slate-600 bg-slate-900 text-indigo-500"></td>
+                            <td class="px-3 py-1.5 text-slate-100">{{ d.client_name }}{% if d.client_number %} <span class="text-[11px] text-slate-500">#{{ d.client_number }}</span>{% endif %}</td>
+                            <td class="px-3 py-1.5 text-xs {% if d.address %}text-slate-300{% else %}text-red-400{% endif %}">{{ d.address or 'SIN DIRECCION — no se puede ubicar' }}</td>
+                            <td class="px-3 py-1.5 text-xs text-slate-400">{{ (d.seller.full_name or d.seller.username) if d.seller else '—' }}</td>
+                            <td class="px-3 py-1.5 text-xs {% if (d.geocode_attempts or 0) >= 3 %}text-red-400{% else %}text-slate-400{% endif %}">{{ d.geocode_attempts or 0 }}/3</td>
+                            <td class="px-3 py-1.5 text-xs text-slate-400">{{ d.origen or '' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+
     <!-- Asignacion + listado -->
-    <form method="post" action="{{ url_for('sales.assign_deals') }}">
+    <form method="post" action="{{ url_for('sales.assign_deals') }}" id="formAssign">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="bg-slate-900 rounded-2xl border border-slate-800/50 overflow-hidden">
             <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
@@ -140,9 +211,14 @@
                     Asignar (<span x-text="selCount"></span>)
                 </button>
                 <button type="button" class="text-[11px] text-slate-400 hover:text-slate-200 underline"
-                        @click="document.querySelectorAll('input[name=deal_ids]').forEach(c=>c.checked=true); selCount=document.querySelectorAll('input[name=deal_ids]:checked').length">Todos</button>
+                        @click="document.querySelectorAll('#formAssign input[name=deal_ids]').forEach(c=>c.checked=true); selCount=document.querySelectorAll('#formAssign input[name=deal_ids]:checked').length">Todos</button>
                 <button type="button" class="text-[11px] text-slate-400 hover:text-slate-200 underline"
-                        @click="document.querySelectorAll('input[name=deal_ids]').forEach(c=>c.checked=false); selCount=0">Ninguno</button>
+                        @click="document.querySelectorAll('#formAssign input[name=deal_ids]').forEach(c=>c.checked=false); selCount=0">Ninguno</button>
+                {% if current_user.role == 'admin' %}
+                <button type="submit" formaction="{{ url_for('sales.delete_deals') }}" class="ml-auto px-3 py-2 bg-red-700/70 text-white rounded-xl text-xs font-medium hover:bg-red-600 transition"
+                        :disabled="selCount === 0" :class="{'opacity-40 cursor-not-allowed': selCount === 0}"
+                        onclick="return confirm('Se eliminaran los negocios seleccionados (y sus fotos). Esta accion es manual y no se puede deshacer. Continuar?')">🗑 Eliminar seleccionados (depurar)</button>
+                {% endif %}
             </div>
 
             <div class="overflow-x-auto max-h-[560px] overflow-y-auto">
@@ -163,7 +239,7 @@
                         {% for d in deals %}
                         <tr class="hover:bg-slate-800/30 transition">
                             <td class="px-3 py-2"><input type="checkbox" name="deal_ids" value="{{ d.id }}"
-                                @change="selCount = document.querySelectorAll('input[name=deal_ids]:checked').length"
+                                @change="selCount = document.querySelectorAll('#formAssign input[name=deal_ids]:checked').length"
                                 class="rounded border-slate-600 bg-slate-900 text-indigo-500"></td>
                             <td class="px-3 py-2">
                                 <div class="font-medium text-slate-100">{{ d.client_name }}</div>
