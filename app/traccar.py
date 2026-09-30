@@ -6,6 +6,8 @@ from datetime import datetime
 
 import requests
 from requests.adapters import HTTPAdapter
+import threading
+import time as _clock
 from urllib3.util.retry import Retry
 from flask import current_app
 import pytz
@@ -19,12 +21,53 @@ WALKING_SPEED_THRESHOLD = 6.0  # <= 6 km/h = a pie
 KNOTS_TO_KMH = 1.852
 
 
+# Cortacircuito: si Traccar deja de responder (timeouts seguidos), durante
+# BREAKER_PAUSE_S las llamadas fallan de inmediato en vez de esperar el timeout
+# una y otra vez. Asi las paginas cargan (con datos en cero o de cache) y
+# gunicorn no mata el proceso por exceder los 120 s.
+BREAKER_FAILS = 3
+BREAKER_PAUSE_S = 60
+_BREAKER = {'fails': 0, 'until': 0.0, 'lock': threading.Lock()}
+
+
+def traccar_paused():
+    """True mientras el cortacircuito esta abierto (Traccar sin responder)."""
+    return _clock.time() < _BREAKER['until']
+
+
+def _breaker_failure(exc):
+    with _BREAKER['lock']:
+        _BREAKER['fails'] += 1
+        if _BREAKER['fails'] >= BREAKER_FAILS and not traccar_paused():
+            _BREAKER['until'] = _clock.time() + BREAKER_PAUSE_S
+            logger.error('Traccar no responde (%s). Consultas en pausa %ss.', exc.__class__.__name__, BREAKER_PAUSE_S)
+
+
+def _breaker_success():
+    if _BREAKER['fails']:
+        with _BREAKER['lock']:
+            _BREAKER['fails'] = 0
+
+
+class _BreakerSession(requests.Session):
+    def request(self, method, url, **kwargs):
+        if traccar_paused():
+            raise requests.ConnectionError('Traccar en pausa por fallos recientes (cortacircuito)')
+        try:
+            resp = super().request(method, url, **kwargs)
+        except (requests.Timeout, requests.ConnectionError) as e:
+            _breaker_failure(e)
+            raise
+        _breaker_success()
+        return resp
+
+
 def _build_session(user, password):
-    """Crea una sesion HTTP con retry y autenticacion."""
-    session = requests.Session()
+    """Crea una sesion HTTP con retry, autenticacion y cortacircuito."""
+    session = _BreakerSession()
     session.auth = (user, password)
     retries = Retry(
-        total=2,
+        total=1,
         backoff_factor=0.5,
         status_forcelist=[500, 502, 503, 504]
     )
