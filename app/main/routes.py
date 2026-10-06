@@ -52,6 +52,28 @@ _EMPTY_DEVICE_STATS = {
 }
 
 
+_SUMMARY_CACHE = {}       # (device_id, 'mes'|'total') -> (expira_epoch, metros)
+_SUMMARY_TTL_MONTH = 1800   # 30 min
+_SUMMARY_TTL_TOTAL = 6 * 3600   # 6 h (cambia muy poco de una hora a otra)
+
+
+def _cached_summary(device_id, kind, from_time, to_time, ttl):
+    key = (device_id, kind)
+    hit = _SUMMARY_CACHE.get(key)
+    if hit and hit[0] > clock.time():
+        return hit[1]
+    val = _summary_distance_m(device_id, from_time, to_time)
+    if val or not hit:
+        _SUMMARY_CACHE[key] = (clock.time() + ttl, val)
+    else:
+        # Fallo transitorio: conservar el ultimo valor conocido un rato mas
+        _SUMMARY_CACHE[key] = (clock.time() + 300, hit[1])
+        val = hit[1]
+    if len(_SUMMARY_CACHE) > 2000:
+        _SUMMARY_CACHE.clear()
+    return val
+
+
 def _device_dashboard_stats(device_id, today_start, month_start, total_start, now):
     """Distancias hoy/mes/total y clasificacion de hoy para UN dispositivo (con cache)."""
     key = (device_id, today_start.date().isoformat())
@@ -62,8 +84,10 @@ def _device_dashboard_stats(device_id, today_start, month_start, total_start, no
     positions_today = get_device_positions_view(device_id, today_start, now)
     res = dict(_EMPTY_DEVICE_STATS)
     res['distance_today_meters'] = calculate_distance_from_points(positions_today)
-    res['distance_month_meters'] = _summary_distance_m(device_id, month_start, now)
-    res['distance_total_meters'] = _summary_distance_m(device_id, total_start, now)
+    # Los reportes de mes y de 12 meses son costosos en Traccar (~3 s cada uno):
+    # se cachean aparte por mas tiempo para no saturarlo en cada carga del panel.
+    res['distance_month_meters'] = _cached_summary(device_id, 'mes', month_start, now, _SUMMARY_TTL_MONTH)
+    res['distance_total_meters'] = _cached_summary(device_id, 'total', total_start, now, _SUMMARY_TTL_TOTAL)
     if positions_today and len(positions_today) >= 2:
         rs = calculate_route_distances(positions_today)
         res['walking_km_today'] = rs['walking_km']
@@ -88,7 +112,8 @@ def parallel_device_stats(device_ids, today_start, month_start, total_start, now
         with app_obj.app_context():
             return _device_dashboard_stats(did, today_start, month_start, total_start, now)
 
-    ex = ThreadPoolExecutor(max_workers=min(8, len(device_ids)))
+    # 4 hilos: suficiente paralelismo sin saturar el servidor Traccar (1 vCPU)
+    ex = ThreadPoolExecutor(max_workers=min(4, len(device_ids)))
     futs = {ex.submit(job, did): did for did in device_ids}
     deadline = clock.time() + budget_s
     for fut, did in futs.items():
