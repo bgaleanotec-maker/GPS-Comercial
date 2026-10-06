@@ -150,8 +150,16 @@ def visit_report():
 @bp.route('/uploads/<filename>')
 @login_required
 def uploaded_file(filename):
-    """Sirve archivos de evidencia subidos."""
-    return send_file(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+    """Sirve archivos de evidencia subidos (solo al dueno o a admin/lider)."""
+    from flask import abort, send_from_directory
+    from werkzeug.utils import secure_filename
+    safe = secure_filename(filename)
+    if safe != filename:
+        abort(404)
+    # El nombre empieza por el usuario que la subio: <usuario>_<fecha>_<archivo>
+    if current_user.role not in ('admin', 'lider') and not safe.startswith(current_user.username + '_'):
+        abort(403)
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], safe)
 
 @bp.route('/dashboard')
 @login_required
@@ -159,6 +167,9 @@ def analytics_dashboard():
     """
     Dashboard avanzado de analítica comercial con filtros y métricas detalladas.
     """
+    if current_user.role not in ('admin', 'lider'):
+        from flask import abort
+        abort(403)
     colombia_tz = pytz.timezone('America/Bogota')
     now = datetime.now(colombia_tz)
     

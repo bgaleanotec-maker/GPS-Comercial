@@ -35,11 +35,13 @@ def manage_users():
             work_address=request.form.get('work_address', ''),
             employee_status='activo',
         )
-        user.set_password('Vanti2025')
+        import secrets as _sec
+        temp_pw = 'Vanti' + _sec.token_urlsafe(6)
+        user.set_password(temp_pw)
         user.must_change_password = True
         db.session.add(user)
         db.session.commit()
-        flash(f'Usuario "{form.full_name.data}" creado como {role}. Clave temporal: Vanti2025 (debera cambiarla al ingresar)', 'success')
+        flash(f'Usuario "{form.full_name.data}" creado como {role}. Clave temporal: {temp_pw} (debera cambiarla al ingresar)', 'success')
         return redirect(url_for('user_management.manage_users'))
 
     # Asociar dispositivo (solo admin)
@@ -162,7 +164,7 @@ def edit_user(user_id):
             temp_pw = 'Vanti' + secrets.token_urlsafe(4)
             user.set_password(temp_pw)
             user.must_change_password = True
-            flash(f'Clave temporal generada: <strong>{temp_pw}</strong> — El usuario debera cambiarla al ingresar.', 'success_key')
+            flash(f'Clave temporal generada: {temp_pw} — El usuario debera cambiarla al ingresar.', 'success_key')
         elif new_password:
             user.set_password(new_password)
             user.must_change_password = True

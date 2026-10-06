@@ -187,6 +187,7 @@
 
 <script>
 function vgApp() {
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   return {
     clock: '--:--:--', today: '', msg: '', loading: false, canInstall: false, deferredPrompt: null, iosHint: false,
     uploading: null, photoDeal: null, gallery: { open: false, title: '', items: [] },
@@ -398,7 +399,7 @@ function vgApp() {
       d.stops.forEach(s => {
         const ic = L.divIcon({ className: '', iconSize: [30,30], iconAnchor: [15,15], html: '<div class="vg-stop ' + (s.status==='en_cotizacion'?'cot':'') + '">' + s.order + '</div>' });
         L.marker([s.lat, s.lng], { icon: ic }).addTo(this.stopLayer)
-          .bindPopup('<b>' + s.order + '. ' + s.client + '</b><br>' + s.address + '<br>🚗 ' + s.travel_min + ' min · Llega ' + s.arrive + ' · Sale ' + s.depart);
+          .bindPopup('<b>' + s.order + '. ' + esc(s.client) + '</b><br>' + esc(s.address) + '<br>🚗 ' + esc(s.travel_min) + ' min · Llega ' + esc(s.arrive) + ' · Sale ' + esc(s.depart));
         b.push([s.lat, s.lng]);
       });
       if (b.length > 1) this.map.fitBounds(b, { padding: [30, 30] }); else if (b.length === 1) this.map.setView(b[0], 14);

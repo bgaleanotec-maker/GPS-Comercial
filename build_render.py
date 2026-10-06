@@ -33,27 +33,6 @@ with app.app_context():
 
     db.session.commit()
 
-    # === Reinicio masivo de claves (operacion de una sola vez) ===
-    # Resetea la clave de TODOS los usuarios (excepto el/los admin) a 'Vanti2026*'.
-    # Es idempotente: un flag en la tabla Setting garantiza que solo corre una vez,
-    # asi futuros despliegues NO sobrescriben claves que los usuarios hayan cambiado.
-    RESET_FLAG = 'pw_reset_vanti2026'
-    if not Setting.query.filter_by(key=RESET_FLAG).first():
-        reset_count = 0
-        users = User.query.filter(
-            User.username != 'admin',
-            (User.role != 'admin') | (User.role.is_(None))
-        ).all()
-        for u in users:
-            u.set_password('Vanti2026*')
-            u.must_change_password = False
-            reset_count += 1
-        db.session.add(Setting(key=RESET_FLAG, value='done'))
-        db.session.commit()
-        print(f"=== Claves reiniciadas a 'Vanti2026*' para {reset_count} usuario(s) (admin excluido) ===")
-    else:
-        print("=== Reinicio de claves ya ejecutado previamente: omitido ===")
-
     # === Reproceso unico: rellenar last_time (hora final) de visitas por proximidad ===
     # Al agregar la columna last_time, se reinicia el cursor del backfill una vez para
     # que el worker reprocese el historico y calcule la duracion de cada visita.

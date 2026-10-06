@@ -17,6 +17,7 @@ from flask import render_template, request, flash, redirect, url_for, abort
 from flask_login import login_required, current_user
 
 from app import db
+from app.utils import safe_next
 from app.models import SalesDeal, User, ProximityVisit, Ally, Setting
 from app.sales import bp
 
@@ -370,14 +371,14 @@ def set_deal_status(deal_id):
     new_status = request.form.get('status')
     if new_status not in DEAL_STATUSES:
         flash('Estado invalido.', 'danger')
-        return redirect(request.form.get('next') or url_for('sales.board'))
+        return redirect(safe_next(request.form.get('next')) or url_for('sales.board'))
 
     deal.status = new_status
     deal.status_reason = (request.form.get('reason') or '').strip() or deal.status_reason
     deal.status_date = datetime.now(pytz.utc)
     db.session.commit()
     flash(f'Negocio "{deal.client_name}" marcado como {deal.status_display}.', 'success')
-    return redirect(request.form.get('next') or url_for('sales.board'))
+    return redirect(safe_next(request.form.get('next')) or url_for('sales.board'))
 
 
 # ============================================================

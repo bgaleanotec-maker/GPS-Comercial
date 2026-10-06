@@ -152,7 +152,8 @@
 
 <script>
 function monitor() {
-  const POLL = 60;  // segundos (suficiente y liviano; el movimiento se anima entre lecturas)
+  const POLL = 60;
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));  // segundos (suficiente y liviano; el movimiento se anima entre lecturas)
   return {
     sellers: [], ts: '--', clock: '', countdown: POLL, selected: null, loading: false, planSrc: '', follow: false,
     plan: { stops: [], total_travel_min: 0, end_time: '' }, gallery: { open: false, title: '', items: [] },
@@ -165,7 +166,7 @@ function monitor() {
         this.potential = d.deals; this.potLayer.clearLayers();
         d.deals.forEach(p => {
           L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', iconSize: [14, 14], iconAnchor: [7, 7], html: '<div class="pot ' + (p.status === 'en_cotizacion' ? 'cot' : '') + '" style="background:' + p.color + '"></div>' }), zIndexOffset: 100 })
-            .addTo(this.potLayer).bindPopup('<b>' + p.client + '</b><br>' + p.address + '<br>' + p.status_display + ' · ' + p.origen + '<br><span style="color:' + p.color + '">● ' + p.seller + '</span>');
+            .addTo(this.potLayer).bindPopup('<b>' + esc(p.client) + '</b><br>' + esc(p.address) + '<br>' + esc(p.status_display) + ' · ' + esc(p.origen) + '<br><span style="color:' + esc(p.color) + '">● ' + esc(p.seller) + '</span>');
         });
       } catch (e) {}
     },
@@ -193,8 +194,8 @@ function monitor() {
       const warn = dev ? '<span class="warn">⚠ ' + s.deviation.distance_m + 'm</span>' : '';
       return L.divIcon({ className: '', iconSize: [52, 66], iconAnchor: [26, 26],
         html: '<div class="rp ' + (live ? 'live ' : '') + (moving ? 'moving ' : '') + (dev ? 'dev' : '') + '" style="--c:' + s.color + '">' + dir +
-              '<div class="ring"><div class="in" style="background:' + s.color + '">' + s.initials + '</div></div>' + spd + warn +
-              '<div class="lbl">' + s.name.split(' ')[0] + (dev ? ' · desviado' : '') + '</div></div>' });
+              '<div class="ring"><div class="in" style="background:' + esc(s.color) + '">' + esc(s.initials) + '</div></div>' + spd + warn +
+              '<div class="lbl">' + esc(s.name.split(' ')[0]) + (dev ? ' · desviado' : '') + '</div></div>' });
     },
     animate(marker, from, to, ms) {
       // Movimiento suave entre la posicion anterior y la nueva (como una app de domicilios)
@@ -216,7 +217,7 @@ function monitor() {
           const moved = prev && (Math.abs(prev[0] - ll[0]) > 1e-5 || Math.abs(prev[1] - ll[1]) > 1e-5);
           const heading = moved ? this.bearing(prev, ll) : (s.position.course != null ? s.position.course : null);
           const moving = moved || (s.position.speed_kmh > 3);
-          const pop = '<b>' + s.name + '</b><br>' + (s.shift.status==='en_jornada' ? 'En jornada desde ' + s.shift.start : (s.shift.status==='finalizada' ? 'Jornada ' + s.shift.start + ' → ' + s.shift.end : 'Sin iniciar jornada')) + '<br>' + s.pending + ' pendientes · ' + s.won_today + ' ventas hoy';
+          const pop = '<b>' + esc(s.name) + '</b><br>' + (s.shift.status==='en_jornada' ? 'En jornada desde ' + s.shift.start : (s.shift.status==='finalizada' ? 'Jornada ' + s.shift.start + ' → ' + s.shift.end : 'Sin iniciar jornada')) + '<br>' + s.pending + ' pendientes · ' + s.won_today + ' ventas hoy';
           if (this.avatars[s.id]) {
             const mk = this.avatars[s.id]; mk.setIcon(this.icon(s, heading, moving)).setPopupContent(pop);
             if (moved) { this.animate(mk, prev, ll, 2500); if (this.follow && this.selected && this.selected.id === s.id) this.map.panTo(ll, { animate: true, duration: 2 }); }
@@ -246,7 +247,7 @@ function monitor() {
         if (d.geometry && d.geometry.length > 1) L.polyline(d.geometry, { color: s.color, weight: 5, opacity: .85 }).addTo(this.routeLayer);
         d.stops.forEach(st => {
           L.marker([st.lat, st.lng], { icon: L.divIcon({ className: '', iconSize: [26,26], iconAnchor: [13,13], html: '<div class="vg-stop">' + st.order + '</div>' }) })
-            .addTo(this.stopLayer).bindPopup('<b>' + st.order + '. ' + st.client + '</b><br>Llega ' + st.arrive + ' · Sale ' + st.depart);
+            .addTo(this.stopLayer).bindPopup('<b>' + st.order + '. ' + esc(st.client) + '</b><br>Llega ' + esc(st.arrive) + ' · Sale ' + esc(st.depart));
           b.push([st.lat, st.lng]);
         });
         if (b.length > 1) this.map.fitBounds(b, { padding: [50, 50] });

@@ -183,3 +183,10 @@ def filter_positions_by_working_hours(positions):
             continue
 
     return filtered
+
+
+def safe_next(url, default=None):
+    """Solo acepta rutas relativas del propio sitio (evita redirecciones abiertas)."""
+    if url and isinstance(url, str) and url.startswith('/') and not url.startswith('//') and '\\' not in url:
+        return url
+    return default

@@ -8,6 +8,7 @@ from flask import render_template, request, flash, redirect, url_for, abort, jso
 from flask_login import login_required, current_user
 
 from app import db
+from app.utils import safe_next
 from app.models import (ScheduledTask, TaskTemplate, TaskAssignment,
                         User, Ally, Visit)
 from app.schedule import bp
@@ -142,7 +143,7 @@ def complete_task(task_id):
     db.session.commit()
     flash('Tarea marcada como cumplida.', 'success')
 
-    next_url = request.form.get('next') or url_for('schedule.my_schedule')
+    next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
     return redirect(next_url)
 
 
@@ -157,7 +158,7 @@ def cancel_task(task_id):
     db.session.commit()
     flash('Tarea cancelada.', 'info')
 
-    next_url = request.form.get('next') or url_for('schedule.my_schedule')
+    next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
     return redirect(next_url)
 
 
@@ -172,7 +173,7 @@ def mark_not_completed(task_id):
     reason = (request.form.get('reason') or '').strip()
     if not reason:
         flash('Debes registrar una observacion indicando por que no se cumplio.', 'danger')
-        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
         return redirect(next_url)
 
     task.status = 'no_cumplida'
@@ -181,7 +182,7 @@ def mark_not_completed(task_id):
     db.session.commit()
     flash('Tarea marcada como NO cumplida. Observacion registrada.', 'info')
 
-    next_url = request.form.get('next') or url_for('schedule.my_schedule')
+    next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
     return redirect(next_url)
 
 
@@ -194,7 +195,7 @@ def reschedule_task(task_id):
         abort(403)
     if task.status in ('cumplida', 'cancelada'):
         flash('No se puede reprogramar una tarea cumplida o cancelada.', 'warning')
-        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
         return redirect(next_url)
 
     new_date_str = request.form.get('new_date')
@@ -204,13 +205,13 @@ def reschedule_task(task_id):
 
     if not new_date_str:
         flash('Debes indicar la nueva fecha.', 'danger')
-        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
         return redirect(next_url)
     try:
         new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
     except ValueError:
         flash('Formato de fecha invalido.', 'danger')
-        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
         return redirect(next_url)
 
     old_date = task.scheduled_date
@@ -244,7 +245,7 @@ def reschedule_task(task_id):
 
     db.session.commit()
     flash(f'Tarea reprogramada para {new_date.strftime("%d/%m/%Y")}. Cambio registrado.', 'success')
-    next_url = request.form.get('next') or url_for('schedule.my_schedule')
+    next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
     return redirect(next_url)
 
 
@@ -257,7 +258,7 @@ def edit_task(task_id):
         abort(403)
     if not task.is_editable:
         flash('No se puede editar una tarea cumplida, no cumplida o cancelada.', 'warning')
-        next_url = request.form.get('next') or url_for('schedule.my_schedule')
+        next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
         return redirect(next_url)
 
     task.title = request.form.get('title', task.title).strip()
@@ -280,7 +281,7 @@ def edit_task(task_id):
 
     db.session.commit()
     flash('Tarea actualizada.', 'success')
-    next_url = request.form.get('next') or url_for('schedule.my_schedule')
+    next_url = safe_next(request.form.get('next')) or url_for('schedule.my_schedule')
     return redirect(next_url)
 
 
@@ -317,7 +318,7 @@ def delete_task(task_id):
         msg += f' Observacion: {observacion}'
     flash(msg, 'info')
 
-    next_url = request.form.get('next') or url_for('schedule.control_tower')
+    next_url = safe_next(request.form.get('next')) or url_for('schedule.control_tower')
     return redirect(next_url)
 
 
@@ -333,7 +334,7 @@ def reopen_task(task_id):
     task.auto_validated = False
     db.session.commit()
     flash('Tarea reabierta.', 'success')
-    next_url = request.form.get('next') or url_for('schedule.control_tower')
+    next_url = safe_next(request.form.get('next')) or url_for('schedule.control_tower')
     return redirect(next_url)
 
 

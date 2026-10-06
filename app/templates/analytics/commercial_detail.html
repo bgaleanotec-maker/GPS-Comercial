@@ -231,6 +231,7 @@
 {% if map_allies or map_route %}
 <script>
 (function() {
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const route = {{ map_route|tojson|safe }};
     const allies = {{ map_allies|tojson|safe }};
     const el = document.getElementById('map');
@@ -257,7 +258,7 @@
                   + 'border:2px solid #fff;">' + (a.visits || 0) + '</div>'
         });
         L.marker([a.lat, a.lon], { icon: icon, zIndexOffset: has ? 1000 : 0 }).addTo(map)
-            .bindPopup('<b>' + a.name + '</b><br>' + (a.visits || 0) + ' dia(s) que paso a menos de ' + a.radius + ' m (max 1/dia)');
+            .bindPopup('<b>' + esc(a.name) + '</b><br>' + (a.visits || 0) + ' dia(s) que paso a menos de ' + a.radius + ' m (max 1/dia)');
         bounds.push([a.lat, a.lon]);
     });
 

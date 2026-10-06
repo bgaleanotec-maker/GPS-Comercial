@@ -63,8 +63,8 @@ def _init_database(app):
                 'report_time': '08:00', 'report_recipients': '',
                 'sst_recipients': '',
                 'whatsapp_enabled': 'true',
-                'ultramsg_instance_id': os.environ.get('ULTRAMSG_INSTANCE_ID', 'instance154562'),
-                'ultramsg_token': os.environ.get('ULTRAMSG_TOKEN', 'gxcg5k06jjz7fmi0'),
+                'ultramsg_instance_id': os.environ.get('ULTRAMSG_INSTANCE_ID', ''),
+                'ultramsg_token': os.environ.get('ULTRAMSG_TOKEN', ''),
                 'whatsapp_report_time': '18:00',
                 'emergency_whatsapp_enabled': 'true',
                 'admin_whatsapp_number': '573222699322',
@@ -138,8 +138,34 @@ def create_app(config_class=Config):
     app.jinja_env.globals['pytz'] = pytz
     app.jinja_env.globals['datetime'] = datetime
 
-    from flask_wtf.csrf import generate_csrf
+    from flask_wtf.csrf import generate_csrf, CSRFProtect, CSRFError
     app.jinja_env.globals['csrf_token'] = generate_csrf
+    # Proteccion CSRF global: todo POST/PUT/DELETE exige el token (campo csrf_token
+    # en formularios o cabecera X-CSRFToken en fetch). Las rutas /api/v1 son GET.
+    csrf = CSRFProtect()
+    csrf.init_app(app)
+
+    @app.errorhandler(CSRFError)
+    def _csrf_error(e):
+        from flask import request, jsonify, flash, redirect
+        if request.is_json or request.headers.get('X-Requested-With') == 'fetch' or request.path.startswith('/sales/api/'):
+            return jsonify({'ok': False, 'msg': 'Sesion expirada o peticion invalida. Recarga la pagina.'}), 400
+        flash('La sesion expiro o el formulario no es valido. Intenta de nuevo.', 'warning')
+        return redirect(request.referrer or '/')
+
+    # Render termina el HTTPS en su proxy: respetar X-Forwarded-Proto/For
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+    @app.after_request
+    def _security_headers(resp):
+        resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        resp.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        resp.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        resp.headers.setdefault('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()')
+        if app.config.get('IS_PRODUCTION'):
+            resp.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+        return resp
 
     db.init_app(app)
     login.init_app(app)
@@ -183,84 +209,16 @@ def create_app(config_class=Config):
             if request.endpoint and request.endpoint not in allowed:
                 return redirect(url_for('auth.change_password'))
 
-    # === DIAGNOSTICO TEMPORAL: captura de tracebacks para depurar el 500 ===
-    import traceback as _tbmod
-    import json as _json
-    import time as _clockmod
-    import tempfile as _tmp
-    from werkzeug.exceptions import HTTPException
-    app._last_errors = []
-    app._boot_ts = datetime.now().isoformat(timespec='seconds')
-
-    # Detector de "worker matado": si el proceso muere a mitad de una peticion
-    # (timeout/OOM), el archivo inflight queda escrito y al reiniciar lo registramos.
-    _INFLIGHT = os.path.join(_tmp.gettempdir(), 'vg_inflight.json')
-    _KILLED = os.path.join(_tmp.gettempdir(), 'vg_killed.json')
-    try:
-        if os.path.exists(_INFLIGHT):
-            with open(_INFLIGHT) as fh:
-                pend = fh.read().strip()
-            if pend:
-                killed = []
-                if os.path.exists(_KILLED):
-                    try:
-                        killed = _json.load(open(_KILLED))
-                    except Exception:
-                        killed = []
-                killed.append(pend)
-                _json.dump(killed[-10:], open(_KILLED, 'w'))
-            os.remove(_INFLIGHT)
-    except Exception:
-        pass
-
-    @app.before_request
-    def _diag_inflight_start():
-        from flask import request
-        if request.path.startswith(('/static', '/__diag', '/health')):
-            return
-        try:
-            with open(_INFLIGHT, 'w') as fh:
-                fh.write(f"{datetime.now().isoformat(timespec='seconds')} {request.method} {request.full_path}")
-        except Exception:
-            pass
-
-    @app.teardown_request
-    def _diag_inflight_end(exc=None):
-        try:
-            if os.path.exists(_INFLIGHT):
-                os.remove(_INFLIGHT)
-        except Exception:
-            pass
-
+    # Errores no controlados: se registran con traza completa en el log (Render)
+    # y se responde una pagina generica, sin exponer detalles al navegador.
     @app.errorhandler(Exception)
-    def _diag_capture(e):
+    def _unhandled(e):
+        import traceback
+        from werkzeug.exceptions import HTTPException
         if isinstance(e, HTTPException):
             return e
-        tb = _tbmod.format_exc()
-        try:
-            app._last_errors.append(tb)
-            app._last_errors[:] = app._last_errors[-8:]
-        except Exception:
-            pass
-        app.logger.error("UNHANDLED EXCEPTION:\n%s", tb)
+        app.logger.error("UNHANDLED EXCEPTION:\n%s", traceback.format_exc())
         return "Internal Server Error", 500
-
-    @app.route('/__diag')
-    def _diag_view():
-        from flask import request, Response
-        if request.args.get('k') != 'vg-diag-7x9k':
-            return ("forbidden", 403)
-        killed = []
-        try:
-            if os.path.exists(_KILLED):
-                killed = _json.load(open(_KILLED))
-        except Exception:
-            pass
-        parts = [f"boot: {app._boot_ts}"]
-        parts.append("PETICIONES MATADAS (worker murio a mitad):\n" + ("\n".join(killed) if killed else "  ninguna registrada"))
-        parts.append("EXCEPCIONES CAPTURADAS:\n" + ("\n\n======== siguiente ========\n\n".join(app._last_errors[-5:]) or "  ninguna"))
-        return Response("\n\n".join(parts), mimetype='text/plain')
-    # === FIN DIAGNOSTICO TEMPORAL ===
 
     # Crear/actualizar tablas e inicializar datos
     _init_database(app)

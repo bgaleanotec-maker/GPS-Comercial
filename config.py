@@ -32,7 +32,19 @@ class Config(object):
     REMEMBER_COOKIE_DURATION = 60 * 24 * 3600
     REMEMBER_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SAMESITE = 'Lax'
-    UPLOAD_FOLDER = os.path.join(basedir, 'app/static/uploads')
+    SESSION_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_HTTPONLY = True
+    # En produccion (Render, detras de HTTPS) las cookies solo viajan cifradas
+    IS_PRODUCTION = bool(os.environ.get('RENDER') or os.environ.get('DATABASE_URL', '').startswith(('postgres://', 'postgresql://')))
+    SESSION_COOKIE_SECURE = IS_PRODUCTION
+    REMEMBER_COOKIE_SECURE = IS_PRODUCTION
+    # CSRF global (Flask-WTF): token ligado a la sesion, sin caducidad propia
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = None
+    # Tope de tamano por peticion (fotos ~2 MB, Excel de precarga)
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+    # Evidencias fuera de /static: solo se sirven con sesion y control de propietario
+    UPLOAD_FOLDER = os.path.join(basedir, 'instance', 'uploads')
 
     # Traccar - URL no es secreto, puede tener fallback
     TRACCAR_URL = os.environ.get('TRACCAR_URL') or 'http://64.227.85.213:8082'
