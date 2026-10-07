@@ -212,7 +212,7 @@ function vgApp() {
       // Deja el formulario de Negocio Dispersa disponible sin internet (el service worker lo guarda)
       if (navigator.onLine && this.isSelf) setTimeout(() => fetch('{{ url_for("sales.new_deal") }}', { headers: { 'Accept': 'text/html' } }).catch(() => null), 3000);
       this.map = L.map('map', { zoomControl: false }).setView([4.6533, -74.0836], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '© OpenStreetMap © CARTO' }).addTo(this.map);
       this.routeLayer = L.layerGroup().addTo(this.map);
       this.stopLayer = L.layerGroup().addTo(this.map);
       try { const cp = localStorage.getItem('vg_plan_' + this.sellerId); if (cp) { const d = JSON.parse(cp); this.plan = d; this.fromCache = true; this.draw(d); } } catch (e) {}
@@ -327,24 +327,9 @@ function vgApp() {
     saveShift() { try { localStorage.setItem('vg_shift_' + this.sellerId, JSON.stringify({ date: this.dateKey(), shift: this.shift })); } catch (e) {} },
     hhmm(d) { return d.toLocaleTimeString('es-CO', { hour12: false, hour: '2-digit', minute: '2-digit' }); },
 
-    // ---- Precarga de mosaicos del mapa alrededor de la ruta (para verla sin internet) ----
-    prefetchTiles(d) {
-      if (!navigator.onLine || !d.stops || !d.stops.length) return;
-      const key = d.stops.map(s => s.deal_id).join(',');
-      if (key === this.prefetched) return; this.prefetched = key;
-      const pts = d.stops.map(s => [s.lat, s.lng]); if (d.origin) pts.push([d.origin.lat, d.origin.lng]);
-      const urls = new Set();
-      [14, 15, 16].forEach(z => pts.forEach(([lat, lng]) => {
-        const n = Math.pow(2, z), x0 = Math.floor((lng + 180) / 360 * n);
-        const y0 = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n);
-        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) urls.add('https://a.tile.openstreetmap.org/' + z + '/' + (x0 + dx) + '/' + (y0 + dy) + '.png');
-      }));
-      // De a pocos, sin bloquear la interfaz (el service worker los guarda)
-      const list = Array.from(urls).slice(0, 400); let i = 0;
-      const next = () => { if (i >= list.length) return; const batch = list.slice(i, i += 6);
-        Promise.all(batch.map(u => fetch(u, { mode: 'no-cors' }).catch(() => null))).then(() => setTimeout(next, 150)); };
-      setTimeout(next, 1500);
-    },
+    // La precarga masiva de mosaicos se retiro (politica de uso de los servidores de mapas):
+    // el service worker guarda los mosaicos que el vendedor va viendo, que es lo permitido.
+    prefetchTiles(d) {},
 
     // ---- Cola offline (IndexedDB): jornada y fotos que no pudieron enviarse ----
     qdb() {

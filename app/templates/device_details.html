@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const route = {{ route|tojson|safe }};
     if (route && route.length > 0) {
         const map = L.map('map').setView([route[0].latitude, route[0].longitude], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap'
         }).addTo(map);
 

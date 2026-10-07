@@ -224,7 +224,7 @@ $('#fReset').onclick=()=>{st.seg='Todos';st.emp='';st.ini='';st.fin='';st.det=''
 const keepE=e=>(st.seg==='Todos'||D.segmentos[e]===st.seg)&&(!st.emp||e===st.emp); const keepR=r=>keepE(r.e)&&(!st.ini||r.f>=st.ini)&&(!st.fin||r.f<=st.fin);
 const col=e=>st.color==='seg'?SEGC[D.segmentos[e]]:EC[e]; const scoreCol=v=>v>=70?'#6ee7b7':v>=50?'#fcd34d':'#fca5a5';
 const charts={};function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg)} Chart.defaults.color='#94a3b8';Chart.defaults.borderColor='rgba(36,48,82,.6)';
-const map=L.map('map').setView([4.7,-74.1],7); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map); const LY={}; ['heat','stops','places','bases','terr','hull','over','route'].forEach(k=>LY[k]=L.layerGroup().addTo(map)); let heatLayer=null;
+const map=L.map('map').setView([4.7,-74.1],7); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map); const LY={}; ['heat','stops','places','bases','terr','hull','over','route'].forEach(k=>LY[k]=L.layerGroup().addTo(map)); let heatLayer=null;
 function drawMap(){
   Object.values(LY).forEach(l=>l.clearLayers()); if(heatLayer){map.removeLayer(heatLayer);heatLayer=null}
   const par=D.paradas.filter(keepR), pts=[];
@@ -287,3 +287,77 @@ print('\n=== CONCLUSIONES ===')
 for i, c in enumerate(concl, 1): print(f'{i}. {c}')
 print('\n=== KPI por ejecutivo (indice, cobertura, km/dia, jornada, prod/dia, %base, muertos, radio, %exceso) ===')
 for k in ks: print(f"{k['e']:14} {k['seg'][:3]} idx={k['indice']:3} cob={k['cobertura']:3.0f}% km/d={k['kmd']:5.1f} jor={k['jornada']:5.2f} prod={k['prod_dia']:4.2f} base={k['pct_base']:4.1f}% muertos={k['muertos']:2} radio={k['radio_km']:5.1f} exc={k['pct_exceso']:3}% vmax={k['vmax_abs']}")
+
+
+# ============ Excel: hojas con los numeros que sustentan las conclusiones ============
+def write_excel(src, dst):
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+    from openpyxl.chart import BarChart, Reference
+    wb = load_workbook(src)
+    hf = PatternFill('solid', fgColor='4F46E5'); hfont = Font(bold=True, color='FFFFFF')
+    def add_sheet(name, headers, rows, widths=None, pos=None):
+        if name in wb.sheetnames: del wb[name]
+        ws = wb.create_sheet(name, pos) if pos is not None else wb.create_sheet(name)
+        ws.append(headers)
+        for c in ws[1]: c.fill = hf; c.font = hfont; c.alignment = Alignment(wrap_text=True, vertical='center')
+        for r in rows: ws.append(r)
+        ws.freeze_panes = 'A2'
+        if rows: ws.auto_filter.ref = ws.dimensions
+        for i, h in enumerate(headers, start=1):
+            w = (widths or {}).get(h) or min(max(10, max([len(str(h))] + [len(str(r[i-1])) for r in rows[:300]]) + 2), 60)
+            ws.column_dimensions[get_column_letter(i)].width = w
+        return ws
+    # Conclusiones
+    ws = add_sheet('Conclusiones', ['#', 'Conclusion (con cifras)', 'Indicador que la sustenta', 'Hoja donde verlo'],
+                   [[i, c, ['Indice, km/dia, paradas productivas, radio', '% tiempo en base', 'Indice operativo', 'Indice operativo', '% en base', 'Tiempos muertos', '% dias >80 km/h, Vmax', 'Cobertura GPS', 'Inicio promedio', 'Jornada (h)', 'Radio P80 / Area', 'Solapamientos', 'Dias excluidos'][min(i-1, 12)],
+                     ['Comparativo segmentos', 'Comparativo segmentos', 'KPIs geo-operativos', 'KPIs geo-operativos', 'KPIs geo-operativos', 'Tiempos muertos', 'Excesos de velocidad', 'KPIs geo-operativos', 'KPIs geo-operativos', 'KPIs geo-operativos', 'Territorio', 'Solapamientos', 'Dias excluidos'][min(i-1, 12)]] for i, c in enumerate(concl, 1)],
+                   widths={'Conclusion (con cifras)': 120}, pos=0)
+    for row in ws.iter_rows(min_row=2):
+        row[1].alignment = Alignment(wrap_text=True, vertical='top')
+    ws['F1'] = 'Formula del indice operativo (0-100): cobertura GPS (20) + jornada 8-12 h (20) + paradas productivas/dia meta 4 (25) + tiempo en base <40% (15) + variabilidad del inicio <2 h (10) + dias sin exceso de velocidad (10). Parada productiva = >=20 min fuera de base. Tiempo muerto = >=2 h fuera de base. Radio P80 = radio que contiene el 80% de las paradas.'
+    ws['F1'].alignment = Alignment(wrap_text=True, vertical='top'); ws.column_dimensions['F'].width = 70
+    # KPIs geo-operativos
+    H = ['Ejecutivo', 'Segmento', 'Indice operativo', 'Desde', 'Hasta', 'Dias con datos', 'Cobertura GPS %', 'Km total', 'Km/dia', 'Jornada (h)', 'Inicio prom.', 'Fin prom.', 'Variabilidad inicio (h)',
+         'Paradas productivas/dia', 'Min productivos/dia', '% tiempo en base', '% tiempo detenido', 'Tiempos muertos (n)', 'Tiempos muertos (h)', 'Radio P80 (km)', 'Area cubierta (km2)', 'Km por parada productiva',
+         'Dias con exceso >80 km/h', '% dias con exceso', 'Vmax (km/h)', 'Vmax prom. diaria', 'Horas fuera de base', 'Base detectada', 'Dias excluidos']
+    rows = [[k['e'], k['seg'], k['indice'], k['desde'], k['hasta'], k['dias'], k['cobertura'], k['km'], k['kmd'], k['jornada'], k['ini'], k['fin'], k['puntualidad_sd'], k['prod_dia'], k['prod_min_dia'], k['pct_base'],
+             k['pct_detenido'], k['muertos'], round(k['muertos_min'] / 60, 1), k['radio_km'], k['area_km2'], k['km_por_parada'] or '', k['dias_exceso'], k['pct_exceso'], k['vmax_abs'], k['vmax_prom'], k['hf'] if k['hf'] is not None else '', 'Si' if k['base'] else 'No', k['excluidos']]
+            for k in sorted(kpi.values(), key=lambda k: -k['indice'])]
+    ws = add_sheet('KPIs geo-operativos', H, rows, pos=1)
+    ch = BarChart(); ch.type = 'bar'; ch.title = 'Indice operativo por ejecutivo'; ch.height = 10; ch.width = 16
+    ch.add_data(Reference(ws, min_col=3, min_row=1, max_row=len(rows) + 1), titles_from_data=True); ch.set_categories(Reference(ws, min_col=1, min_row=2, max_row=len(rows) + 1)); ws.add_chart(ch, 'AE2')
+    ch2 = BarChart(); ch2.type = 'bar'; ch2.title = '% del tiempo laboral en base/domicilio'; ch2.height = 10; ch2.width = 16
+    ch2.add_data(Reference(ws, min_col=16, min_row=1, max_row=len(rows) + 1), titles_from_data=True); ch2.set_categories(Reference(ws, min_col=1, min_row=2, max_row=len(rows) + 1)); ws.add_chart(ch2, 'AE24')
+    # Comparativo segmentos
+    add_sheet('Comparativo segmentos', ['Segmento', 'Ejecutivos (>=5 dias)', 'Km/dia', 'Jornada (h)', 'Paradas productivas/dia', '% tiempo en base', 'Radio P80 (km)', '% dias con exceso', 'Cobertura GPS %', 'Indice operativo'],
+              [[sg, v['n'], round(v['kmd'], 1), round(v['jornada'], 2), round(v['prod'], 2), round(v['base'], 1), round(v['radio'], 1), round(v['exceso'], 1), round(v['cob'], 1), round(v['indice'], 1)] for sg, v in seg_stats.items()], pos=2)
+    # Tiempos muertos (paradas >= 2 h fuera de base)
+    tm_rows = []
+    for e in sorted(kpi):
+        base = bases.get(e)
+        for p in by_emp_p[e]:
+            d = num(p['Duracion (min)']) or 0
+            if d >= LONG_STOP_MIN and not (base and hav(num(p['Latitud']), num(p['Longitud']), base[0], base[1]) <= 150):
+                tm_rows.append([e, SEG(e), p['Fecha'], p['Llegada'], p['Salida'], round(d / 60, 2), p.get('Lugar frecuente') or '', p.get('Direccion') or '', f"https://www.google.com/maps?q={p['Latitud']},{p['Longitud']}"])
+    add_sheet('Tiempos muertos', ['Ejecutivo', 'Segmento', 'Fecha', 'Llegada', 'Salida', 'Horas', 'Lugar frecuente', 'Direccion', 'Mapa'], tm_rows, widths={'Direccion': 50, 'Mapa': 44})
+    # Excesos de velocidad
+    ex_rows = [[r['Empleado'], SEG(r['Empleado']), r['Fecha'], num(r['Vel. max (km/h)']), r['Inicio recorrido'], r['Fin recorrido'], num(r['Km recorridos'])]
+               for r in diario if (num(r['Vel. max (km/h)']) or 0) > SPEED_LIMIT and (num(r['Vel. max (km/h)']) or 0) <= 200]
+    ex_rows.sort(key=lambda x: (-x[3]))
+    add_sheet('Excesos de velocidad', ['Ejecutivo', 'Segmento', 'Fecha', 'Vel. max (km/h)', 'Inicio', 'Fin', 'Km del dia'], ex_rows)
+    # Territorio
+    add_sheet('Territorio', ['Ejecutivo', 'Segmento', 'Centro lat', 'Centro lng', 'Radio P80 (km)', 'Area cubierta (km2)', 'Km/dia', 'Km por parada productiva', 'Base lat', 'Base lng', 'Ver centro en mapa'],
+              [[k['e'], k['seg'], k['centro'][0] if k['centro'] else '', k['centro'][1] if k['centro'] else '', k['radio_km'], k['area_km2'], k['kmd'], k['km_por_parada'] or '', bases.get(k['e'], ['', ''])[0], bases.get(k['e'], ['', ''])[1],
+                f"https://www.google.com/maps?q={k['centro'][0]},{k['centro'][1]}" if k['centro'] else ''] for k in sorted(kpi.values(), key=lambda k: -k['radio_km'])], widths={'Ver centro en mapa': 44})
+    # Solapamientos
+    add_sheet('Solapamientos', ['Ejecutivo A', 'Ejecutivo B', 'Veces A', 'Veces B', 'Direccion', 'Mapa'],
+              [[o['a'], o['b'], o['va'], o['vb'], o['dir'], f"https://www.google.com/maps?q={o['lat']},{o['lng']}"] for o in sorted(overlap, key=lambda o: -(o['va'] + o['vb']))], widths={'Direccion': 60, 'Mapa': 44})
+    wb.save(dst)
+    return dst
+
+if __name__ == '__main__':
+    out_x = OUT.replace('.html', '.xlsx') if OUT.endswith('.html') else OUT + '.xlsx'
+    out_x = os.path.join(os.path.dirname(out_x), 'Analisis_Tiempos_Ejecutivos_Geoanalitica.xlsx')
+    print('XLSX ->', write_excel(XLSX, out_x))

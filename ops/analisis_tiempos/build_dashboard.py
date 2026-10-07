@@ -168,7 +168,7 @@ function render(){
   // lugares + mapa
   const lug=D.lugares.filter(l=>(st.seg==='Todos'||D.segmentos[l.e]===st.seg)&&(!st.emp||l.e===st.emp)).sort((a,b)=>b.mt-a.mt);
   $('#tLug tbody').innerHTML=lug.slice(0,80).map(l=>`<tr><td><b>${l.e}</b><div class="note">${(l.dir||'').slice(0,48)}</div></td><td>${l.t.startsWith('Posible')?'<span style="color:#fca5a5">Base/domicilio</span>':l.t.startsWith('Aliado')?'<span style="color:#6ee7b7">'+l.t+'</span>':'Recurrente'}</td><td class="r">${l.v}</td><td class="r">${fmt(l.mt,0)}</td><td>${l.ll||''}</td></tr>`).join('');
-  if(!window._map){window._map=L.map('map').setView([4.7,-74.1],7);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(window._map);window._lay=L.layerGroup().addTo(window._map)}
+  if(!window._map){window._map=L.map('map').setView([4.7,-74.1],7);L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(window._map);window._lay=L.layerGroup().addTo(window._map)}
   window._lay.clearLayers(); const pts=[];
   lug.forEach(l=>{if(l.lat==null)return; const col=l.t.startsWith('Posible')?'#ef4444':SEGC[D.segmentos[l.e]]; const r=6+Math.min(22,Math.sqrt(l.mt||1)/3);
     L.circleMarker([l.lat,l.lng],{radius:r,color:'#fff',weight:1,fillColor:col,fillOpacity:.8}).addTo(window._lay).bindPopup(`<b>${l.e}</b><br>${l.t}<br>${l.v} veces · ${fmt(l.mt,0)} min · llega ${l.ll||''}<br><small>${l.dir||''}</small>`); pts.push([l.lat,l.lng])});

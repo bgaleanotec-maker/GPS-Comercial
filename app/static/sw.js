@@ -9,7 +9,7 @@
  *  - Paginas HTML: red primero, si falla -> copia guardada, si no hay -> /offline.
  *  - POST/PUT: pasan directo; la app encola en IndexedDB lo que falle y lo reenvia.
  */
-const VERSION = 'vantigo-v4';
+const VERSION = 'vantigo-v5';
 const CACHE_STATIC = VERSION + '-static';
 const CACHE_PAGES = VERSION + '-pages';
 const CACHE_API = VERSION + '-api';
@@ -58,7 +58,7 @@ function isStatic(url) {
     url.hostname === 'cdn.tailwindcss.com' || url.hostname === 'cdn.jsdelivr.net' ||
     url.hostname === 'unpkg.com' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
 }
-function isTile(url) { return /tile\.openstreetmap\.org$/.test(url.hostname) || /\/tiles?\//.test(url.pathname) && url.hostname !== self.location.hostname; }
+function isTile(url) { return /tile\.openstreetmap\.org$/.test(url.hostname) || /basemaps\.cartocdn\.com$/.test(url.hostname); }
 function isPhoto(url) { return url.origin === self.location.origin && url.pathname.startsWith('/sales/photo/'); }
 function isApi(url) {
   return url.origin === self.location.origin && (

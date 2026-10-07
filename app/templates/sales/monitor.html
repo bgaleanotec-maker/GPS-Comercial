@@ -175,7 +175,7 @@ function monitor() {
     init() {
       setInterval(() => { this.clock = new Date().toLocaleTimeString('es-CO', { hour12: false }); }, 1000);
       this.map = L.map('map').setView([4.6533, -74.0836], 11);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(this.map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '© OpenStreetMap © CARTO' }).addTo(this.map);
       this.potLayer = L.layerGroup().addTo(this.map);
       this.trailLayer = L.layerGroup().addTo(this.map);
       this.routeLayer = L.layerGroup().addTo(this.map);
