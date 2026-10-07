@@ -194,7 +194,7 @@ def build_tracking_dataset(users, start_d, end_d, params=None, fetch_budget_s=80
                 travel_min = _mins(prev_end, s['start']) if prev_end else _mins(inicio, s['start'])
                 travel_km = (haversine_distance(prev_latlng[0], prev_latlng[1], s['lat'], s['lng']) / 1000.0) if prev_latlng else None
                 paradas.append({
-                    'empleado': name, 'fecha': day.isoformat(), 'dia': ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'][day.weekday()],
+                    'empleado': name, 'mes': day.strftime('%Y-%m'), 'fecha': day.isoformat(), 'dia': ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'][day.weekday()],
                     'parada_n': k, 'llegada': _fmt_hm(s['start']), 'salida': _fmt_hm(s['end']), 'duracion_min': s['min'],
                     'tipo': tipo, 'aliado': aliado, 'dist_al_aliado_m': dist if dist is not None else '',
                     'latitud': s['lat'], 'longitud': s['lng'], 'direccion': s['address'],
@@ -204,7 +204,7 @@ def build_tracking_dataset(users, start_d, end_d, params=None, fetch_budget_s=80
                 prev_end, prev_latlng = s['end'], (s['lat'], s['lng'])
             min_mov = max(0.0, jornada - min_al - min_ot)
             resumen.append({
-                'empleado': name, 'fecha': day.isoformat(), 'dia': ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'][day.weekday()],
+                'empleado': name, 'mes': day.strftime('%Y-%m'), 'fecha': day.isoformat(), 'dia': ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'][day.weekday()],
                 'inicio_recorrido': _fmt_hm(inicio), 'fin_recorrido': _fmt_hm(fin), 'jornada_horas': round(jornada / 60.0, 2),
                 'km_recorridos': round(km, 1), 'paradas': len(stops), 'visitas_aliados': n_vis,
                 'min_en_aliados': round(min_al), 'min_en_otros_lugares': round(min_ot), 'min_en_movimiento': round(min_mov),
@@ -377,7 +377,7 @@ def _reverse_geocode_places(lugares, paradas):
 
 
 HEADERS_ES = {
-    'empleado': 'Empleado', 'fecha': 'Fecha', 'dia': 'Dia', 'inicio_recorrido': 'Inicio recorrido', 'fin_recorrido': 'Fin recorrido',
+    'empleado': 'Empleado', 'mes': 'Mes', 'fecha': 'Fecha', 'dia': 'Dia', 'inicio_recorrido': 'Inicio recorrido', 'fin_recorrido': 'Fin recorrido',
     'jornada_horas': 'Jornada (h)', 'km_recorridos': 'Km recorridos', 'paradas': 'Paradas', 'visitas_aliados': 'Visitas a aliados',
     'min_en_aliados': 'Min en aliados', 'min_en_otros_lugares': 'Min en otros lugares', 'min_en_movimiento': 'Min en movimiento',
     'pct_tiempo_aliados': '% tiempo en aliados', 'pct_tiempo_otros': '% tiempo otros lugares', 'pct_tiempo_movimiento': '% tiempo en movimiento',
