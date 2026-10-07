@@ -6,6 +6,12 @@
       "runtimeExecutable": "venv/Scripts/python.exe",
       "runtimeArgs": ["run.py"],
       "port": 5000
+    },
+    {
+      "name": "dashboard-static",
+      "runtimeExecutable": "venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "C:/Users/bgale/AppData/Local/Temp/claude/C--Users-bgale-OneDrive-GPS-Comercial/63646180-45f3-4a0d-b248-be571751c673/scratchpad"],
+      "port": 8765
     }
   ]
 }
