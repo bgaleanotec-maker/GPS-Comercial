@@ -28,9 +28,12 @@ with app.app_context():
     devices = [d for d in (tr.get_devices() or []) if not d.get('disabled') and d['name'] not in EXCLUIR_DISPOSITIVOS]
     users = [SimpleNamespace(id=-d['id'], username=d['name'], full_name=d['name'], traccar_device_id=d['id']) for d in devices]
     print(f'Empleados (dispositivos): {len(users)} -> {[u.username for u in users]}')
-    # Aliados reales: se ignoran los de demostracion de la base local
-    real = [a for a in Ally.query.all() if not a.name.startswith(DEMO_ALLIES)]
-    print('Aliados usados:', [a.name for a in real])
+    # Aliados reales de produccion (exportados de la BD de Render a aliados_produccion.json).
+    # Oficinas = nombre con 'Vanti' o 'Calima'; el resto son aliados.
+    import json
+    jpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'aliados_produccion.json')
+    real = [SimpleNamespace(**a) for a in json.load(open(jpath, encoding='utf8'))]
+    print('Aliados usados:', len(real), '| oficinas:', [a.name for a in real if a.tipo == 'Oficina'])
     orig_query = Ally.query
     class _Q:   # el modulo consulta Ally.query.all(); se le entrega solo la lista real
         def all(self): return real

@@ -117,7 +117,7 @@ def _classify_stop(stop, allies, prm):
         if d <= lim and (best_d is None or d < best_d):
             best, best_d = a, d
     if best:
-        return 'Aliado', best.name, round(best_d)
+        return getattr(best, 'tipo', 'Aliado') or 'Aliado', best.name, round(best_d)
     return 'Otro lugar', '', None
 
 
@@ -178,8 +178,8 @@ def build_tracking_dataset(users, start_d, end_d, params=None, fetch_budget_s=80
             stops = _detect_stops(pts, prm)
             inicio, fin = pts[0]['t'], pts[-1]['t']
             jornada = _mins(inicio, fin)
-            min_al = min_ot = 0.0
-            n_vis = 0
+            min_al = min_ot = min_of = 0.0
+            n_vis = n_of = 0
             prev_end, prev_latlng, prev_ally_end = None, None, None
             gaps = []
             for k, s in enumerate(stops, start=1):
@@ -189,6 +189,8 @@ def build_tracking_dataset(users, start_d, end_d, params=None, fetch_budget_s=80
                     if prev_ally_end:
                         gaps.append(_mins(prev_ally_end, s['start']))
                     prev_ally_end = s['end']
+                elif tipo == 'Oficina':
+                    min_of += s['min']; n_of += 1
                 else:
                     min_ot += s['min']
                 travel_min = _mins(prev_end, s['start']) if prev_end else _mins(inicio, s['start'])
@@ -202,20 +204,21 @@ def build_tracking_dataset(users, start_d, end_d, params=None, fetch_budget_s=80
                     'mapa': f"https://www.google.com/maps?q={s['lat']},{s['lng']}",
                 })
                 prev_end, prev_latlng = s['end'], (s['lat'], s['lng'])
-            min_mov = max(0.0, jornada - min_al - min_ot)
+            min_mov = max(0.0, jornada - min_al - min_ot - min_of)
             resumen.append({
                 'empleado': name, 'mes': day.strftime('%Y-%m'), 'fecha': day.isoformat(), 'dia': ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'][day.weekday()],
                 'inicio_recorrido': _fmt_hm(inicio), 'fin_recorrido': _fmt_hm(fin), 'jornada_horas': round(jornada / 60.0, 2),
-                'km_recorridos': round(km, 1), 'paradas': len(stops), 'visitas_aliados': n_vis,
-                'min_en_aliados': round(min_al), 'min_en_otros_lugares': round(min_ot), 'min_en_movimiento': round(min_mov),
+                'km_recorridos': round(km, 1), 'paradas': len(stops), 'visitas_aliados': n_vis, 'visitas_oficina': n_of,
+                'min_en_aliados': round(min_al), 'min_en_oficina': round(min_of), 'min_en_otros_lugares': round(min_ot), 'min_en_movimiento': round(min_mov),
                 'pct_tiempo_aliados': round(100 * min_al / jornada, 1) if jornada else 0,
+                'pct_tiempo_oficina': round(100 * min_of / jornada, 1) if jornada else 0,
                 'pct_tiempo_otros': round(100 * min_ot / jornada, 1) if jornada else 0,
                 'pct_tiempo_movimiento': round(100 * min_mov / jornada, 1) if jornada else 0,
                 'tiempo_prom_entre_visitas_min': round(sum(gaps) / len(gaps)) if gaps else '',
                 'vel_max_kmh': round(max(p['speed'] for p in pts)), 'puntos_gps': len(pts), 'saltos_gps_descartados': jumps,
             })
             agg['dias'] += 1; agg['km'] += km; agg['jornada_min'] += jornada; agg['paradas'] += len(stops)
-            agg['visitas'] += n_vis; agg['min_aliados'] += min_al; agg['min_otros'] += min_ot; agg['min_mov'] += min_mov
+            agg['visitas'] += n_vis; agg['min_aliados'] += min_al; agg['min_otros'] += min_ot; agg['min_mov'] += min_mov; agg['min_oficina'] = agg.get('min_oficina', 0.0) + min_of; agg['visitas_of'] = agg.get('visitas_of', 0) + n_of
             agg['inicios'].append(inicio.hour * 60 + inicio.minute); agg['fines'].append(fin.hour * 60 + fin.minute); agg['gaps'] += gaps
         d = agg['dias'] or 1
         avg_hm = lambda lst: (f"{int(sum(lst) / len(lst)) // 60:02d}:{int(sum(lst) / len(lst)) % 60:02d}" if lst else '')
@@ -224,6 +227,7 @@ def build_tracking_dataset(users, start_d, end_d, params=None, fetch_budget_s=80
             'empleado': name, 'dias_con_datos': agg['dias'], 'km_total': round(agg['km'], 1), 'km_promedio_dia': round(agg['km'] / d, 1),
             'inicio_promedio': avg_hm(agg['inicios']), 'fin_promedio': avg_hm(agg['fines']), 'jornada_promedio_horas': round(agg['jornada_min'] / d / 60.0, 2),
             'paradas_promedio_dia': round(agg['paradas'] / d, 1), 'visitas_aliados_total': agg['visitas'], 'visitas_aliados_prom_dia': round(agg['visitas'] / d, 2),
+            'visitas_oficina_total': agg.get('visitas_of', 0), 'pct_tiempo_oficina': round(100 * agg.get('min_oficina', 0.0) / tj, 1),
             'pct_tiempo_aliados': round(100 * agg['min_aliados'] / tj, 1), 'pct_tiempo_otros_lugares': round(100 * agg['min_otros'] / tj, 1),
             'pct_tiempo_movimiento': round(100 * agg['min_mov'] / tj, 1),
             'tiempo_prom_entre_visitas_min': round(sum(agg['gaps']) / len(agg['gaps'])) if agg['gaps'] else '',
@@ -293,7 +297,7 @@ def _frequent_places(paradas, resumen, radius_m=150, min_times=3):
         def score(c):
             rs = c[2]
             if any(r['aliado'] for r in rs) or len(rs) < min_times:
-                return -1
+                return -1   # un aliado u oficina nunca es la base/domicilio
             return sum(1 for r in rs if r['parada_n'] == 1 or r['parada_n'] == max(first_last[(emp, r['fecha'])]))
         best = max(clusters, key=score) if clusters else None
         base = best if best is not None and score(best) >= max(3, 0.4 * len(days_emp)) else None
@@ -308,12 +312,13 @@ def _frequent_places(paradas, resumen, radius_m=150, min_times=3):
             firsts = sum(1 for r in rs if r['parada_n'] == 1)
             lasts = sum(1 for r in rs if r['parada_n'] == max(first_last[(emp, r['fecha'])]))
             ally = next((r['aliado'] for r in rs if r['aliado']), '')
+            ally_t = next((r['tipo'] for r in rs if r['aliado']), 'Aliado')
             posible = 'Posible domicilio / base' if c is base else ('' if ally else 'Lugar recurrente')
             mins = [int(r['llegada'][:2]) * 60 + int(r['llegada'][3:]) for r in rs if r['llegada']]
             avg = f"{(sum(mins) // len(mins)) // 60:02d}:{(sum(mins) // len(mins)) % 60:02d}" if mins else ''
             for r in rs:
                 r['lugar_frecuente'] = label + (' · ' + posible if posible else '')
-            out.append({'empleado': emp, 'lugar': label, 'tipo': ('Aliado: ' + ally) if ally else posible,
+            out.append({'empleado': emp, 'lugar': label, 'tipo': (ally_t + ': ' + ally) if ally else posible,
                         'veces': len(rs), 'dias_distintos': len(dias), 'llegada_promedio': avg,
                         'duracion_promedio_min': round(sum(r['duracion_min'] for r in rs) / len(rs)),
                         'minutos_totales': round(sum(r['duracion_min'] for r in rs)),
@@ -383,7 +388,7 @@ HEADERS_ES = {
     'pct_tiempo_aliados': '% tiempo en aliados', 'pct_tiempo_otros': '% tiempo otros lugares', 'pct_tiempo_movimiento': '% tiempo en movimiento',
     'tiempo_prom_entre_visitas_min': 'Tiempo prom. entre visitas (min)', 'vel_max_kmh': 'Vel. max (km/h)', 'puntos_gps': 'Puntos GPS',
     'saltos_gps_descartados': 'Saltos GPS descartados', 'parada_n': 'Parada #', 'llegada': 'Llegada', 'salida': 'Salida', 'duracion_min': 'Duracion (min)',
-    'tipo': 'Tipo de lugar', 'aliado': 'Aliado', 'dist_al_aliado_m': 'Dist. al aliado (m)', 'latitud': 'Latitud', 'longitud': 'Longitud', 'direccion': 'Direccion',
+    'tipo': 'Tipo de lugar', 'aliado': 'Aliado / Oficina', 'visitas_oficina': 'Visitas a oficina', 'min_en_oficina': 'Min en oficina', 'pct_tiempo_oficina': '% tiempo en oficina', 'visitas_oficina_total': 'Visitas oficina (total)', 'dist_al_aliado_m': 'Dist. al aliado (m)', 'latitud': 'Latitud', 'longitud': 'Longitud', 'direccion': 'Direccion',
     'desplazamiento_min_desde_anterior': 'Desplazamiento desde anterior (min)', 'km_desde_anterior': 'Km desde anterior', 'mapa': 'Ver en mapa',
     'dias_con_datos': 'Dias con datos', 'km_total': 'Km total', 'km_promedio_dia': 'Km promedio/dia', 'inicio_promedio': 'Inicio promedio', 'fin_promedio': 'Fin promedio',
     'jornada_promedio_horas': 'Jornada promedio (h)', 'paradas_promedio_dia': 'Paradas promedio/dia', 'visitas_aliados_total': 'Visitas aliados (total)',

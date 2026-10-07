@@ -31,7 +31,7 @@ data = {
                 'mM': num(r['Min en movimiento']) or 0, 'vmax': num(r['Vel. max (km/h)']), 'sb': r.get('Salida de base/domicilio') or '', 'lb': r.get('Llegada a base/domicilio') or '',
                 'hf': num(r.get('Horas fuera de base'))} for r in diario],
     'paradas': [{'e': r['Empleado'], 'f': r['Fecha'], 'n': r['Parada #'], 'll': r['Llegada'], 'sa': r['Salida'], 'min': num(r['Duracion (min)']), 't': r['Tipo de lugar'],
-                 'al': r.get('Aliado') or '', 'lat': num(r['Latitud']), 'lng': num(r['Longitud']), 'dir': r.get('Direccion') or '', 'lf': r.get('Lugar frecuente') or '',
+                 'al': r.get('Aliado / Oficina') or r.get('Aliado') or '', 'lat': num(r['Latitud']), 'lng': num(r['Longitud']), 'dir': r.get('Direccion') or '', 'lf': r.get('Lugar frecuente') or '',
                  'tr': num(r['Desplazamiento desde anterior (min)']), 'kma': num(r['Km desde anterior'])} for r in paradas],
     'lugares': [{'e': r['Empleado'], 'l': r['Lugar'], 't': r.get('Tipo') or r.get('Tipo de lugar') or '', 'v': num(r['Veces']), 'dd': num(r['Dias distintos']), 'll': r['Llegada promedio'],
                  'dm': num(r['Duracion promedio (min)']), 'mt': num(r['Minutos totales']), 'lat': num(r['Latitud']), 'lng': num(r['Longitud']), 'dir': r.get('Direccion') or ''} for r in lugares],
@@ -82,6 +82,7 @@ td{padding:7px 6px;border-bottom:1px solid rgba(36,48,82,.5);white-space:nowrap}
   <span class="chip on" data-seg="Todos">Todos</span><span class="chip" data-seg="Mercado Comercial">Mercado Comercial</span><span class="chip" data-seg="Residencial">Residencial</span>
   <label>Ejecutivo</label><select id="fEmp"><option value="">Todos</option></select>
   <label>Mes</label><select id="fMes"><option value="">Todos</option></select>
+  <label>Tipo de lugar</label><select id="fTipo"><option value="">Todos</option><option>Aliado</option><option>Oficina</option><option>Otro lugar</option></select>
   <label>Desde</label><input type="date" id="fIni"><label>Hasta</label><input type="date" id="fFin">
   <button class="btn" id="fReset">Limpiar</button><span class="note" id="fInfo"></span>
 </div>
@@ -110,7 +111,7 @@ td{padding:7px 6px;border-bottom:1px solid rgba(36,48,82,.5);white-space:nowrap}
 <script>
 const D = __DATA__;
 const SEGC = {'Mercado Comercial':'#6366f1','Residencial':'#10b981'};
-const st = {seg:'Todos', emp:'', mes:'', ini:'', fin:'', sortK:'kmd', sortD:-1, det:'', day:''};
+const st = {seg:'Todos', emp:'', mes:'', tipo:'', ini:'', fin:'', sortK:'kmd', sortD:-1, det:'', day:''};
 const emps = Object.keys(D.segmentos).sort(); const meses = [...new Set(D.diario.map(r=>r.f.slice(0,7)))].sort();
 const $ = s => document.querySelector(s); const fmt = (n,d=1)=> n==null?'—':Number(n).toLocaleString('es-CO',{maximumFractionDigits:d});
 const toMin = h => h ? parseInt(h.slice(0,2))*60+parseInt(h.slice(3,5)) : null; const toHM = m => m==null?'—':`${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.round(m%60)).padStart(2,'0')}`;
@@ -119,7 +120,7 @@ document.getElementById('per').textContent = D.periodo[0]+' a '+D.periodo[1];
 emps.forEach(e=>{const o=document.createElement('option');o.value=e;o.textContent=e+' ('+(D.segmentos[e]==='Residencial'?'Res':'Com')+')';$('#fEmp').appendChild(o)});
 meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;$('#fMes').appendChild(o)});
 document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');st.seg=c.dataset.seg;render()});
-$('#fEmp').onchange=e=>{st.emp=e.target.value;st.det=st.emp;render()};$('#fMes').onchange=e=>{st.mes=e.target.value;render()};
+$('#fEmp').onchange=e=>{st.emp=e.target.value;st.det=st.emp;render()};$('#fMes').onchange=e=>{st.mes=e.target.value;render()};$('#fTipo').onchange=e=>{st.tipo=e.target.value;render()};
 $('#fIni').onchange=e=>{st.ini=e.target.value;render()};$('#fFin').onchange=e=>{st.fin=e.target.value;render()};
 $('#fReset').onclick=()=>{st.seg='Todos';st.emp='';st.mes='';st.ini='';st.fin='';$('#fEmp').value='';$('#fMes').value='';$('#fIni').value='';$('#fFin').value='';document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x.dataset.seg==='Todos'));render()};
 function keep(r){ if(st.seg!=='Todos'&&D.segmentos[r.e]!==st.seg)return false; if(st.emp&&r.e!==st.emp)return false; if(st.mes&&!r.f.startsWith(st.mes))return false; if(st.ini&&r.f<st.ini)return false; if(st.fin&&r.f>st.fin)return false; return true; }
@@ -128,7 +129,7 @@ Chart.defaults.color='#94a3b8'; Chart.defaults.borderColor='rgba(36,48,82,.6)'; 
 function perEmp(rows){ const m={}; rows.forEach(r=>{const o=m[r.e]||(m[r.e]={e:r.e,seg:D.segmentos[r.e],dias:0,km:0,h:0,p:0,mL:0,mO:0,mM:0,ini:[],fin:[],hf:[]}); o.dias++;o.km+=r.km||0;o.h+=r.h||0;o.p+=r.p||0;o.mL+=r.mL;o.mO+=r.mO;o.mM+=r.mM; if(r.ini)o.ini.push(toMin(r.ini)); if(r.fin)o.fin.push(toMin(r.fin)); if(r.hf!=null)o.hf.push(r.hf);});
   return Object.values(m).map(o=>{const tot=o.mL+o.mO+o.mM||1; return {...o,kmd:o.km/o.dias,hd:o.h/o.dias,pd:o.p/o.dias,pl:100*(o.mL+o.mO)/tot,pm:100*o.mM/tot,inim:avg(o.ini),finm:avg(o.fin),hfm:avg(o.hf),ex:D.excluidos.filter(x=>x.e===o.e&&x.f).length}}); }
 function render(){
-  const rows=D.diario.filter(keep), par=D.paradas.filter(keep); const pe=perEmp(rows);
+  const rows=D.diario.filter(keep), par=D.paradas.filter(p=>keep(p)&&(!st.tipo||p.t===st.tipo)); const pe=perEmp(rows);
   $('#fInfo').textContent=`${rows.length} dias-persona · ${pe.length} ejecutivos · ${par.length} paradas`;
   const tot=rows.reduce((a,r)=>a+r.mL+r.mO+r.mM,0)||1, km=rows.reduce((a,r)=>a+(r.km||0),0);
   const k=[['Ejecutivos',pe.length,''],['Dias con datos',rows.length,''],['Km recorridos',fmt(km,0),`${fmt(km/(rows.length||1))} km por dia`],['Jornada promedio',fmt(avg(rows.map(r=>r.h)))+' h','por dia con datos'],
@@ -186,7 +187,7 @@ function renderDetail(){
   const r=rows.find(x=>x.f===st.day); const ps=D.paradas.filter(p=>p.e===e&&p.f===st.day).sort((a,b)=>a.n-b.n);
   $('#detDay').textContent=st.day+(r?` · ${r.ini}–${r.fin} · ${fmt(r.km)} km`:'');
   let html=`<div class="it"><div class="t">${r?r.ini:''}</div><div class="box">Primer registro GPS del dia${r&&r.sb?` · sale de base ${r.sb}`:''}</div></div>`;
-  ps.forEach(p=>{html+=`<div class="mv">⟶ ${fmt(p.tr,0)} min en desplazamiento${p.kma?` · ${fmt(p.kma)} km`:''}</div><div class="it"><div class="t">${p.ll}</div><div class="box"><b>${p.t==='Aliado'?'Aliado: '+p.al:(p.lf||'Parada')}</b> · ${fmt(p.min,0)} min (hasta ${p.sa})<div class="note">${p.dir||''} <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" style="color:#818cf8">mapa</a></div></div></div>`});
+  ps.forEach(p=>{html+=`<div class="mv">⟶ ${fmt(p.tr,0)} min en desplazamiento${p.kma?` · ${fmt(p.kma)} km`:''}</div><div class="it"><div class="t">${p.ll}</div><div class="box"><b>${p.al?p.t+': '+p.al:(p.lf||'Parada')}</b> · ${fmt(p.min,0)} min (hasta ${p.sa})<div class="note">${p.dir||''} <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" style="color:#818cf8">mapa</a></div></div></div>`});
   html+=`<div class="it"><div class="t">${r?r.fin:''}</div><div class="box">Ultimo registro GPS${r&&r.lb?` · llega a base ${r.lb}`:''}</div></div>`; $('#tl').innerHTML=html;
 }
 document.querySelectorAll('#rank th').forEach(th=>th.onclick=()=>{const k=th.dataset.k; if(st.sortK===k)st.sortD*=-1; else {st.sortK=k;st.sortD=(k==='e'||k==='seg'||k==='ini')?1:-1} render()});
